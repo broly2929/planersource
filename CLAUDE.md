@@ -1,0 +1,85 @@
+# CLAUDE.md — règles de travail
+
+## Ouverture de session
+
+1. Lire `docs/state.md` : il dit où on en est et quoi faire ensuite.
+2. Lire dans `SPEC.md` les sections du lot en cours. `SPEC.md` est la seule référence fonctionnelle.
+3. Annoncer en 3 lignes : lot en cours, prochaine action, blocages éventuels.
+
+## Règles non négociables
+
+- **Licence** : projet MIT. Dépendances d'exécution : MIT, Apache 2.0, BSD, ISC, 0BSD. Outillage de développement : en plus BlueOak-1.0.0, CC0-1.0, Python-2.0, CC-BY-4.0, Unlicense, MPL-2.0. GPL, AGPL et LGPL interdites partout. Aucun code GPL ou AGPL, ni lu, ni copié, ni adapté. En cas de doute sur une licence, s'arrêter et demander.
+- **TDD** : un test qui échoue (rouge prouvé, sortie affichée), puis le code minimal, puis refactor. Jamais de code de production sans test rouge préalable. Tout test de refus vérifie que l'état en base est inchangé, pas seulement le code HTTP. Un test sous tag jugé faux se corrige seul dans un commit, avec la décision du porteur et un tag de révision -rN (D-031).
+- **Tests de la spec** : les valeurs attendues viennent de `SPEC.md`, recopiées, jamais recalculées ni ajustées pour faire passer un test. Si un cas de la spec semble faux, s'arrêter et le signaler. Tout nouveau test hors moteur reçoit un identifiant dans docs/tests.md avant d'être écrit.
+- **Documents** : `SPEC.md`, `docs/decisions.md` et ce fichier se modifient de façon incrémentale. Jamais de réécriture complète.
+- **Moteur** : le paquet moteur est une bibliothèque pure, sans accès base, réseau ni horloge système (la date du jour est un paramètre).
+- **Périmètre** : ne rien implémenter qui figure dans « Hors périmètre V1 » de la spec.
+- **Parcours IHM** : tout écran qui crée ou modifie une entité a au moins un e2e qui le fait par l'écran, sans appel API pour cette entité, puis vérifie l'effet dans l'écran consommateur. Un e2e de parcours complet part d'une base où seul l'administrateur existe et enchaîne tout à l'écran ; il est étendu à chaque tranche d'écran.
+- **Couverture des champs** : docs/tests.md tient un tableau "champ modifiable de l'API → champ d'écran, ou hors écran avec la raison". Le reviewer le contrôle en fin de lot.
+
+## Ambiguïtés et décisions
+
+- Ambiguïté couverte par la section 10 de la spec : appliquer la valeur par défaut.
+- Autre ambiguïté ou choix d'architecture : proposer 2 options en 5 lignes, attendre la réponse.
+- Toute décision prise est ajoutée à `docs/decisions.md` (identifiant D-xxx suivant, date, décision, raison).
+
+## Commits
+
+- Commits petits, message en français à l'impératif, préfixe `feat:`, `test:`, `fix:`, `docs:`, `chore:`.
+- Code et tests dans le même commit ; documentation dans un commit séparé.
+- `git add` ciblé, fichier par fichier. Jamais `git add .` ni `-A`.
+- Preuve après chaque commit : `git log -3 --oneline && git status -sb`.
+
+## Fin de lot
+
+1. Tests, lint et contrôle des licences au vert, sorties affichées.
+2. Relecture par `@reviewer`. Corriger les points bloquants.
+3. Mettre à jour `docs/state.md`.
+4. Commit docs, puis `git push`.
+
+Vérifications proportionnées (D-128) : phase rouge = vitest et e2e des seuls fichiers touchés, plus lint et typecheck ; suite complète une seule fois, en fin de phase verte ; 3 exécutions ciblées réservées aux nouveaux e2e en phase verte ; la CI exécute la suite complète à chaque push.
+
+## Fin de session (même si le lot n'est pas fini)
+
+- Mettre à jour `docs/state.md`, commit, `git push`. Le dépôt distant doit toujours refléter l'état réel : c'est lui qui est lu depuis claude.ai.
+
+## Communication
+
+- Français, puces courtes, pas de politesses ni de méta-commentaire.
+- Souvent lu sur téléphone : réponses brèves, une question à la fois.
+
+## Agents
+
+- reviewer : une fois par lot, avant le commit final.
+- debugger : après deux corrections échouées, ou un /goal arrêté sans succès.
+- ui-designer : tout écran ou composant visuel (lots 0, 1, 1b, 2e, 3, 4).
+
+## Architecture
+
+À compléter au lot 0 (arborescence, commandes de test, de lint et de lancement).
+
+Monorepo npm workspaces (Node 22, TypeScript strict, ESM).
+
+```
+packages/engine/   moteur pur, aucune dépendance d'exécution
+packages/api/      Fastify, pg, argon2, zod : src/ (routes, db, auth, cli), migrations/*.sql, test/
+packages/web/      React + Vite (+ Tailwind, Radix, lucide-react avec les premiers composants)
+e2e/               Playwright (démarre l'API et le web, base de test)
+scripts/           backup.sh, restore.sh, check-licenses.mjs, test/ (tests des scripts)
+```
+
+Commandes (racine) :
+
+- `npm run lint` : eslint + prettier --check (le Markdown n'est pas formaté par prettier)
+- `npm run typecheck` : tsc --noEmit dans chaque workspace
+- `npm test` : vitest (engine, api, scripts) ; exige `TEST_DATABASE_URL`
+- `npm run test:e2e` : Playwright
+- e2e ciblé : `cd e2e && npx playwright test -g <ID>` (`npm run test:e2e -- --grep` ne filtre pas)
+- `npm run licenses` : contrôle des licences
+- `npm run dev` : API (3000) + web (5173)
+- `npm run demo` : recrée la base `planersource_demo` (DROP, CREATE, migrations, jeu de démonstration, D-117) ; `npm run dev:demo` : comme `npm run dev` sur cette base
+- `npm run create-admin -- --login <id> [--email <e>] --nom <n>` avec `ADMIN_PASSWORD` dans l'environnement (login ou email requis ; login absent = email, D-077)
+
+Un contrôle d'accès ne renvoie jamais `reply` depuis une fonction async (reply est thenable) : il renvoie un verdict, la route répond.
+
+Configuration : copier `.env.example` vers `.env`. Les tests n'utilisent que `TEST_DATABASE_URL`, dont le nom de base doit finir par `_test` (refus sinon, jamais de repli sur `DATABASE_URL`). Tests API en série, base remise à zéro avant chaque test. Mot de passe de test haché une fois par processus (`helpers.ts`) ; base modèle essayée, plus lente, abandonnée (D-037). Migrations : fichiers `NNN_nom.sql` dans `packages/api/migrations/`, table `schema_version`.

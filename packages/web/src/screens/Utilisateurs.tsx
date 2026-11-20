@@ -1,0 +1,361 @@
+import { Pencil, Plus } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { api, ApiError, ROLE_LABELS, type Role, type Utilisateur } from '../api';
+import { Badge } from '../components/Badge';
+import { BoutonIcone } from '../components/BoutonIcone';
+import { Button } from '../components/Button';
+import { Case } from '../components/Case';
+import { Dialog } from '../components/Dialog';
+import { Chargement, Vide } from '../components/Etat';
+import { Field } from '../components/Field';
+import { Layout } from '../components/Layout';
+import { Notification } from '../components/Notification';
+import { Select } from '../components/Select';
+import { Table, type Colonne } from '../components/Table';
+import { FormulaireDialogue } from './projet/commun';
+import type { Calendrier } from './Calendriers';
+
+const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({
+  value: r,
+  label: ROLE_LABELS[r],
+}));
+
+const EMAIL_UTILISE = 'Cet email est déjà utilisé.';
+const LOGIN_UTILISE = 'Cet identifiant est déjà utilisé.';
+const LOGIN_OU_EMAIL = 'Renseignez un identifiant ou un email.';
+
+/** Validation locale (rien n'est envoyé) : identifiant ou email requis. */
+const validerIdentite = (login: string, email: string) => () =>
+  login.trim() === '' && email.trim() === '' ? LOGIN_OU_EMAIL : null;
+
+/** Texte d'un 409 de l'écran, distingué par le message d'erreur de l'API (D-073). */
+function conflitUtilisateur(err: ApiError): string {
+  const m = (err.erreur ?? '').toLowerCase();
+  if (m.includes('identifiant')) return LOGIN_UTILISE;
+  if (m.includes('affecté'))
+    return 'Cet utilisateur est affecté à des projets : il reste ressource.';
+  if (m.includes('se désactiver'))
+    return 'Vous ne pouvez ni vous désactiver ni changer votre rôle.';
+  if (m.includes('administrateur actif')) return 'Il doit rester un administrateur actif.';
+  return EMAIL_UTILISE;
+}
+
+type Liste =
+  | { statut: 'chargement' }
+  | { statut: 'erreur'; message: string }
+  | { statut: 'ok'; utilisateurs: Utilisateur[]; calendriers: Calendrier[] };
+
+interface Commun {
+  calendriers: Calendrier[];
+  onSucces: () => void;
+  onAnnuler: () => void;
+}
+
+function optionsCalendrier(calendriers: Calendrier[]) {
+  return calendriers.map((c) => ({ value: String(c.id), label: c.nom }));
+}
+
+function FormulaireCreation({ calendriers, onSucces, onAnnuler }: Commun) {
+  const [nom, setNom] = useState('');
+  const [login, setLogin] = useState('');
+  const [initiales, setInitiales] = useState('');
+  const [email, setEmail] = useState('');
+  const [motDePasse, setMotDePasse] = useState('');
+  const [role, setRole] = useState<Role>('ressource');
+  const [ressource, setRessource] = useState(true);
+  const [capacite, setCapacite] = useState('1');
+  const [calendrier, setCalendrier] = useState(
+    String((calendriers.find((c) => c.est_defaut) ?? calendriers[0])?.id ?? ''),
+  );
+  return (
+    <FormulaireDialogue
+      libelle="Créer"
+      valider={validerIdentite(login, email)}
+      envoyer={() => {
+        return api('/api/utilisateurs', {
+          method: 'POST',
+          body: {
+            nom,
+            ...(login.trim() !== '' ? { login: login.trim() } : {}),
+            ...(email.trim() !== '' ? { email: email.trim() } : {}),
+            ...(initiales.trim() !== '' ? { initiales: initiales.trim() } : {}),
+            mot_de_passe: motDePasse,
+            role,
+            est_ressource: ressource,
+            capacite: Number(capacite),
+            ...(calendrier ? { calendrier_id: Number(calendrier) } : {}),
+          },
+        });
+      }}
+      onSucces={onSucces}
+      onAnnuler={onAnnuler}
+      conflit={conflitUtilisateur}
+    >
+      <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
+      <Field
+        label="Identifiant"
+        autoComplete="off"
+        value={login}
+        onChange={(e) => setLogin(e.target.value)}
+      />
+      <Field
+        label="Initiales"
+        maxLength={4}
+        value={initiales}
+        onChange={(e) => setInitiales(e.target.value)}
+      />
+      <Field
+        label="Email"
+        type="email"
+        autoComplete="off"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <Field
+        label="Mot de passe"
+        type="password"
+        autoComplete="new-password"
+        required
+        value={motDePasse}
+        onChange={(e) => setMotDePasse(e.target.value)}
+      />
+      <Select
+        label="Rôle"
+        options={ROLE_OPTIONS}
+        value={role}
+        onChange={(e) => setRole(e.target.value as Role)}
+      />
+      <Case
+        label="Ressource planifiable"
+        checked={ressource}
+        onChange={(e) => setRessource(e.target.checked)}
+      />
+      <Field
+        label="Capacité (j/jour)"
+        type="number"
+        required
+        min="0.01"
+        step="any"
+        value={capacite}
+        onChange={(e) => setCapacite(e.target.value)}
+      />
+      <Select
+        label="Calendrier"
+        options={optionsCalendrier(calendriers)}
+        value={calendrier}
+        onChange={(e) => setCalendrier(e.target.value)}
+      />
+    </FormulaireDialogue>
+  );
+}
+
+function FormulaireModification({
+  utilisateur: u,
+  calendriers,
+  onSucces,
+  onAnnuler,
+}: Commun & { utilisateur: Utilisateur }) {
+  const [nom, setNom] = useState(u.nom);
+  const [login, setLogin] = useState(u.login);
+  const [initiales, setInitiales] = useState(u.initiales ?? '');
+  const [email, setEmail] = useState(u.email ?? '');
+  const [role, setRole] = useState<Role>(u.role);
+  const [ressource, setRessource] = useState(u.est_ressource);
+  const [capacite, setCapacite] = useState(String(u.capacite));
+  const [calendrier, setCalendrier] = useState(String(u.calendrier_id));
+  const [actif, setActif] = useState(u.actif);
+  const [motDePasse, setMotDePasse] = useState('');
+
+  // Seuls les champs modifiés partent dans le PATCH ; mot de passe vide = inchangé.
+  const modifies = () => ({
+    ...(nom !== u.nom ? { nom } : {}),
+    ...(login.trim() !== '' && login.trim() !== u.login ? { login: login.trim() } : {}),
+    ...(email.trim() !== (u.email ?? '')
+      ? { email: email.trim() === '' ? null : email.trim() }
+      : {}),
+    ...(initiales.trim() !== (u.initiales ?? '')
+      ? { initiales: initiales.trim() === '' ? null : initiales.trim() }
+      : {}),
+    ...(role !== u.role ? { role } : {}),
+    ...(ressource !== u.est_ressource ? { est_ressource: ressource } : {}),
+    ...(Number(capacite) !== u.capacite ? { capacite: Number(capacite) } : {}),
+    ...(calendrier !== String(u.calendrier_id) ? { calendrier_id: Number(calendrier) } : {}),
+    ...(actif !== u.actif ? { actif } : {}),
+    ...(motDePasse !== '' ? { mot_de_passe: motDePasse } : {}),
+  });
+
+  return (
+    <FormulaireDialogue
+      libelle="Enregistrer"
+      valider={validerIdentite(login, email)}
+      envoyer={() => {
+        return api(`/api/utilisateurs/${u.id}`, { method: 'PATCH', body: modifies() });
+      }}
+      onSucces={onSucces}
+      onAnnuler={onAnnuler}
+      conflit={conflitUtilisateur}
+    >
+      <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
+      <Field
+        label="Identifiant"
+        autoComplete="off"
+        value={login}
+        onChange={(e) => setLogin(e.target.value)}
+      />
+      <Field
+        label="Initiales"
+        maxLength={4}
+        value={initiales}
+        onChange={(e) => setInitiales(e.target.value)}
+      />
+      <Field
+        label="Email"
+        type="email"
+        autoComplete="off"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <Select
+        label="Rôle"
+        options={ROLE_OPTIONS}
+        value={role}
+        onChange={(e) => setRole(e.target.value as Role)}
+      />
+      <Case
+        label="Ressource planifiable"
+        checked={ressource}
+        onChange={(e) => setRessource(e.target.checked)}
+      />
+      <Field
+        label="Capacité (j/jour)"
+        type="number"
+        required
+        min="0.01"
+        step="any"
+        value={capacite}
+        onChange={(e) => setCapacite(e.target.value)}
+      />
+      <Select
+        label="Calendrier"
+        options={optionsCalendrier(calendriers)}
+        value={calendrier}
+        onChange={(e) => setCalendrier(e.target.value)}
+      />
+      <Case label="Actif" checked={actif} onChange={(e) => setActif(e.target.checked)} />
+      <Field
+        label="Nouveau mot de passe"
+        type="password"
+        autoComplete="new-password"
+        value={motDePasse}
+        onChange={(e) => setMotDePasse(e.target.value)}
+      />
+    </FormulaireDialogue>
+  );
+}
+
+export function Utilisateurs() {
+  const [liste, setListe] = useState<Liste>({ statut: 'chargement' });
+  const [creation, setCreation] = useState(false);
+  const [aModifier, setAModifier] = useState<Utilisateur | null>(null);
+
+  const charger = useCallback(() => {
+    Promise.all([api<Utilisateur[]>('/api/utilisateurs'), api<Calendrier[]>('/api/calendriers')])
+      .then(([utilisateurs, calendriers]) => setListe({ statut: 'ok', utilisateurs, calendriers }))
+      .catch((err) =>
+        setListe({
+          statut: 'erreur',
+          message:
+            err instanceof ApiError && err.status === 403
+              ? 'Accès réservé aux administrateurs.'
+              : 'Impossible de charger les utilisateurs.',
+        }),
+      );
+  }, []);
+
+  useEffect(charger, [charger]);
+
+  const calendriers = liste.statut === 'ok' ? liste.calendriers : [];
+  const colonnes: Colonne<Utilisateur>[] = [
+    { titre: 'Nom', cellule: (u) => u.nom },
+    { titre: 'Identifiant', cellule: (u) => u.login || '—' },
+    { titre: 'Initiales', cellule: (u) => u.initiales || '—' },
+    { titre: 'Email', cellule: (u) => u.email ?? '—' },
+    { titre: 'Rôle', cellule: (u) => ROLE_LABELS[u.role] },
+    { titre: 'Ressource', cellule: (u) => (u.est_ressource ? 'Oui' : 'Non') },
+    { titre: 'Capacité', cellule: (u) => u.capacite },
+    {
+      titre: 'Calendrier',
+      cellule: (u) => calendriers.find((c) => c.id === u.calendrier_id)?.nom ?? '—',
+    },
+    {
+      titre: 'Statut',
+      cellule: (u) => (
+        <Badge statut={u.actif ? 'success' : 'neutre'}>{u.actif ? 'Actif' : 'Inactif'}</Badge>
+      ),
+    },
+    {
+      titre: 'Actions',
+      cellule: (u) => (
+        <BoutonIcone libelle={`Modifier ${u.nom}`} icone={Pencil} onClick={() => setAModifier(u)} />
+      ),
+    },
+  ];
+
+  const apres = (fermer: () => void) => () => {
+    fermer();
+    charger();
+  };
+
+  return (
+    <Layout
+      titre="Utilisateurs"
+      actions={
+        <Button onClick={() => setCreation(true)} disabled={liste.statut !== 'ok'}>
+          <Plus aria-hidden className="size-4" />
+          Nouvel utilisateur
+        </Button>
+      }
+    >
+      {liste.statut === 'chargement' && <Chargement libelle="Chargement des utilisateurs…" />}
+      {liste.statut === 'erreur' && <Notification type="erreur">{liste.message}</Notification>}
+      {liste.statut === 'ok' && liste.utilisateurs.length === 0 && (
+        <Vide>Aucun utilisateur pour le moment.</Vide>
+      )}
+      {liste.statut === 'ok' && liste.utilisateurs.length > 0 && (
+        <Table
+          legende="Liste des utilisateurs"
+          colonnes={colonnes}
+          lignes={liste.utilisateurs}
+          cle={(u) => u.id}
+        />
+      )}
+      <Dialog
+        ouvert={creation}
+        onOuvertChange={setCreation}
+        titre="Nouvel utilisateur"
+        description="Renseignez les informations du compte à créer."
+      >
+        <FormulaireCreation
+          calendriers={calendriers}
+          onAnnuler={() => setCreation(false)}
+          onSucces={apres(() => setCreation(false))}
+        />
+      </Dialog>
+      <Dialog
+        ouvert={aModifier !== null}
+        onOuvertChange={(ouvert) => !ouvert && setAModifier(null)}
+        titre={aModifier ? `Modifier ${aModifier.nom}` : 'Modifier l’utilisateur'}
+        description="Modifiez les informations du compte. Un mot de passe vide reste inchangé."
+      >
+        {aModifier && (
+          <FormulaireModification
+            utilisateur={aModifier}
+            calendriers={calendriers}
+            onAnnuler={() => setAModifier(null)}
+            onSucces={apres(() => setAModifier(null))}
+          />
+        )}
+      </Dialog>
+    </Layout>
+  );
+}

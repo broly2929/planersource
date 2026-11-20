@@ -1,0 +1,39 @@
+{
+  "name": "planersource",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "e2e"
+  ],
+  "scripts": {
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.json",
+    "build": "npm run build -w @planersource/engine && npm run build -w @planersource/api && npm run build -w @planersource/web",
+    "start": "node --conditions=planersource-dist packages/api/dist/server.js",
+    "test": "vitest run",
+    "test:e2e": "npm run test -w @planersource/e2e",
+    "licenses": "node scripts/check-licenses.mjs",
+    "create-admin": "npm run create-admin -w @planersource/api --",
+    "demo": "npm run demo -w @planersource/api",
+    "dev:demo": "concurrently -n api,web \"npm run dev-demo -w @planersource/api\" \"npm run dev -w @planersource/web\"",
+    "dev": "concurrently -n api,web \"npm run dev -w @planersource/api\" \"npm run dev -w @planersource/web\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^22.20.5",
+    "concurrently": "^10.0.7",
+    "eslint": "^10.15.0",
+    "prettier": "^3.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  }
+}

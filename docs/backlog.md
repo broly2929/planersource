@@ -1,0 +1,22 @@
+# Backlog
+
+- 2026-11-17 (D-080) : colonnes ajoutables au Gantt de l'Accueil.
+- 2026-11-17 (cadrage du Gantt global, D-080) : dépendances entre projets, aujourd'hui interdites (SPEC §3, `copie.ts`). À cadrer : droits, calcul partiel (prédécesseur dans un projet non coché), cycles entre projets, copie et suppression, affichage dans le Gantt d'un projet et dans l'Accueil.
+- 2026-11-18 (D-114) : jours en surcharge sur l'Accueil.
+- 2026-11-18 (D-118) : saisie des imputations par l'administrateur pour autrui.
+- 2026-11-18 (D-118) : dévalidation d'une feuille de temps validée.
+- 2026-11-18 (4b) : ports des e2e configurables (E2E_API_PORT, E2E_WEB_PORT) pour lancer les e2e pendant un dev:demo.
+- 2026-11-18 (D-121) : confirmation en quittant la Feuille de temps (et le Planning manuel) avec des modifications non enregistrées.
+- 2026-11-19 (D-128) : e2e en parallèle (base par worker).
+- 2026-11-19 (4b, relecture de 4b-corr) : `erreurs.find` par case dans FeuilleTemps.tsx (remplacer par une Map).
+- 2026-11-19 (4b-corr) : colonnes « Assigné » et « Réel cumulé » serrées à 1024 px.
+- 2026-11-19 (4b-corr) : bordure `flag` d'une case invalide peu visible sous l'anneau de focus.
+- 2026-11-19 (4c, relecture des tests) : typecheck du web sans `packages/web/test`.
+- 2026-11-19 (porteur, D-138 (5)) : assistant web de premier démarrage façon outils de gestion de projet existants (page de configuration verrouillée par code à usage unique).
+- 2026-11-19 (porteur) : équipe facultative de l'utilisateur (table d'équipes gérée par l'administrateur, `utilisateur.equipe` nullable).
+- 2026-11-19 (porteur) : exports CSV (plan de charge, feuilles de temps) ; pas d'import de base depuis l'application (backup.sh et restore.sh suffisent).
+- 2026-11-19 (porteur) : Accueil, planning d'une ressource (liste de choix, ses assignations sur tous les projets, Gantt).
+- 2026-11-19 (porteur) : charge vendue. Champ « charge vendue » de l'activité, vu du chef et de l'administrateur seulement ; totaux vendu, assigné, marge, réel ; moteur inchangé (planifie l'assigné). Jalon avec « date client » facultative : deux marqueurs dans le Gantt, écart affiché, drapeau « Engagement client dépassé » si date planifiée > date client ; pas de second planning.
+- 2026-11-19 (porteur) : vue restreinte de la ressource. « Mes tâches » (ses assignations, charge assignée, dates, reste, réel) et sa feuille de temps ; aucun accès aux projets, Gantt et Accueil global ; refus côté API (SPEC §2 à amender) ; la charge vendue ne lui est jamais renvoyée.
+- 2026-11-19 (porteur) : plan de charge par équipe ou global. Ressource × mois (jours affectés, jours ouvrés selon calendrier et capacité, écart coloré), projets dépliables sous la ressource, filtres équipe, année, mois de départ, export CSV.
+- 2026-11-19 (porteur) : ordre du lot 6 : équipe, vue restreinte, charge vendue, plan de charge, planning d'une ressource, exports CSV.

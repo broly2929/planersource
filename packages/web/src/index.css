@@ -1,0 +1,75 @@
+@import 'tailwindcss';
+
+/*
+ * Jetons de la charte (docs/ui.md). Seul endroit où les valeurs concrètes sont définies.
+ * Les composants n'utilisent que les classes dérivées de ces jetons.
+ * Espacement : pas de 4 px (--spacing par défaut de Tailwind 4).
+ */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-accent: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-accent-bg: #dbeafe;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #a16207;
+  --color-warning-bg: #fefce8;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-info: #0369a1;
+  --color-info-bg: #f0f9ff;
+  --color-flag: #be123c;
+  --color-flag-bg: #ffe4e6;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --text-*: initial;
+  --text-petit: 0.75rem;
+  --text-petit--line-height: 1rem;
+  --text-normal: 0.875rem;
+  --text-normal--line-height: 1.25rem;
+  --text-titre: 1.25rem;
+  --text-titre--line-height: 1.75rem;
+
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+
+  --radius-*: initial;
+  --radius-ui: 4px;
+
+  --shadow-*: initial;
+  --shadow-ui: 0 1px 3px 0 rgb(17 24 39 / 0.15);
+  --shadow-repere: -4px 0 6px -2px rgb(0 0 0 / 0.12);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-normal);
+    line-height: var(--text-normal--line-height);
+    font-weight: var(--font-weight-normal);
+    color: var(--color-gray-900);
+    background: var(--color-gray-50);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,71 @@
+// Logique pure de l'écran Validation (lot 4c, D-135 et ses précisions). Aucune dépendance au DOM.
+import type { Statut } from '../imputations/logique';
+
+/** Projet d'une feuille dans GET /api/validations (SPEC §7 API 8). */
+export interface ProjetValidation {
+  projet_id: number;
+  projet_code: string;
+  valide: boolean;
+  peut_valider: boolean;
+}
+
+export interface FeuilleValidation {
+  feuille_id: number;
+  ressource_id: number;
+  ressource_nom: string;
+  statut: Statut;
+  projets: ProjetValidation[];
+}
+
+export const COMMENTAIRE_MAX = 500;
+export const AUCUNE_IMPUTATION = 'Aucune imputation';
+
+export interface BadgeProjet {
+  texte: string;
+  statut: 'success' | 'info' | 'neutre';
+}
+
+/** Badge d'un projet selon sa validation, le droit de l'utilisateur et le statut de la feuille (D-135 (b)). */
+export function badgeProjet(p: ProjetValidation, statutFeuille: Statut): BadgeProjet {
+  if (p.valide) return { texte: `${p.projet_code} · Validé`, statut: 'success' };
+  if (!p.peut_valider) return { texte: `${p.projet_code} · Non autorisé`, statut: 'neutre' };
+  if (statutFeuille === 'soumise') return { texte: `${p.projet_code} · À valider`, statut: 'info' };
+  return { texte: p.projet_code, statut: 'neutre' };
+}
+
+export const badgesProjets = (f: FeuilleValidation): BadgeProjet[] =>
+  f.projets.map((p) => badgeProjet(p, f.statut));
+
+/** « Valider » : feuille soumise avec au moins un projet à valider par l'utilisateur. */
+export const peutValider = (f: FeuilleValidation): boolean =>
+  f.statut === 'soumise' && f.projets.some((p) => p.peut_valider && !p.valide);
+
+/** « Rejeter » : feuille soumise avec au moins un projet sur lequel l'utilisateur peut agir. */
+export const peutRejeter = (f: FeuilleValidation): boolean =>
+  f.statut === 'soumise' && f.projets.some((p) => p.peut_valider);
+
+export const codesValidables = (f: FeuilleValidation): string[] =>
+  f.projets.filter((p) => p.peut_valider && !p.valide).map((p) => p.projet_code);
+
+/** Commentaire de rejet : 1 à 500 caractères après retrait des espaces de bord. */
+export function analyserCommentaire(texte: string): {
+  ok: boolean;
+  valeur: string;
+  longueur: number;
+} {
+  const valeur = texte.trim();
+  const longueur = valeur.length;
+  return { ok: longueur >= 1 && longueur <= COMMENTAIRE_MAX, valeur, longueur };
+}
+
+export function messageRefusValidation(status: number, code?: string): string {
+  if (status === 422 && code === 'statut_invalide') return 'La feuille a changé de statut.';
+  if (status === 403) return 'Vous n’avez pas le droit d’agir sur cette feuille.';
+  if (status === 404) return 'Feuille introuvable.';
+  if (status === 400) return 'Données invalides.';
+  return 'Une erreur est survenue.';
+}
+
+/** La liste est relue après un refus qui prouve qu'elle est périmée. */
+export const relireListe = (status: number, code?: string): boolean =>
+  (status === 422 && code === 'statut_invalide') || status === 404;

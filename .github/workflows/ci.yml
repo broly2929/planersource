@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+    branches: ['**']
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: planer_test
+          POSTGRES_PASSWORD: planer_test
+          POSTGRES_DB: planersource_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U planer_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://planer_test:planer_test@localhost:5432/planersource_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Client PostgreSQL 18 (pg_dump, pg_restore, psql)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run licenses
+      - run: npx playwright install --with-deps chromium
+      - name: Polices
+        run: |
+          fc-match system-ui
+          fc-match sans-serif
+          fc-match "sans-serif:bold"
+      - run: npm run test:e2e
+      - name: Résultats Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: e2e/test-results
+          retention-days: 7
