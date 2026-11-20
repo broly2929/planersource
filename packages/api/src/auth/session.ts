@@ -85,7 +85,7 @@ export async function loadUser(
   const token = readToken(request);
   if (!token) return null;
   const { rows } = await pool.query<UtilisateurRow>(
-    `SELECT u.id, u.nom, u.login, u.email, u.initiales, u.role, u.est_ressource, u.capacite, u.actif
+    `SELECT u.id, u.nom, u.login, u.email, u.initiales, u.role, u.est_ressource, u.capacite, u.actif, u.equipe_id
        FROM session s JOIN utilisateur u ON u.id = s.utilisateur_id
       WHERE s.jeton_hash = $1
         AND s.cree_le > now() - make_interval(hours => $2)

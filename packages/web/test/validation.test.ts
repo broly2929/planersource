@@ -4,6 +4,7 @@ import {
   analyserCommentaire,
   badgeProjet,
   badgesProjets,
+  cibleFocus,
   codesValidables,
   messageRefusValidation,
   peutRejeter,
@@ -182,5 +183,45 @@ describe('VFT erreurs de valider et rejeter (D-135 (8))', () => {
     ] as const) {
       expect(relireListe(s, c), `${s} ${c}`).toBe(false);
     }
+  });
+});
+
+describe('VFT règle de focus après la relecture de la liste (D-145 (2))', () => {
+  const autre = { ...feuille('soumise', [projet('Q4B', false, true)]), feuille_id: 9 };
+
+  it('VFT-11 : bouton d’origine conservé s’il existe encore (valider ou rejeter)', () => {
+    const f = feuille('soumise', [projet('P4B', false, true)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'valider' }, [autre, f])).toEqual({
+      genre: 'bouton',
+      action: 'valider',
+    });
+    expect(cibleFocus({ feuilleId: 7, action: 'rejeter' }, [autre, f])).toEqual({
+      genre: 'bouton',
+      action: 'rejeter',
+    });
+    // « Rejeter » reste présent même si tous les projets de l'utilisateur sont validés.
+    const validee = feuille('soumise', [projet('P4B', true, true)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'rejeter' }, [validee])).toEqual({
+      genre: 'bouton',
+      action: 'rejeter',
+    });
+  });
+
+  it('VFT-12 : sinon « Voir » de la même feuille', () => {
+    const validee = feuille('validee', [projet('P4B', true, true)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'valider' }, [autre, validee])).toEqual({
+      genre: 'voir',
+    });
+    const toutValide = feuille('soumise', [projet('P4B', true, true)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'valider' }, [toutValide])).toEqual({
+      genre: 'voir',
+    });
+    const rejetee = feuille('rejetee', [projet('P4B', false, true)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'rejeter' }, [rejetee])).toEqual({ genre: 'voir' });
+  });
+
+  it('VFT-13 : sinon le tableau (feuille absente de la liste relue, liste vide)', () => {
+    expect(cibleFocus({ feuilleId: 7, action: 'valider' }, [autre])).toEqual({ genre: 'tableau' });
+    expect(cibleFocus({ feuilleId: 7, action: 'rejeter' }, [])).toEqual({ genre: 'tableau' });
   });
 });

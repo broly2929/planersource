@@ -12,6 +12,7 @@
 // (`table input[type="checkbox"][tabindex="0"]`), les autres à −1, touches ← → ↑ ↓ Début Fin.
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { lireSaisies, libelleCase, monde, poserSaisies } from './lot2e-helpers.js';
 import { insererSaisies } from './rex3a-helpers.js';
 import { activiteAvec, calculer, monde3b, sousProjet } from './lot3b-helpers.js';
@@ -438,7 +439,7 @@ test('E2E-217 : case courante remise à la première au changement de mois ; un 
   await expect(cliquee).toHaveAttribute('tabindex', '0');
 });
 
-test('E2E-218 : lecture seule (ressource) : cases désactivées, ni Enregistrer ni Annuler, aucun arrêt dans la grille ; témoin : le chef a un arrêt', async ({
+test('E2E-218-r1 : lecture seule (chef affecté au projet d’un autre chef) : cases désactivées, ni Enregistrer ni Annuler, aucun arrêt dans la grille ; témoin : le chef a un arrêt', async ({
   page,
   request,
 }) => {
@@ -449,7 +450,8 @@ test('E2E-218 : lecture seule (ressource) : cases désactivées, ni Enregistrer 
   await expect(courantes(page)).toHaveCount(1);
 
   await page.context().clearCookies();
-  await connecterAvec(page, m.emailAlice);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E218'));
   await page.goto(URL_MANUEL(m));
   await expect(cases(page)).toHaveCount(124);
   await expect(page.locator('table input[type="checkbox"]:not([disabled])')).toHaveCount(0);

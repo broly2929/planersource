@@ -278,7 +278,7 @@ test('E2E-52 refus : l’administrateur connecté ne se désactive pas', async (
   await expect(await cellule(page, NOM_ADMIN, 'Statut')).toHaveText('Actif');
 });
 
-test('E2E-53 nouveau mot de passe : vide = inchangé, saisi = nouveau mot de passe', async ({
+test('E2E-53-r1 nouveau mot de passe : vide = inchangé, saisi = nouveau mot de passe', async ({
   page,
   browser,
 }) => {
@@ -295,8 +295,10 @@ test('E2E-53 nouveau mot de passe : vide = inchangé, saisi = nouveau mot de pas
     await p.getByLabel('Mot de passe').fill(motDePasse);
     await p.getByRole('button', { name: 'Se connecter' }).click();
     const refus = p.getByRole('alert');
+    // Révision 6b (D-031, D-148 (5)) : la ressource n'a plus « Accueil » ; « Mes tâches » prouve la connexion.
     await refus
       .or(p.getByRole('link', { name: 'Accueil', exact: true }))
+      .or(p.getByRole('link', { name: 'Mes tâches', exact: true }))
       .first()
       .waitFor();
     const ok = !(await refus.isVisible());

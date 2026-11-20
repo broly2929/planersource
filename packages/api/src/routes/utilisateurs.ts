@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { estReference } from '../db/erreurs.js';
+import { estReference, nomContrainte } from '../db/erreurs.js';
 import { hashPassword } from '../auth/password.js';
 import { emailSchema, initialesSchema, loginSchema, motDePasseSchema } from '../auth/schemas.js';
 import { toPublicUser, USER_COLUMNS, type UtilisateurRow } from '../auth/user.js';
@@ -21,6 +21,7 @@ const createBody = z.object({
   capacite: z.number().positive().default(1),
   actif: z.boolean().default(true),
   calendrier_id: idCorps.optional(),
+  equipe_id: idCorps.nullable().optional(),
 });
 
 const patchBody = z
@@ -35,6 +36,7 @@ const patchBody = z
     capacite: z.number().positive(),
     actif: z.boolean(),
     calendrier_id: idCorps,
+    equipe_id: idCorps.nullable(),
   })
   .partial();
 
@@ -44,6 +46,10 @@ async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promi
 }
 
 const isDuplicate = (err: unknown) => (err as { code?: string }).code === '23505';
+
+/** 422 distingué par la contrainte violée : équipe (D-147 (4)), sinon calendrier. */
+const messageReference = (err: unknown) =>
+  nomContrainte(err) === 'utilisateur_equipe_id_fkey' ? 'Équipe inconnue' : 'Calendrier inconnu';
 
 /** 409 distingué par la contrainte violée (D-077 8). */
 const messageDoublon = (err: unknown) =>
@@ -73,8 +79,8 @@ export function utilisateursRoutes(
     if (!login) return reply.code(400).send({ erreur: 'Renseignez un identifiant ou un email' });
     try {
       const { rows } = await pool.query<UtilisateurRow>(
-        `INSERT INTO utilisateur (nom, login, email, initiales, mot_de_passe_hash, role, est_ressource, capacite, actif, calendrier_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING ${USER_COLUMNS}`,
+        `INSERT INTO utilisateur (nom, login, email, initiales, mot_de_passe_hash, role, est_ressource, capacite, actif, calendrier_id, equipe_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING ${USER_COLUMNS}`,
         [
           d.nom,
           login,
@@ -86,12 +92,13 @@ export function utilisateursRoutes(
           d.capacite,
           d.actif,
           d.calendrier_id ?? null,
+          d.equipe_id ?? null,
         ],
       );
       return reply.code(201).send(toPublicUser(rows[0]!));
     } catch (err) {
       if (isDuplicate(err)) return reply.code(409).send({ erreur: messageDoublon(err) });
-      if (estReference(err)) return reply.code(422).send({ erreur: 'Calendrier inconnu' });
+      if (estReference(err)) return reply.code(422).send({ erreur: messageReference(err) });
       throw err;
     }
   });
@@ -167,7 +174,7 @@ export function utilisateursRoutes(
     } catch (err) {
       await client.query('ROLLBACK').catch(() => undefined);
       if (isDuplicate(err)) return reply.code(409).send({ erreur: messageDoublon(err) });
-      if (estReference(err)) return reply.code(422).send({ erreur: 'Calendrier inconnu' });
+      if (estReference(err)) return reply.code(422).send({ erreur: messageReference(err) });
       throw err;
     } finally {
       client.release();

@@ -135,3 +135,4 @@ Définis une seule fois dans `packages/web/src/index.css` (`@theme` Tailwind 4) 
 - Valider : `Confirmation` variante primaire. Rejeter : `Dialog` avec `textarea` libellé « Commentaire » (4 lignes, `border-gray-400`) et compteur `text-petit text-gray-600` aligné à droite ; bouton « Rejeter » `danger`, inactif si le commentaire est invalide.
 - Quatre états : `Chargement`, `Vide`, `Notification` erreur, tableau ; succès en `Notification` `succes`.
 - Captures : `e2e/captures/validation-{liste,voir,valider,rejeter}-{1440,1024}.png` (E2E-320).
+- Colonne Projet de `TableauFeuille` (REX-4, D-145 (3)) : `w-28` ; au-delà, code tronqué (`truncate`), `title` = code complet ; aucun défilement horizontal à 1024 px (D-134 (2)).

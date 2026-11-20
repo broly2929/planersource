@@ -87,13 +87,13 @@ async function prouverDetection(ctx: TestCtx, c: Cas): Promise<void> {
   expect(await empreinte(ctx), `témoin ${nomCas(c)} : l'empreinte doit changer`).not.toEqual(avant);
 }
 
-/** Sans session → 401, chef d'un autre projet → 404, ressource affectée → 403. */
+/** Sans session → 401, chef d'un autre projet → 404, ressource affectée → 404 (révision 6b, D-148 (2)). */
 function trio(m: Monde, methode: Methode, adresse: string, c?: Corps): Cas[] {
   const base = { methode, adresse, ...(c ? { corps: c } : {}) };
   return [
     { ...base, qui: undefined, statut: 401 },
     { ...base, qui: m.autreChef, statut: 404 },
-    { ...base, qui: m.alice, statut: 403 },
+    { ...base, qui: m.alice, statut: 404 },
   ];
 }
 
@@ -102,7 +102,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
   const DELAI = 120_000;
 
   it(
-    'REF-1 : routes de T1, toute requête refusée laisse l’empreinte de la base identique',
+    'REF-1-r1 : routes de T1, toute requête refusée laisse l’empreinte de la base identique',
     async () => {
       const m = await creerMonde(ctx);
       const { admin, chef, autreChef, alice } = m;
@@ -355,7 +355,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
           methode: 'PATCH',
           adresse: `/api/projets/${P.id}`,
           corps: { nom: 'X' },
-          statut: 403,
+          statut: 404,
         },
         {
           qui: admin,
@@ -613,7 +613,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
   );
 
   it(
-    'REF-2 : routes de T2, toute requête refusée laisse l’empreinte de la base identique',
+    'REF-2-r1 : routes de T2, toute requête refusée laisse l’empreinte de la base identique',
     async () => {
       const m = await creerMonde(ctx);
       const { chef, alice, admin } = m;

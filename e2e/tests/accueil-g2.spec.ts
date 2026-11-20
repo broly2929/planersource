@@ -4,6 +4,7 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 import pg from 'pg';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, sousProjet } from './lot3b-helpers.js';
 
 const NOM_ADMIN_E2E = 'Admin E2E';
@@ -210,7 +211,7 @@ test('E2E-90 projets non calculés : bandeau, lignes visibles, aucune barre', as
   await expect(zoneCalendrier(page).getByRole('img')).toHaveCount(0);
 });
 
-test('E2E-91 ressource affectée à un sous-projet seulement : il est affiché comme racine, sans bouton', async ({
+test('E2E-91-r1 chef affecté à un sous-projet seulement (lecture seule) : il est affiché comme racine, sans bouton', async ({
   page,
   request,
 }) => {
@@ -221,7 +222,8 @@ test('E2E-91 ressource affectée à un sous-projet seulement : il est affiché c
   const sous = await sousProjet(request, parent.id, 'S91', 'Sous91', admin);
   await api.affectation(sous.id, ressource.id);
 
-  await connecterAvec(page, 'r91@g2.test');
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, sous.id, 'E91'));
   expect(await codesAffiches(page)).toEqual(['S91']);
   await expect(page.getByText('Parent91')).toHaveCount(0);
   // Révision G3 (D-031) : « Déplier » arrive en G3 ; « Calculer » reste absent (ressource, et G4).

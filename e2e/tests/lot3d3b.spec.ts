@@ -10,6 +10,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { clore } from './lot2e-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b, sousProjet } from './lot3b-helpers.js';
 import { bandeauNonCalcule, remettreAdminSeul } from './lot3c-helpers.js';
@@ -336,12 +337,13 @@ test('E2E-149 : le dialogue s’ouvre aussi sur un parent et sur une activité c
   await expect(dialogue).toHaveCount(0);
 });
 
-test('E2E-150 : sans droit d’écriture, la barre est active et annoncée mais aucun dialogue ne s’ouvre', async ({
+test('E2E-150-r1 : sans droit d’écriture, la barre est active et annoncée mais aucun dialogue ne s’ouvre', async ({
   page,
   request,
 }) => {
   const m = await mondeClavier(request, 'E2E150');
-  await ouvrirGantt(page, m, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await ouvrirGantt(page, m, await chefLecteur(request, [m.projet.id, m.s.id], 'E150'));
 
   await tabulerJusqua(page);
   await appuyer(page, 'ArrowDown');

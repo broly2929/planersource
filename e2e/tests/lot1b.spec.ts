@@ -43,7 +43,7 @@ test('E2E-12 : l’administrateur crée un modèle, le voit dans « Modèles » 
   await expect(page.getByRole('row', { name: /1 Étude E2E12/ })).toBeVisible();
 });
 
-test('E2E-13 : un chef voit le modèle et son planning sans bouton d’écriture ; une ressource n’a pas le lien « Modèles »', async ({
+test('E2E-13-r1 : un chef voit le modèle et son planning sans bouton d’écriture ; une ressource n’a ni le lien « Projets » ni le lien « Modèles »', async ({
   page,
   request,
   browser,
@@ -69,7 +69,8 @@ test('E2E-13 : un chef voit le modèle et son planning sans bouton d’écriture
   const contexte = await browser.newContext();
   const pageRessource = await contexte.newPage();
   await connecterAvec(pageRessource, 'alice-e2e13@example.test');
-  await expect(pageRessource.getByRole('link', { name: 'Projets' })).toBeVisible();
+  // Révision 6b (D-031, D-148 (5)) : menu de la ressource sans « Projets ».
+  await expect(pageRessource.getByRole('link', { name: 'Projets' })).toHaveCount(0);
   await expect(pageRessource.getByRole('link', { name: 'Modèles' })).toHaveCount(0);
   await contexte.close();
 });

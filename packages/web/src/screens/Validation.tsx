@@ -30,12 +30,14 @@ import {
   analyserCommentaire,
   AUCUNE_IMPUTATION,
   badgesProjets,
+  cibleFocus,
   codesValidables,
   COMMENTAIRE_MAX,
   messageRefusValidation,
   peutRejeter,
   peutValider,
   relireListe,
+  type ActionOrigine,
   type FeuilleValidation,
 } from '../validation/logique';
 
@@ -73,11 +75,20 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
   const [voir, setVoir] = useState<FeuilleValidation | null>(null);
   const [valider, setValider] = useState<FeuilleValidation | null>(null);
   const [rejeter, setRejeter] = useState<FeuilleValidation | null>(null);
+  // Refus 422 ou 404 (D-145 (2)) : message au-dessus du tableau, dialogue fermé.
+  const [alerteRefus, setAlerteRefus] = useState<string | null>(null);
+  const tableau = useRef<HTMLTableElement | null>(null);
+  // Dernière action d'écriture, et focus à rendre une fois la liste relue (D-145 (2)).
+  const derniere = useRef<{ feuilleId: number; action: ActionOrigine } | null>(null);
+  const [aFocaliser, setAFocaliser] = useState<{ feuilleId: number; action: ActionOrigine } | null>(
+    null,
+  );
 
   // Radix ne rend pas le focus sans `Dialog.Trigger` : le bouton d'origine est mémorisé et refocalisé à la fermeture.
   const origine = useRef<HTMLElement | null>(null);
   const ouvrir = (ouvrirDialogue: () => void) => (e: MouseEvent<HTMLElement>) => {
     origine.current = e.currentTarget;
+    setAlerteRefus(null);
     ouvrirDialogue();
   };
   const fermer = (fermerDialogue: () => void) => () => {
@@ -85,39 +96,72 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
     setTimeout(() => origine.current?.focus(), 0);
   };
 
-  const recharger = useCallback(async () => {
-    try {
-      const r = await api<{ feuilles: FeuilleValidation[] }>(`/api/validations?semaine=${semaine}`);
-      setFeuilles(r.feuilles);
-      setErreurChargement(false);
-    } catch {
-      setErreurChargement(true);
-    }
-  }, [semaine]);
+  /** Relit la liste ; `rendreFocus` : une fois relue, le focus est rendu selon `cibleFocus`. */
+  const recharger = useCallback(
+    async (rendreFocus?: { feuilleId: number; action: ActionOrigine } | null) => {
+      try {
+        const r = await api<{ feuilles: FeuilleValidation[] }>(
+          `/api/validations?semaine=${semaine}`,
+        );
+        setFeuilles(r.feuilles);
+        if (rendreFocus) setAFocaliser(rendreFocus);
+        setErreurChargement(false);
+      } catch {
+        setErreurChargement(true);
+      }
+    },
+    [semaine],
+  );
 
   useEffect(() => {
     setFeuilles(null);
     setErreurChargement(false);
     setRetour(null);
+    setAlerteRefus(null);
     void recharger();
   }, [recharger]);
 
+  useEffect(() => {
+    if (!aFocaliser || !feuilles) return;
+    const cible = cibleFocus(aFocaliser, feuilles);
+    const f = feuilles.find((x) => x.feuille_id === aFocaliser.feuilleId);
+    if (cible.genre === 'tableau' || !f) {
+      tableau.current?.focus();
+    } else {
+      const verbe =
+        cible.genre === 'voir' ? 'Voir' : cible.action === 'valider' ? 'Valider' : 'Rejeter';
+      const nom = `${verbe} la feuille de ${f.ressource_nom}`;
+      [...(tableau.current?.querySelectorAll('button') ?? [])]
+        .find((b) => b.getAttribute('aria-label') === nom)
+        ?.focus();
+    }
+    setAFocaliser(null);
+  }, [aFocaliser, feuilles]);
+
   /** Appel d'écriture : relit la liste si le refus prouve qu'elle est périmée (D-135 (8)). */
-  const ecrire =
-    (f: FeuilleValidation, verbe: 'valider' | 'rejeter', corps?: object) => async () => {
-      try {
-        await api(`/api/feuilles/${f.feuille_id}/${verbe}`, { method: 'POST', body: corps ?? {} });
-      } catch (err) {
-        if (err instanceof ApiError && relireListe(err.status, err.code)) void recharger();
-        throw err;
+  const ecrire = (f: FeuilleValidation, verbe: ActionOrigine, corps?: object) => async () => {
+    const action = { feuilleId: f.feuille_id, action: verbe };
+    derniere.current = action;
+    try {
+      await api(`/api/feuilles/${f.feuille_id}/${verbe}`, { method: 'POST', body: corps ?? {} });
+    } catch (err) {
+      if (err instanceof ApiError && relireListe(err.status, err.code)) {
+        // Liste périmée : dialogue fermé, message au-dessus du tableau (D-145 (2)).
+        setValider(null);
+        setRejeter(null);
+        setRetour(null);
+        setAlerteRefus(messageDe(err));
+        void recharger(action);
       }
-    };
+      throw err;
+    }
+  };
 
   const succes = (texte: string) => {
     setValider(null);
     setRejeter(null);
     setRetour(texte);
-    void recharger();
+    void recharger(derniere.current);
   };
 
   return (
@@ -131,6 +175,7 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
       </div>
 
       {retour && <Notification type="succes">{retour}</Notification>}
+      {alerteRefus && <Notification type="erreur">{alerteRefus}</Notification>}
 
       {erreurChargement ? (
         <Notification type="erreur">Impossible de charger les feuilles de temps.</Notification>
@@ -143,6 +188,7 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
           legende="Feuilles de temps à valider"
           lignes={feuilles}
           cle={(f) => f.feuille_id}
+          tableRef={tableau}
           colonnes={[
             { titre: 'Ressource', cellule: (f) => f.ressource_nom },
             {

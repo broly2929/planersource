@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useTestApp } from './helpers.js';
-import { appel, creerActeur } from './lot1-helpers.js';
+import { affecter, appel, creerActeur } from './lot1-helpers.js';
 import { creerActivite, creerAssignation, url } from './lot1-t2-helpers.js';
 import { creerMonde, empreinte, tache } from './lot2a-helpers.js';
 import {
@@ -157,7 +157,7 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     await putRefuse(m.admin, 999999, JANV, corps, 404, 'PUT activité inconnue');
   });
 
-  it('SAI-7 : droits. GET : administrateur, chef et ressource affectée 200 ; chef d’un autre projet et ressource non affectée 404. PUT : ressource affectée 403, non affectée 404, chef d’un autre projet 404 ; base inchangée', async () => {
+  it('SAI-7-r1 : droits. GET : administrateur et chef 200 ; ressource affectée, chef d’un autre projet et ressource non affectée 404. PUT : ressource affectée 404, non affectée 404, chef d’un autre projet 404 ; base inchangée', async () => {
     const m = await creerMonde(ctx);
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     const { activite, assignation } = await activiteMan(ctx, m.chef, m.projet.id, m.alice.id, 1);
@@ -166,20 +166,21 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     for (const [nom, qui] of [
       ['administrateur', m.admin],
       ['chef', m.chef],
-      ['ressource affectée', m.alice],
     ] as const) {
       const res = await lireSaisies(ctx, qui, activite.id, JANV);
       expect(res.statusCode, `GET ${nom}`).toBe(200);
       expect(res.json(), `GET ${nom}`).toEqual({ mois: JANV, saisies: [matin(a, J05)] });
     }
+    // Révision 6b (D-031, D-148 (2)) : la ressource affectée ne lit plus les saisies → 404.
     for (const [nom, qui] of [
+      ['ressource affectée', m.alice],
       ['chef d’un autre projet', m.autreChef],
       ['ressource non affectée', carole],
     ] as const) {
       expect((await lireSaisies(ctx, qui, activite.id, JANV)).statusCode, `GET ${nom}`).toBe(404);
     }
     const corps = { saisies: [matin(a, J06)] };
-    await putRefuse(m.alice, activite.id, JANV, corps, 403, 'PUT ressource affectée');
+    await putRefuse(m.alice, activite.id, JANV, corps, 404, 'PUT ressource affectée');
     await putRefuse(carole, activite.id, JANV, corps, 404, 'PUT ressource non affectée');
     await putRefuse(m.autreChef, activite.id, JANV, corps, 404, 'PUT chef d’un autre projet');
     // témoins : l'administrateur et le chef écrivent
@@ -296,7 +297,7 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     expect(await saisiesEnBase(ctx)).toEqual([matin(deux.assignation.id, J06)]);
   });
 
-  it('SAI-10 : ordre des refus 401, 404, 403, 400, 422 ; base inchangée', async () => {
+  it('SAI-10-r1 : ordre des refus 401, 404, 403, 400, 422 ; ressource affectée 404 ; base inchangée', async () => {
     const m = await creerMonde(ctx);
     const man = await activiteMan(ctx, m.chef, m.projet.id, m.alice.id, 1);
     const asap = await tache(ctx, m.chef, m.projet.id, m.alice.id, 1);
@@ -305,8 +306,13 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     await putRefuse(undefined, man.activite.id, '2027-13', invalide, 401, '401 avant 404 et 400');
     await putRefuse(m.chef, 999999, '2027-13', invalide, 404, '404 avant 400');
     await putRefuse(m.autreChef, man.activite.id, '2027-13', invalide, 404, '404 avant 403 et 400');
-    await putRefuse(m.alice, man.activite.id, '2027-13', invalide, 403, '403 avant 400');
-    await putRefuse(m.alice, asap.activite.id, JANV, valideAsap, 403, '403 avant 422');
+    // Révision 6b (D-031, D-148 (2), (9)) : la ressource affectée reçoit 404 ; l'ordre 403 est vérifié
+    // avec un chef de projet affecté au projet d'un autre chef (lecture seule).
+    await putRefuse(m.alice, man.activite.id, '2027-13', invalide, 404, 'ressource affectée : 404');
+    const lecteur = await creerActeur(ctx, 'lecteur@example.test', 'chef_de_projet', true);
+    await affecter(ctx, m.projet.id, lecteur.id);
+    await putRefuse(lecteur, man.activite.id, '2027-13', invalide, 403, '403 avant 400');
+    await putRefuse(lecteur, asap.activite.id, JANV, valideAsap, 403, '403 avant 422');
     await putRefuse(m.chef, asap.activite.id, JANV, invalide, 400, '400 corps avant 422');
     await putRefuse(m.chef, asap.activite.id, '2027-13', valideAsap, 400, '400 mois avant 422');
     await putRefuse(m.chef, asap.activite.id, JANV, valideAsap, 422, '422 en dernier');

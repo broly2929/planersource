@@ -161,7 +161,7 @@ describe('Activités (lot 1, T2)', () => {
     expect(liste(await api.get(url.activites(m.projet.id)))).toHaveLength(1);
   });
 
-  it('ACT-12 : chef de projet écrit sur ses projets ; projet d’un autre → 404 ; ressource affectée → 403', async () => {
+  it('ACT-12-r1 : chef de projet écrit sur ses projets ; projet d’un autre → 404 ; ressource affectée → 404', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.admin, m.projet.id);
     const parChef = await appel(ctx, m.chef).post(url.activites(m.projet.id), { nom: 'Chef' });
@@ -177,12 +177,12 @@ describe('Activités (lot 1, T2)', () => {
     expect(liste(await appel(ctx, m.admin).get(url.activites(m.projet.id)))).toHaveLength(2);
   });
 
-  it('ACT-13 : la ressource lit les activités d’un projet où elle est affectée', async () => {
+  it('ACT-13-r1 : la ressource affectée ne lit plus les activités du projet (404)', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.chef, m.projet.id);
-    const lecture = await appel(ctx, m.alice).get(url.activites(m.projet.id));
-    expect(lecture.statusCode).toBe(200);
-    expect(liste(lecture).map((x) => x.id)).toEqual([a.id]);
+    expect(a.id).toBeGreaterThan(0);
+    // Révision 6b (D-031, D-148 (2)) : la ressource affectée ne voit plus le projet → 404.
+    expect((await appel(ctx, m.alice).get(url.activites(m.projet.id))).statusCode).toBe(404);
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     expect((await appel(ctx, carole).get(url.activites(m.projet.id))).statusCode).toBe(404);
   });

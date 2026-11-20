@@ -294,7 +294,7 @@ describe('Jours non ouvrés : GET /api/activites/:id/jours-non-ouvres (REX-3a, D
     expect(resVide.json()).toEqual({ mois: JANV, jours_non_ouvres: [] });
   });
 
-  it('SAI-24 : droits et refus comme GET …/saisies : administrateur, chef et ressource affectée 200 ; sans session 401 ; activité inconnue, chef d’un autre projet, ressource non affectée 404 ; mois absent ou invalide 400 ; la route n’écrit rien', async () => {
+  it('SAI-24-r1 : droits et refus comme GET …/saisies : administrateur et chef 200 ; sans session 401 ; activité inconnue, ressource affectée, chef d’un autre projet, ressource non affectée 404 ; mois absent ou invalide 400 ; la route n’écrit rien', async () => {
     const m = await creerMonde(ctx);
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     const { activite } = await activiteMan(ctx, m.chef, m.projet.id, m.alice.id, 1);
@@ -302,14 +302,15 @@ describe('Jours non ouvrés : GET /api/activites/:id/jours-non-ouvres (REX-3a, D
     for (const [nom, qui] of [
       ['administrateur', m.admin],
       ['chef', m.chef],
-      ['ressource affectée', m.alice],
     ] as const) {
       const res = await appel(ctx, qui).get(url(activite.id, JANV));
       expect(res.statusCode, nom).toBe(200);
     }
     expect((await appel(ctx).get(url(activite.id, JANV))).statusCode, 'sans session').toBe(401);
     expect((await appel(ctx, m.admin).get(url(999999, JANV))).statusCode, 'inconnue').toBe(404);
+    // Révision 6b (D-031, D-148 (2)) : la ressource affectée reçoit 404.
     for (const [nom, qui] of [
+      ['ressource affectée', m.alice],
       ['chef d’un autre projet', m.autreChef],
       ['ressource non affectée', carole],
     ] as const) {

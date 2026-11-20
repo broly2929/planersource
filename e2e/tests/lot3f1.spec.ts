@@ -20,6 +20,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, monde3b, sousProjet } from './lot3b-helpers.js';
 import {
   allerA,
@@ -210,7 +211,7 @@ async function etatBase(request: APIRequestContext, projetId: number) {
   return g.elements.map((e) => [e.id, e.parent_id, e.rang]).sort((a, b) => a[0]! - b[0]!);
 }
 
-test('E2E-181 : poignées sur les activités et les jalons (tous zooms), aucune pour un sous-projet, une ressource ni un modèle', async ({
+test('E2E-181-r1 : poignées sur les activités et les jalons (tous zooms), aucune pour un sous-projet, un chef en lecture seule ni un modèle', async ({
   page,
   request,
 }) => {
@@ -231,9 +232,10 @@ test('E2E-181 : poignées sur les activités et les jalons (tous zooms), aucune 
     await expect(poignees(page), zoom).toHaveCount(7);
   }
 
-  // Ressource : peut_ecrire faux ; témoin positif : la ligne de Q est affichée.
+  // Chef lecteur : peut_ecrire faux ; témoin positif : la ligne de Q est affichée.
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E181'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.q.id)).toHaveAttribute('aria-label', BARRE_Q);
   await expect(ligneDe(page, 'Tâche Q')).toHaveCount(1);
@@ -592,7 +594,7 @@ const dialogueDeplacer = (page: Page, nom: string) =>
 const optionsDe = (d: Locator) =>
   d.getByLabel('Activité parente').locator('option').allTextContents();
 
-test('E2E-189 : dialogue « Déplacer » de l’onglet Planning : liste, bouton inactif, POST de corps exact, effet dans le Gantt', async ({
+test('E2E-189-r1 : dialogue « Déplacer » de l’onglet Planning : liste, bouton inactif, POST de corps exact, effet dans le Gantt', async ({
   page,
   request,
 }) => {
@@ -673,9 +675,10 @@ test('E2E-189 : dialogue « Déplacer » de l’onglet Planning : liste, bouton 
       SOUS_PROJET,
     ]);
 
-  // Ressource : aucun bouton « Déplacer » (témoin positif : sa ligne est affichée).
+  // Chef lecteur : aucun bouton « Déplacer » (témoin positif : la ligne est affichée).
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E189'));
   await page.goto(`/projets/${m.projet.id}?onglet=planning`);
   await expect(page.getByRole('row', { name: /Tâche Q/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Déplacer / })).toHaveCount(0);

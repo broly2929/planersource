@@ -30,6 +30,7 @@ import {
   VIDE_SEMAINE,
   adresseValidation,
   alerte,
+  attendreAlerteAuDessus,
   boutonDe,
   compter,
   etatFeuille,
@@ -260,7 +261,7 @@ test('E2E-305 : « Aucune imputation » : listée pour l’administrateur, absen
   await expect(ligneValidation(page, 'Alice 4B')).toHaveCount(0);
 });
 
-test('E2E-319 : ressource sans rôle chef ni administrateur : accès réservé, aucun appel à /api/validations', async ({
+test('E2E-319-r1 : ressource sans rôle chef ni administrateur : /validation redirige vers /mes-taches, aucun appel à /api/validations', async ({
   page,
   request,
 }) => {
@@ -268,9 +269,8 @@ test('E2E-319 : ressource sans rôle chef ni administrateur : accès réservé, 
   await connecterAvec(page, EMAIL_ALICE);
   const n = compter(page);
   await page.goto('/validation');
-  await expect(
-    page.getByText('Accès réservé aux chefs de projet et aux administrateurs.', { exact: true }),
-  ).toBeVisible();
+  // Révision 6b (D-031, D-148 (5)) : redirection au lieu du message « Accès réservé… ».
+  await expect(page).toHaveURL('/mes-taches');
   await expect(tableauValidation(page)).toHaveCount(0);
   expect(n.lectures).toBe(0);
 });
@@ -455,7 +455,7 @@ test('E2E-311 : « Rejeter » : commentaire obligatoire, compteur, rejet, valida
   });
 });
 
-test('E2E-312 : valider, 422 statut_invalide : message, liste relue, base inchangée', async ({
+test('E2E-312-r1 : valider, 422 statut_invalide : dialogue fermé, alerte au-dessus du tableau, liste relue, base inchangée, focus', async ({
   page,
   request,
   playwright,
@@ -469,8 +469,9 @@ test('E2E-312 : valider, 422 statut_invalide : message, liste relue, base inchan
   await boutonDe(ligneValidation(page, 'Alice 4B'), VALIDER).click();
   const lecturesAvant = n.lectures;
   await boutonDe(page.getByRole('dialog'), 'Valider').click();
-  await expect(alerte(page, 'La feuille a changé de statut.')).toBeVisible();
+  await attendreAlerteAuDessus(page, 'La feuille a changé de statut.');
   await expect.poll(() => n.lectures).toBeGreaterThan(lecturesAvant);
+  await expect(boutonDe(ligneValidation(page, 'Alice 4B'), VALIDER)).toBeFocused();
   await expect(statutOk(page, 'Feuille validée.')).toHaveCount(0);
   expect(await etatFeuille(id)).toEqual({ statut: 'soumise', commentaire: null, validations: [] });
 });
@@ -488,7 +489,7 @@ test('E2E-313 : valider, 403 : message, base inchangée', async ({ page, request
   expect(await etatFeuille(id)).toEqual({ statut: 'soumise', commentaire: null, validations: [] });
 });
 
-test('E2E-314 : rejeter, 404 : message, liste relue, base inchangée', async ({
+test('E2E-314-r1 : rejeter, 404 : dialogue fermé, alerte au-dessus du tableau, liste relue, base inchangée, focus', async ({
   page,
   request,
   playwright,
@@ -503,8 +504,9 @@ test('E2E-314 : rejeter, 404 : message, liste relue, base inchangée', async ({
   await page.getByRole('dialog').getByLabel('Commentaire').fill('Écart');
   const lecturesAvant = n.lectures;
   await boutonDe(page.getByRole('dialog'), 'Rejeter').click();
-  await expect(alerte(page, 'Feuille introuvable.')).toBeVisible();
+  await attendreAlerteAuDessus(page, 'Feuille introuvable.');
   await expect.poll(() => n.lectures).toBeGreaterThan(lecturesAvant);
+  await expect(boutonDe(ligneValidation(page, 'Alice 4B'), REJETER)).toBeFocused();
   await expect(statutOk(page, 'Feuille rejetée.')).toHaveCount(0);
   expect(await etatFeuille(id)).toEqual({ statut: 'soumise', commentaire: null, validations: [] });
 });

@@ -18,6 +18,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b, sousProjet } from './lot3b-helpers.js';
 import {
   allerA,
@@ -292,7 +293,7 @@ test('E2E-194-r1 : menu au clic droit sur une ligne d’activité ou de jalon (t
   expect(await etatBase(request, m.projet.id)).toBeTruthy();
 });
 
-test('E2E-195 : aucun menu pour une ressource, un modèle ni l’Accueil ; témoin positif : le chef l’a', async ({
+test('E2E-195-r1 : aucun menu pour un chef en lecture seule, un modèle ni l’Accueil ; témoin positif : le chef l’a', async ({
   page,
   request,
 }) => {
@@ -306,9 +307,10 @@ test('E2E-195 : aucun menu pour une ressource, un modèle ni l’Accueil ; témo
   await expect(menu(page)).toBeVisible();
   await page.keyboard.press('Escape');
 
-  // Ressource : peut_ecrire faux ; témoin : ligne et barre de Q affichées.
+  // Chef lecteur : peut_ecrire faux ; témoin : ligne et barre de Q affichées.
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E195'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.q.id)).toHaveAttribute('aria-label', BARRE_Q);
   await expect(ligneDe(page, 'Tâche Q')).toHaveCount(1);
@@ -359,7 +361,7 @@ test('E2E-196 : entrées du menu dans l’ordre selon la ligne : activité (3), 
   }
 });
 
-test('E2E-197 : Maj+F10 ou touche Menu sur la barre active ouvre le menu sur cette barre ; rien sans barre active ni pour une ressource', async ({
+test('E2E-197-r1 : Maj+F10 ou touche Menu sur la barre active ouvre le menu sur cette barre ; rien sans barre active ni pour un chef en lecture seule', async ({
   page,
   request,
 }) => {
@@ -394,9 +396,10 @@ test('E2E-197 : Maj+F10 ou touche Menu sur la barre active ouvre le menu sur cet
   await page.keyboard.press('Escape');
   await expect(menu(page)).toHaveCount(0);
 
-  // Ressource : barre active, mais aucun menu.
+  // Chef lecteur : barre active, mais aucun menu.
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E197'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.q.id)).toHaveAttribute('aria-label', BARRE_Q);
   await barre(page, m.q.id).click();
@@ -702,7 +705,7 @@ test('E2E-203-r1 : refus réels dans le dialogue laissé ouvert (parent assigné
   await expect.poll(() => ordre(page)).toContain('3.1 Fille R');
 });
 
-test('E2E-204 : bouton « Copier » après « Initiales » pour le chef et l’administrateur ; absent pour une ressource et un modèle', async ({
+test('E2E-204-r1 : bouton « Copier » après « Initiales » pour le chef et l’administrateur ; absent pour un chef en lecture seule et un modèle', async ({
   page,
   request,
 }) => {
@@ -732,9 +735,10 @@ test('E2E-204 : bouton « Copier » après « Initiales » pour le chef et l’a
   await expect.poll(() => ordre(page)).toEqual(ORDRE_INITIAL);
   await expect(boutonCopier(page)).toHaveCount(1);
 
-  // Ressource (témoin : barre de Q) : aucun bouton.
+  // Chef lecteur (témoin : barre de Q) : aucun bouton.
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E204'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.q.id)).toHaveAttribute('aria-label', BARRE_Q);
   await expect(boutonCopier(page)).toHaveCount(0);

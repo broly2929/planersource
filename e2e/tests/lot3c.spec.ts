@@ -197,7 +197,7 @@ test('E2E-63 liste : ni modèle, ni projet clos, ni sous-projet ; racine cochée
   }
 });
 
-test('E2E-64 pas de bouton « Calculer » pour une ressource, un chef en lecture seule, ni sur un modèle', async ({
+test('E2E-64-r1 pas de bouton « Calculer » pour un chef en lecture seule, ni sur un modèle', async ({
   page,
   request,
   browser,
@@ -231,7 +231,8 @@ test('E2E-64 pas de bouton « Calculer » pour une ressource, un chef en lecture
   await page.waitForLoadState('networkidle');
   await expect(boutonsCalculer(page)).toHaveCount(0);
 
-  for (const email of ['chef-lecteur-3c@lot3c.test', 'ressource-3c-64@lot3c.test']) {
+  // Révision 6b (D-031, D-148 (9)) : la ressource n'ouvre plus le Gantt ; témoin = chef lecteur seul.
+  for (const email of ['chef-lecteur-3c@lot3c.test']) {
     const autre = await pageConnectee(browser, email);
     await autre.goto(adresseGantt(p.id));
     await expect(bandeauNonCalcule(autre)).toBeVisible();

@@ -64,5 +64,6 @@ export async function connecterAvec(page: Page, email: string): Promise<void> {
   await page.getByLabel('Identifiant').fill(email);
   await page.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  await expect(page).toHaveURL('/');
+  // Révision 6b (D-031, D-148 (5)) : la ressource est redirigée de « / » vers /mes-taches.
+  await expect(page).toHaveURL(/\/(mes-taches)?$/);
 }

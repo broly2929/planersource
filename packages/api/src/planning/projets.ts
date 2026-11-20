@@ -37,6 +37,8 @@ type Ligne = Projet & {
  * invisible pour une ressource, même affectée.
  */
 async function lireVisibles(db: Db, user: Acteur, id?: number): Promise<Ligne[]> {
+  // Rôle ressource : portée de lecture vide (lot 6b, D-148 (2)).
+  if (user.role === 'ressource') return [];
   if (user.role === 'administrateur') {
     const params: unknown[] = id === undefined ? [] : [id];
     const filtre = id === undefined ? '' : ' AND id = $1';

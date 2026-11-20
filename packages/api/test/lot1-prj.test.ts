@@ -95,20 +95,22 @@ describe('Projets (lot 1, T1)', () => {
     await refus(() => api.delete(`/api/projets/${b.id}`));
   });
 
-  it('PRJ-7-r1 : une ressource ne voit que les projets où elle est affectée ; projet non affecté → 404 ; écriture sur un projet affecté → 403', async () => {
+  it('PRJ-7-r2 : une ressource ne voit aucun projet : liste 403, projet affecté ou non → 404 ; création 403', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const alice = await creerActeur(ctx, 'alice@example.test', 'ressource', true);
     const a = await creerProjet(ctx, admin);
     const b = await creerProjet(ctx, admin);
     await affecter(ctx, a.id, alice.id);
     const api = appel(ctx, alice);
-    expect(liste(await api.get('/api/projets')).map((p) => p.id)).toEqual([a.id]);
-    expect((await api.get(`/api/projets/${a.id}`)).statusCode).toBe(200);
     const refus = (statut: number, requete: () => Promise<LightMyRequestResponse>) =>
       refusSansEffet(ctx, TABLES_PRJ, statut, requete);
+    // Révision 6b (D-031, D-148 (2)) : liste 403, projet affecté 404 comme un projet illisible.
+    await refus(403, () => api.get('/api/projets'));
+    expect((await api.get('/api/projets')).json()).toEqual({ erreur: 'Interdit' });
+    await refus(404, () => api.get(`/api/projets/${a.id}`));
     await refus(404, () => api.get(`/api/projets/${b.id}`));
-    await refus(403, () => api.patch(`/api/projets/${a.id}`, { nom: 'X' }));
-    await refus(403, () => api.delete(`/api/projets/${a.id}`));
+    await refus(404, () => api.patch(`/api/projets/${a.id}`, { nom: 'X' }));
+    await refus(404, () => api.delete(`/api/projets/${a.id}`));
     await refus(404, () => api.patch(`/api/projets/${b.id}`, { nom: 'X' }));
     await refus(403, () =>
       api.post('/api/projets', { code: 'RES', nom: 'Interdit', date_debut: '2027-01-04' }),

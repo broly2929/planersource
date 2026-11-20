@@ -15,6 +15,7 @@
 // Colonnes de l'onglet Planning : 0 WBS, 1 Nom, 2 Type, 3 Ressources, 4 Actions.
 import { expect, test, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { libelleCase, lireSaisies, monde } from './lot2e-helpers.js';
 import { activiteAvec, jalonAvec, monde3b, sousProjet } from './lot3b-helpers.js';
 import { calendrierPropre, insererSaisies, journeeEntiere } from './rex3a-helpers.js';
@@ -150,7 +151,7 @@ test('E2E-248 : onglet Planning : « Assigner une ressource à <nom> » à la fi
   await expect(ressources.getByRole('button').last()).toHaveAccessibleName(nomBouton);
 });
 
-test('E2E-249 : onglet Planning : le nom d’une activité et d’un jalon est un bouton qui ouvre le dialogue de modification ; renommage par l’écran, effet dans le Gantt ; lecture seule : texte simple', async ({
+test('E2E-249-r1 : onglet Planning : le nom d’une activité et d’un jalon est un bouton qui ouvre le dialogue de modification ; renommage par l’écran, effet dans le Gantt ; lecture seule : texte simple', async ({
   page,
   request,
 }) => {
@@ -182,7 +183,8 @@ test('E2E-249 : onglet Planning : le nom d’une activité et d’un jalon est u
 
   // Sans droit d'écriture : texte simple.
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E249'));
   await page.goto(fiche(m.projet.id));
   await expect(page.getByRole('cell', { name: 'Alpha 249 bis', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Alpha 249 bis', exact: true })).toHaveCount(0);

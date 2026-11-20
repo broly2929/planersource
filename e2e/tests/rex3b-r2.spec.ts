@@ -14,7 +14,7 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 import { connecterAvec } from './lot1-helpers.js';
 import { activiteAvec, calculer, monde3b, sousProjet } from './lot3b-helpers.js';
 import { notification, ouvrirDialogueCalcul, remettreAdminSeul } from './lot3c-helpers.js';
-import { retarderPatchs, suivreReponsesPatch } from './patch-helpers.js';
+import { appliquerGeste, retarderPatchs } from './patch-helpers.js';
 
 const J06 = '2027-01-06T10:00:00';
 const PX_JOUR = 24;
@@ -119,20 +119,21 @@ test('E2E-279 : un calcul vide la pile : « Annuler » désactivé avec son info
   await expect(boutonAnnuler(page)).toHaveAttribute('title', 'Annuler (Ctrl+Z)');
 });
 
-test('E2E-280-r1 : échec d’une annulation : l’écran est rechargé depuis le serveur et l’alerte est visible', async ({
+test('E2E-280-r2 : échec d’une annulation : l’écran est rechargé depuis le serveur et l’alerte est visible', async ({
   page,
   request,
 }) => {
   const m = await mondeStart(request, 'E2E280');
   const s = suivre(page);
-  const reponses = suivreReponsesPatch(page, m.a.id);
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
-  // Révision E2E-280-r1 (D-031, D-142 (4)) : réponse du PATCH attendue après chaque glisser.
-  await glisser(page, barre(page, m.a.id), PX_JOUR);
-  await expect.poll(() => reponses()).toBe(1);
-  await glisser(page, barre(page, m.a.id), 2 * PX_JOUR);
-  await expect.poll(() => reponses()).toBe(2);
+  // Révision E2E-280-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus
+  // la réponse réseau.
+  for (const dx of [PX_JOUR, 2 * PX_JOUR]) {
+    await appliquerGeste(barre(page, m.a.id), contours(page, m.a.id), () =>
+      glisser(page, barre(page, m.a.id), dx),
+    );
+  }
   await expect.poll(() => s.ecritures.filter((e) => e.methode === 'PATCH').length).toBe(2);
 
   // Le serveur change derrière l'écran : seul un rechargement le montre.

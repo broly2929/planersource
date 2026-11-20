@@ -375,7 +375,7 @@ describe('Historique (lot 1, T3)', () => {
   });
 
   describe('HIS-12 : refus et atomicité', () => {
-    it('HIS-12 : une modification refusée n’écrit aucune entrée', async () => {
+    it('HIS-12-r1 : une modification refusée n’écrit aucune entrée (ressource : 404, D-148 (2))', async () => {
       const m = await creerMonde(ctx);
       const a = await creerActivite(ctx, m.chef, m.projet.id);
       const b = await creerActivite(ctx, m.chef, m.projet.id);
@@ -407,7 +407,7 @@ describe('Historique (lot 1, T3)', () => {
           { nom: 'X' },
           404,
         ],
-        ['projet, ressource', m.alice, 'PATCH', `/api/projets/${m.projet.id}`, { nom: 'X' }, 403],
+        ['projet, ressource', m.alice, 'PATCH', `/api/projets/${m.projet.id}`, { nom: 'X' }, 404],
         [
           'projet, corps invalide',
           m.chef,
@@ -416,7 +416,7 @@ describe('Historique (lot 1, T3)', () => {
           { priorite: 1001 },
           400,
         ],
-        ['activité, ressource', m.alice, 'PATCH', url.activite(a.id), { nom: 'X' }, 403],
+        ['activité, ressource', m.alice, 'PATCH', url.activite(a.id), { nom: 'X' }, 404],
         ['activité, corps invalide', m.chef, 'PATCH', url.activite(a.id), { priorite: -1 }, 400],
         ['activité, règle métier', m.chef, 'PATCH', url.activite(a.id), { duree_validee: 0 }, 422],
         [
@@ -449,7 +449,7 @@ describe('Historique (lot 1, T3)', () => {
           'PATCH',
           url.assignation(s.id),
           { charge_assignee: 3 },
-          403,
+          404,
         ],
         ['déplacement, cycle', m.chef, 'POST', url.deplacer(a.id), { parent_id: a.id }, 422],
         [
@@ -474,7 +474,7 @@ describe('Historique (lot 1, T3)', () => {
           'DELETE',
           url.activite(b.id),
           undefined,
-          403,
+          404,
         ],
       ];
       for (const [nom, qui, methode, adresse, contenu, statut] of refus) {
@@ -575,7 +575,7 @@ describe('Historique (lot 1, T3)', () => {
     });
   });
 
-  it('HIS-13 : lecture de l’historique d’un projet : chef d’un autre projet → 404 ; ressource affectée → 403', async () => {
+  it('HIS-13-r1 : lecture de l’historique d’un projet : chef d’un autre projet → 404 ; ressource affectée → 404', async () => {
     const m = await creerMonde(ctx);
     const chefRessource = await creerActeur(ctx, 'chefres@example.test', 'chef_de_projet', true);
     await ctx.pool.query(
@@ -589,7 +589,7 @@ describe('Historique (lot 1, T3)', () => {
     expect(await statut(m.admin)).toBe(200);
     expect(await statut(m.chef)).toBe(200);
     expect(await statut(m.autreChef)).toBe(404);
-    expect(await statut(m.alice)).toBe(403);
+    expect(await statut(m.alice)).toBe(404); // révision 6b (D-031, D-148 (2))
     expect(await statut(chefRessource)).toBe(403); // chef d'un autre projet, affecté ici : lecture seule
     expect(await statut(nonAffectee)).toBe(404);
     expect(await statut(undefined)).toBe(401);

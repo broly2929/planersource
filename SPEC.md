@@ -12,7 +12,7 @@ Statut : version 0.3, à modifier de façon incrémentale (ne jamais réécrire 
 
 ### Hors périmètre V1
 
-Tickets, RH, environnements, documents, réunions, pools de ressources, capacité variable dans le temps, chemin critique, planning de référence, coûts (prévus en V2), import de données d'un autre logiciel.
+Tickets, RH, environnements, documents, réunions, pools de ressources, capacité variable dans le temps, chemin critique, planning de référence, coûts (prévus en V2), import de données d'un autre logiciel. Une équipe (6a) n'est pas un pool de ressources : elle regroupe des utilisateurs pour l'affichage et les filtres, et n'est jamais affectée ni assignée.
 
 Modes de planification écartés : travail en commun, régulier en jours entiers, en demi-journées, en quarts de journée, récurrent hebdomadaire.
 
@@ -22,7 +22,7 @@ Modes de planification écartés : travail en commun, régulier en jours entiers
 |---|---|
 | Administrateur | Tout, dont utilisateurs, calendriers, paramètres |
 | Chef de projet | Créer et modifier ses projets, activités, jalons, affectations ; lancer le calcul ; valider les imputations de ses projets |
-| Ressource | Lecture des projets où elle est affectée ; saisie de ses imputations |
+| Ressource | Mes tâches, sa feuille de temps, lecture des calendriers ; aucun accès aux projets (6b, D-148) |
 
 Un utilisateur peut être ressource (planifiable) ou non. Authentification par identifiant (`login`, distinct de l'email, REX-2, D-077) et mot de passe (hachage argon2), session par cookie. Le premier administrateur est créé par la commande `npm run create-admin`. La session expire après 12 h.
 
@@ -41,8 +41,9 @@ Un utilisateur peut être ressource (planifiable) ou non. Authentification par i
 - La déconnexion invalide la session.
 - L'email, quand il est renseigné, est unique ; une création sur un email existant est refusée (409 'Email déjà utilisé'), rien n'est créé.
 - Le mot de passe haché n'apparaît dans aucune réponse de l'API ; le jeton de session est stocké haché.
+- Équipes (lot 6a, D-147) : la liste des équipes est lisible par tout utilisateur connecté ; création, renommage et suppression sont réservés à l'administrateur (403 sinon).
 - Les calendriers sont lisibles par tout utilisateur connecté. Un chef de projet ne lit que ses projets (ceux dont il est chef, ou dont l'un des ancêtres a pour chef) ; l'historique d'un projet est réservé à l'administrateur et à son chef de projet.
-- Tout utilisateur, quel que soit son rôle, lit les projets où il est affecté ; en dehors de ses propres projets, un chef de projet y est en lecture seule.
+- Un administrateur ou un chef de projet lit les projets où il est affecté (D-148 : plus le rôle ressource, dont la portée de lecture est vide) ; en dehors de ses propres projets, un chef de projet y est en lecture seule.
 - Tout utilisateur connecté lit l'annuaire : identifiant, nom, rôle, est_ressource et actif de chaque utilisateur, actif ou non. L'annuaire n'expose ni l'email, ni le login, ni les initiales (celles-ci n'y entrent qu'au lot 3d, D-077), ni aucune autre donnée.
 - Chaque projet renvoyé par `GET /api/projets` et `GET /api/projets/:id` porte `peut_ecrire` : vrai si l'utilisateur peut écrire sur ce projet (administrateur, ou chef de projet dans sa portée), faux sinon (lecture seule).
 - `GET /api/projets` et `GET /api/projets/:id` renvoient aussi `debut_planifie` et `fin_planifiee` (null avant tout calcul), en lecture seule : non modifiables (PATCH : 400) et non historisés (REX-2, D-078).
@@ -56,7 +57,8 @@ Un utilisateur peut être ressource (planifiable) ou non. Authentification par i
 
 | Entité | Champs principaux |
 |---|---|
-| Utilisateur | nom, login, email (facultatif), initiales (facultatives), mot de passe haché, rôle, est_ressource, capacité (j/jour, défaut 1), calendrier, actif |
+| Utilisateur | nom, login, email (facultatif), initiales (facultatives), mot de passe haché, rôle, est_ressource, capacité (j/jour, défaut 1), calendrier, équipe (facultative, D-147), actif |
+| Équipe | nom (1 à 100 caractères, unique sans tenir compte de la casse ; D-147) |
 | Calendrier | nom, jours travaillés de la semaine (défaut lun–ven), jours fériés ou chômés (liste de dates) |
 | Projet | nom, code (unique, sans tenir compte de la casse), parent (sous-projet), priorité (défaut 500, plus petit = plus prioritaire), chef de projet, date de début, clos, est_modele (booléen, défaut faux) |
 | Affectation projet | projet, ressource, taux (%), date de début et de fin facultatives |
@@ -89,11 +91,11 @@ Règles de structure :
 - Une charge n'est jamais négative. Tant que la charge réelle vaut 0, modifier la charge assignée recale le reste à faire sur la charge assignée.
 - Les calendriers sont historisés comme les entités de planning. Un déplacement dans le WBS historise l'élément déplacé, pas les rangs décalés de ses frères.
 - Une date validée (début et fin validés d'une activité, date validée d'un jalon) n'est pas postérieure au 31/12/2099 : sinon refus 400, en création comme en modification (lot 2e, D-056).
-- Saisie manuelle (lot 2e, D-056) : une saisie n'est permise que sur une assignation d'une activité feuille ouverte en mode MAN (422 sinon). Un jour chômé ou hors des dates d'affectation est accepté (tout en surcharge au calcul). Une saisie par (assignation, jour, demi-journée). Saisie par l'administrateur et le chef du projet ; lecture par la ressource affectée ; les saisies ne sont pas historisées.
+- Saisie manuelle (lot 2e, D-056) : une saisie n'est permise que sur une assignation d'une activité feuille ouverte en mode MAN (422 sinon). Un jour chômé ou hors des dates d'affectation est accepté (tout en surcharge au calcul). Une saisie par (assignation, jour, demi-journée). Saisie par l'administrateur et le chef du projet ; lecture par les utilisateurs qui lisent le projet (la ressource n'y a plus accès, D-148) ; les saisies ne sont pas historisées.
 - Tant qu'une activité MAN porte des saisies, changer son mode et lui ajouter un enfant sont refusés (422). La clore est permis : ses saisies sont gardées et ignorées par le moteur.
 - Saisie : `GET /api/activites/:id/saisies?mois=AAAA-MM` et `PUT /api/activites/:id/saisies?mois=AAAA-MM` ; le PUT remplace les saisies du mois en une transaction.
 - API de saisie (lot 2e-I, D-058). Table `saisie_manuelle` (id, assignation, jour, demi-journée `matin` ou `apres_midi`, unique par (assignation, jour, demi-journée)), supprimée avec l'assignation. Pas de colonne charge : une saisie vaut 0,5 j.
-- `GET /api/activites/:id/saisies?mois=AAAA-MM` → 200 `{ mois, saisies: [{ assignation_id, jour, demi_journee }] }`, triées par assignation, jour, puis matin avant après-midi. Droits de lecture du projet (administrateur, chef, ressource affectée). Activité non MAN : 200, liste vide.
+- `GET /api/activites/:id/saisies?mois=AAAA-MM` → 200 `{ mois, saisies: [{ assignation_id, jour, demi_journee }] }`, triées par assignation, jour, puis matin avant après-midi. Droits de lecture du projet (administrateur, chef ; plus la ressource affectée, D-148). Activité non MAN : 200, liste vide.
 - `PUT` (même adresse) : corps strict `{ saisies: [{ assignation_id, jour, demi_journee }] }` ; remplace en une transaction toutes les saisies du mois pour les assignations de l'activité ; réponse 200 de même forme que le GET ; rien n'est historisé. Droits d'écriture du projet.
 - Ordre des refus : 401 ; 404 activité inconnue ou illisible ; 403 lecture seule ; 400 mois invalide, corps invalide, jour hors du mois, doublon dans le corps ; 422 activité qui n'est pas une feuille MAN ouverte, assignation d'une autre activité. Un refus n'écrit rien.
 - Tant que l'activité MAN porte des saisies (précise la règle ci-dessus) : PATCH qui change son mode, création d'un enfant sous elle et déplacement d'un élément sous elle sont refusés (422, base inchangée). La clore est permis. Supprimer l'activité ou l'assignation supprime les saisies.
@@ -119,6 +121,26 @@ Règles de structure :
 - Arborescence de l'écran Projets (REX-2, D-079) : le tableau « Liste des projets » est une arborescence, mêmes colonnes (Code, Nom, Chef de projet, Début, Actions si une ligne est modifiable). Racines : projets visibles sans parent ou dont le parent n'est pas visible ; frères triés par code, sans tenir compte de la casse. Tout est replié par défaut ; boutons « Déplier <nom> » / « Replier <nom> » (aria-expanded) par projet, « Tout déplier » / « Tout replier » en tête d'écran. Sous un projet déplié : ses activités, sous-activités et jalons en ordre WBS (lecture seule : Code = numéro WBS, nom indenté en texte, badge « Jalon », Début = début ou date planifiée ou « — », aucun bouton), puis ses sous-projets (lignes de projet complètes, indentées). Éléments chargés par `GET /api/projets/:id/gantt` au premier dépliage, sans nouvelle route. Projet vide : « Aucune activité ni jalon. » ; échec de chargement : « Impossible de charger le contenu du projet. ».
 - Projet parent (REX-2, D-079) : champ « Projet parent » dans « Nouveau projet » et « Modifier le projet » d'un projet ordinaire ; premier choix « Aucun (projet racine) » ; options : projets ordinaires où l'utilisateur écrit, « <code> — <nom> », triés par code, sans le projet ni ses descendants en modification. `parent_id` envoyé à la création seulement si un parent est choisi, à la modification seulement s'il a changé (identifiant ou null). Refus 422 de code `arborescence_invalide` (D-083 (14)) : « Ce projet parent n’est pas possible. », dialogue ouvert, rien de modifié. Hors écran pour les modèles en V1 ; la copie reste un projet racine.
 - Refus de clôture (D-083 (9), tranche C2), dialogue ouvert, rien modifié : `enfants_ouverts` sur un projet : « Ce projet a des sous-projets ou des activités non clos. » ; sur une activité : « Cette activité a des sous-activités non closes. » ; `parent_clos` sur une activité, ou sur un élément créé ou déplacé : « Le projet ou l’activité parente est clos. » ; `parent_clos` sur un projet : « Le projet parent est clos. » ; `arborescence_invalide` : texte actuel inchangé. Le texte d'un 422 dépend seulement du champ `code` ; sans code, « Cette opération enfreint une règle du planning. » (D-083 (14)), dans les dialogues de modification (projet, activité), la création d'activité et de jalon et le déplacement ; à la création d'un projet, un 422 sans code garde « Données invalides : vérifiez le code, le nom, le chef et la date. » (D-083 (15)).
+
+### Équipes (lot 6a, D-147)
+
+- API. `GET /api/equipes` : tout utilisateur connecté, `[{ id, nom }]` trié par nom sans tenir compte de la casse. `POST /api/equipes { nom }` → 201 `{ id, nom }` ; `PATCH /api/equipes/:id { nom }` → 200 ; `DELETE /api/equipes/:id` → 204 ; ces trois routes sont réservées à l'administrateur (403 sinon). Corps strict. Table `equipe` (id, nom de 1 à 100 caractères après retrait des espaces de bord, unique sans tenir compte de la casse), `utilisateur.equipe_id` nullable avec clé étrangère, migration 013 ; non historisée. Une équipe n'est jamais affectée ni assignée ; le moteur est inchangé.
+- Refus : nom vide ou trop long : 400 ; nom déjà utilisé : 409 { erreur: 'Équipe déjà existante' } ; suppression d'une équipe portée par au moins un utilisateur, actif ou non : 409 { erreur: 'Équipe utilisée : suppression refusée' } ; équipe inconnue ou identifiant hors plage : 404 ; ordre : 401, 403, 404, 400, 409 ; un refus n'écrit rien.
+- Utilisateurs. `POST` et `PATCH /api/utilisateurs` acceptent `equipe_id` (identifiant, ou null = aucune). Équipe inexistante : 422 { erreur: 'Équipe inconnue' }, distinguée de 'Calendrier inconnu' par le nom de la contrainte, sans rien écrire. `equipe_id` figure dans les réponses de /api/utilisateurs et de /api/auth/me. L'annuaire est inchangé (son ouverture sera cadrée en 6d).
+- Écran Équipes. Route `/equipes`, entrée « Équipes » de Layout pour l'administrateur seul, après « Calendriers ». Tableau « Liste des équipes » : Nom, Membres (nombre d'utilisateurs, calculé depuis GET /api/utilisateurs), Actions. Formulaire « Nouvelle équipe » : champ Nom, bouton « Créer ». Bouton de ligne « Renommer <nom> » : dialogue, bouton « Enregistrer ». Bouton de ligne « Supprimer <nom> » : Confirmation. Textes : doublon « Cette équipe existe déjà. » ; équipe utilisée « Cette équipe a des membres : retirez-les d'abord. ». Dialogue ou confirmation laissés ouverts, rien de modifié.
+- Écran Utilisateurs. Liste « Équipe » en création et en modification : premier choix « Aucune », équipes triées par nom. Colonne « Équipe » : nom de l'équipe, ou « — ». `equipe_id` envoyé à la création seulement si une équipe est choisie, et en modification seulement s'il a changé (identifiant ou null). Refus 422 « Équipe inconnue » : « Cette équipe n'existe plus. », dialogue ouvert.
+- Le jeu de démonstration est inchangé en 6a (équipes ajoutées en 6d).
+
+### Vue restreinte de la ressource (lot 6b, D-148)
+
+- Seul le rôle `ressource` est restreint. Un administrateur ou un chef de projet qui est aussi ressource garde ses droits.
+- API : pour le rôle ressource, la portée de lecture des projets est vide. Route qui désigne un projet, un élément, une dépendance, une affectation, une assignation ou un historique : 404, comme un projet illisible. Liste ou vue de planning sans identifiant (GET /api/projets, qui alimente aussi le Gantt global de l'Accueil, et GET /api/modeles) : 403 { erreur: 'Interdit' }, après le 401 et avant tout autre contrôle. Saisies manuelles (GET /api/activites/:id/saisies) : 404. Inchangés : /api/auth/*, /api/feuilles (sa feuille de temps), annuaire, calendriers (lecture), GET /api/equipes, /api/mes-taches, GET /api/validations (200, liste vide, D-148 (8)). Un refus n'écrit rien.
+- `GET /api/mes-taches` : tout utilisateur connecté. Contenu : les assignations de l'utilisateur sur des activités ouvertes de projets ordinaires (non modèles) ouverts. Pour chacune : `assignation_id`, `projet` { code, nom }, `activite` { nom, wbs }, `charge_assignee`, `charge_reelle`, `reste_a_faire`, `debut_planifie`, `fin_planifiee` (null avant calcul). Tri : début planifié (null en dernier), puis code du projet sans tenir compte de la casse, puis numéro WBS. Liste vide pour un utilisateur sans assignation. Aucun autre champ ; la charge vendue (6c) n'y figurera jamais.
+- Écran « Mes tâches », route `/mes-taches`. Entrée « Mes tâches » de Layout, en tête, pour tout utilisateur `est_ressource`. Tableau « Mes tâches » : Projet (code, `title` = nom), Activité (nom), Début, Fin (« — » avant calcul), Assigné, Réel, Reste. État vide : « Aucune tâche en cours. » Échec de chargement : « Impossible de charger vos tâches. » Lecture seule.
+- Web, rôle ressource : menu réduit à Mes tâches, Imputations et Calendriers (Accueil, Projets, Modèles et Validation masqués) ; « / » redirige vers /mes-taches ; /projets, /projets/*, /modeles et /validation redirigent vers /mes-taches. Les autres rôles sont inchangés, avec en plus « Mes tâches » s'ils sont `est_ressource`.
+- La charge vendue (6c) ne sera jamais renvoyée au rôle ressource, par aucune route.
+- Mes tâches exclut aussi une assignation dont une activité ancêtre est close, ou dont le projet a un projet ancêtre clos (même principe que `parent_clos`, D-083 ; données incohérentes possibles, D-083 (7)) (D-148 (10)).
+- L'entrée « Mes tâches » est affichée pour tout utilisateur `est_ressource` et pour tout utilisateur de rôle ressource, même non `est_ressource`. Arrivée après connexion : « / » pour l'administrateur et le chef de projet (ressources ou non), /mes-taches pour le rôle ressource (D-148 (11)).
 
 ## 4. Calendrier et capacité
 
@@ -597,9 +619,9 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 5. « Valider » (« Valider la feuille de <ressource> ») : affiché si statut soumise et au moins un projet `peut_valider` non validé ; confirmation (composant existant) « Valider la feuille de <ressource> pour <codes des projets validables> ? » ; succès : `role="status"` « Feuille validée. », liste relue.
 6. « Rejeter » (« Rejeter la feuille de <ressource> ») : affiché si statut soumise et au moins un projet `peut_valider` ; dialogue avec champ « Commentaire » obligatoire (1 à 500 caractères après retrait des espaces de bord, compteur, « Rejeter » désactivé sinon) ; succès : « Feuille rejetée. », liste relue.
 7. Brouillons, feuilles rejetées ou validées : listées, sans « Valider » ni « Rejeter » ; « Voir » toujours présent.
-8. Erreurs de valider ou rejeter : 422 `statut_invalide` « La feuille a changé de statut. » puis liste relue ; 403 « Vous n'avez pas le droit d'agir sur cette feuille. » ; 404 « Feuille introuvable. » puis liste relue ; 400 « Données invalides. » ; autre « Une erreur est survenue. ». Rien n'est écrit en cas d'échec.
+8. Erreurs de valider ou rejeter : 422 `statut_invalide` « La feuille a changé de statut. » puis liste relue ; 403 « Vous n'avez pas le droit d'agir sur cette feuille. » ; 404 « Feuille introuvable. » puis liste relue ; 400 « Données invalides. » ; autre « Une erreur est survenue. ». Rien n'est écrit en cas d'échec. Amendement D-145 (2) : après un succès de Valider ou Rejeter, et après un refus 422 `statut_invalide` ou 404, le dialogue est fermé et la liste relue ; le message du refus 422 ou 404 s'affiche dans une notification d'erreur (`role="alert"`) au-dessus du tableau, effacée à l'action suivante et au changement de semaine ; 403, 400, erreur réseau et 5xx laissent le dialogue ouvert avec le message dans le dialogue. Focus, la liste relue : sur le bouton d'origine s'il existe encore et n'est pas désactivé, sinon sur « Voir la feuille de <ressource> » de la même feuille, sinon sur le tableau « Feuilles de temps à valider » (`tabIndex=-1`).
 9. Parcours IHM : e2e de bout en bout à l'écran (ressource saisit, enregistre, soumet ; chef valide ; ressource voit « Validée » et la lecture seule dans sa Feuille de temps) ; idem rejet (ressource voit « Feuille rejetée : <commentaire> » et peut de nouveau saisir). Parcours complet étendu à la clôture du lot 4.
-10. Précisions (relecture des tests, claude.ai). (a) Apostrophe typographique ’ dans tous les textes de l’écran (« Vous n’avez pas le droit d’agir sur cette feuille. »), comme en 4b. (b) Badge de projet selon le statut de la feuille : validé → « <code> · Validé » (success) ; non validé et non `peut_valider` → « <code> · Non autorisé » (neutre) ; feuille soumise, `peut_valider`, non validé → « <code> · À valider » (info) ; brouillon ou rejetée, `peut_valider`, non validé → « <code> » (neutre, sans suffixe). Signature `badgeProjet(projet, statutFeuille)`, `badgesProjets(feuille)`. (c) Ressource sans rôle chef ni administrateur qui ouvre `/validation` : « Accès réservé aux chefs de projet et aux administrateurs. », aucun appel à /api/validations.
+10. Précisions (relecture des tests, claude.ai). (a) Apostrophe typographique ’ dans tous les textes de l’écran (« Vous n’avez pas le droit d’agir sur cette feuille. »), comme en 4b. (b) Badge de projet selon le statut de la feuille : validé → « <code> · Validé » (success) ; non validé et non `peut_valider` → « <code> · Non autorisé » (neutre) ; feuille soumise, `peut_valider`, non validé → « <code> · À valider » (info) ; brouillon ou rejetée, `peut_valider`, non validé → « <code> » (neutre, sans suffixe). Signature `badgeProjet(projet, statutFeuille)`, `badgesProjets(feuille)`. (c) Ressource sans rôle chef ni administrateur qui ouvre `/validation` : « Accès réservé aux chefs de projet et aux administrateurs. », aucun appel à /api/validations. (Remplacé en 6b par la redirection vers /mes-taches, D-148 (5) ; toujours aucun appel à /api/validations.)
 
 ## 8. Sauvegarde et restauration
 
@@ -633,10 +655,13 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 | 4 | Imputations et validation |
 | 5 | Durcissement avant production (D-137) |
 | 5i | Installation et déploiement : mode production, compte initial, Docker, manuel (D-138) |
+| 6 | Pilotage des ressources (D-147) |
 
 Lot 3 : tranches 3a à 3g (D-065).
 
 Lot 4 : tranches 4a à 4c (D-118).
+
+Lot 6 : sous-lots 6a équipe ; 6b vue restreinte de la ressource ; 6c charge vendue ; 6d plan de charge ; 6e planning d'une ressource sur l'Accueil ; 6f exports CSV (D-147).
 
 ## 10. Questions ouvertes
 

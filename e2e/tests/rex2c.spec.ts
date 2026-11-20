@@ -4,6 +4,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import pg from 'pg';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, jalonAvec, sousProjet } from './lot3b-helpers.js';
 
 const NOM_ADMIN_E2E = 'Admin E2E';
@@ -271,7 +272,7 @@ test('E2E-82 « Modifier le projet » : parent proposé sans le projet ni ses de
   await expect(ligne(page, 'Alpha82')).toBeVisible();
 });
 
-test('E2E-83 chef : « Projet parent » limité à ses projets ; ressource : sous-projet affiché comme racine, lecture seule', async ({
+test('E2E-83-r1 chef : « Projet parent » limité à ses projets ; chef affecté au sous-projet seul : sous-projet affiché comme racine, lecture seule', async ({
   page,
   request,
 }) => {
@@ -294,7 +295,8 @@ test('E2E-83 chef : « Projet parent » limité à ses projets ; ressource : sou
   ]);
 
   await page.context().clearCookies();
-  await connecterAvec(page, 'r-e83@rex2c.test');
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, sous.id, 'E83'));
   await allerA(page, 'Projets');
   await expect(ligne(page, 'Sous-projet S83')).toBeVisible();
   await expect(ligne(page, 'Projet autre83')).toHaveCount(0);

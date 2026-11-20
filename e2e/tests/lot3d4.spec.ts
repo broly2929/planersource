@@ -12,6 +12,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, sousProjet } from './lot3b-helpers.js';
 import {
   allerA,
@@ -168,7 +169,7 @@ async function dialoguePlanning(page: Page, nom: string) {
   return dialogue;
 }
 
-test('E2E-158 : case « Recalcul automatique » visible et décochée pour le chef ; absente pour une ressource, sur un modèle et sur l’Accueil', async ({
+test('E2E-158-r1 : case « Recalcul automatique » visible et décochée pour le chef ; absente pour un chef en lecture seule, sur un modèle et sur l’Accueil', async ({
   page,
   request,
 }) => {
@@ -189,7 +190,8 @@ test('E2E-158 : case « Recalcul automatique » visible et décochée pour le ch
   await expect(caseAuto(page)).toHaveCount(0);
 
   await page.context().clearCookies();
-  await connecterAvec(page, m.emailAlice);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E158'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.a.id)).toBeVisible();
   await expect(caseAuto(page)).toHaveCount(0);

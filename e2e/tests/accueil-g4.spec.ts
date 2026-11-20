@@ -170,7 +170,7 @@ test('E2E-104 chef de projet : seuls ses projets proposés, cochés, et envoyés
   expect(corps.d0).toBe(D0_FIGE);
 });
 
-test('E2E-105 ressource et chef en lecture seule : projet affiché, jamais de bouton « Calculer »', async ({
+test('E2E-105-r1 chef en lecture seule : projet affiché, jamais de bouton « Calculer »', async ({
   page,
   request,
   browser,
@@ -193,7 +193,8 @@ test('E2E-105 ressource et chef en lecture seule : projet affiché, jamais de bo
   await expect(zoneTableau(page).getByText('Projet G4-105')).toBeVisible();
   await expect(boutonCalculer(page)).toBeVisible();
 
-  for (const email of ['lecteur@g4.test', 'ressource@g4.test']) {
+  // Révision 6b (D-031, D-148 (9)) : la ressource n'a plus d'Accueil ; témoin = chef lecteur seul.
+  for (const email of ['lecteur@g4.test']) {
     const autre = await pageConnectee(browser, email);
     await expect(zoneTableau(autre).getByText('Projet G4-105'), email).toBeVisible();
     expect((await lireGantt(autre.request, p.id)).projet.peut_ecrire, email).toBe(false);

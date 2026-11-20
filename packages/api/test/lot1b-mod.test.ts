@@ -142,7 +142,7 @@ describe('Modèles de projet (lot 1b-A)', () => {
     ]);
   });
 
-  it('MOD-9 : une ressource reçoit 403 sur GET /api/modeles et 404 sur la fiche d’un modèle, même affectée ; base inchangée', async () => {
+  it('MOD-9-r1 : une ressource reçoit 403 sur GET /api/modeles et GET /api/projets, 404 sur la fiche d’un modèle, même affectée ; base inchangée', async () => {
     const { alice, modele } = await monde(ctx);
     await affecter(ctx, modele.id, alice.id);
     await refus(ctx, alice, [
@@ -151,7 +151,8 @@ describe('Modèles de projet (lot 1b-A)', () => {
       ['GET', url.planning(modele.id), 404],
       ['POST', url.activites(modele.id), 404, { nom: 'A' }],
     ]);
-    expect(liste(await appel(ctx, alice).get('/api/projets'))).toEqual([]);
+    // Révision 6b (D-031, D-148 (2)) : liste des projets 403 au lieu de [].
+    await refus(ctx, alice, [['GET', '/api/projets', 403]]);
   });
 
   it('MOD-10 : GET /api/modeles sans session → 401', async () => {

@@ -66,6 +66,25 @@ export function messageRefusValidation(status: number, code?: string): string {
   return 'Une erreur est survenue.';
 }
 
+export type ActionOrigine = 'valider' | 'rejeter';
+
+export type CibleFocus =
+  { genre: 'bouton'; action: ActionOrigine } | { genre: 'voir' } | { genre: 'tableau' };
+
+/**
+ * Où rendre le focus une fois la liste relue (D-145 (2)) : le bouton d'origine s'il existe encore, sinon
+ * « Voir » de la même feuille, sinon le tableau.
+ */
+export function cibleFocus(
+  origine: { feuilleId: number; action: ActionOrigine },
+  feuilles: FeuilleValidation[],
+): CibleFocus {
+  const f = feuilles.find((x) => x.feuille_id === origine.feuilleId);
+  if (!f) return { genre: 'tableau' };
+  const present = origine.action === 'valider' ? peutValider(f) : peutRejeter(f);
+  return present ? { genre: 'bouton', action: origine.action } : { genre: 'voir' };
+}
+
 /** La liste est relue après un refus qui prouve qu'elle est périmée. */
 export const relireListe = (status: number, code?: string): boolean =>
   (status === 422 && code === 'statut_invalide') || status === 404;

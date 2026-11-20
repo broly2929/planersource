@@ -11,6 +11,8 @@ export interface Utilisateur {
   capacite: number;
   actif: boolean;
   calendrier_id: number;
+  /** Équipe (lot 6a, D-147), null = aucune. */
+  equipe_id: number | null;
   /** Session ouverte avec le mot de passe d'origine admin / admin (D-138 (2)), session seulement. */
   mot_de_passe_origine?: boolean;
 }

@@ -9,6 +9,7 @@
 // « Modifier l'activité » (l'onglet Planning n'affiche pas les dates validées dans son tableau).
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activite, clore, poserSaisies } from './lot2e-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b } from './lot3b-helpers.js';
 import { dialogueCalcul, lireGantt, remettreAdminSeul } from './lot3c-helpers.js';
@@ -463,7 +464,7 @@ test('E2E-138 : ASAP, MAN, jalon, parent, activité close, START au zoom mois : 
   expect(patchs.length).toBe(1);
 });
 
-test('E2E-139 : ressource sans droit d’écriture : aucun geste, aucune poignée ; témoin positif du chef', async ({
+test('E2E-139-r1 : chef affecté au projet d’un autre chef, sans droit d’écriture : aucun geste, aucune poignée ; témoin positif du chef', async ({
   page,
   request,
 }) => {
@@ -472,7 +473,8 @@ test('E2E-139 : ressource sans droit d’écriture : aucun geste, aucune poigné
   await calculer(request, [m.projet.id]);
   expect((await lireGantt(request, m.projet.id)).projet.peut_ecrire).toBe(true);
   const patchs = suivrePatchs(page);
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E139'));
   await page.goto(gantt(m.projet.id));
   await verifierDepart(page, a.id, 'Tâche START', '11/01/2027', '15/01/2027');
 

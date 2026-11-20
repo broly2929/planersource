@@ -90,7 +90,11 @@ export function texteRefusCreationLien(err: unknown): string {
 /** Message d'un 409 : fixe, ou choisi d'après l'erreur renvoyée par l'API. */
 export type Conflit = string | ((err: ApiError) => string);
 
-function messageErreur(err: unknown, conflit?: Conflit, cible?: 'projet' | 'element'): string {
+export function messageErreur(
+  err: unknown,
+  conflit?: Conflit,
+  cible?: 'projet' | 'element',
+): string {
   if (err instanceof ApiError) {
     if (err.status === 400) return 'Données invalides : vérifiez les champs.';
     if (err.status === 403) return 'Vous n’avez pas le droit d’effectuer cette action.';

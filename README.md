@@ -1,4 +1,4 @@
-# <NOM DU PROJET À COMPLÉTER>
+# PlanerSource
 
 Outil web de gestion de projet : utilisateurs, planning (projets, activités, jalons), Gantt éditable, imputations, moteur de planification.
 
@@ -9,5 +9,3 @@ Outil web de gestion de projet : utilisateurs, planning (projets, activités, ja
 - Installation en production (Docker ou systemd), sauvegarde, mise à jour : [`docs/installation.md`](docs/installation.md)
 
 Licence : MIT.
-
-Installation et lancement : voir docs/installation.md.

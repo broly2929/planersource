@@ -121,7 +121,7 @@ describe('Travail par jour : GET /api/projets/:id/travail (lot 3g)', () => {
     ]);
   });
 
-  it('TRAV-5 : Alice (ressource affectée) et le chef du projet : 200, mêmes lignes que l’administrateur', async () => {
+  it('TRAV-5-r1 : le chef du projet : 200, mêmes lignes que l’administrateur ; Alice (ressource affectée) 404', async () => {
     const m = await creerMonde(ctx);
     const a = await tache(ctx, m.admin, m.projet.id, m.alice.id, 1);
     const res = await calculer(ctx, m.admin, { projets: [m.projet.id], ...calcul });
@@ -129,7 +129,8 @@ describe('Travail par jour : GET /api/projets/:id/travail (lot 3g)', () => {
     const attendu = [ligne(a.activite, a.assignation, m.alice.id, '2027-01-04', 1)];
 
     expect(await lire(ctx, m.admin, m.projet.id)).toEqual(attendu);
-    expect(await lire(ctx, m.alice, m.projet.id)).toEqual(attendu);
+    // Révision 6b (D-031, D-148 (2)).
+    expect((await appel(ctx, m.alice).get(adresse(m.projet.id))).statusCode).toBe(404);
     expect(await lire(ctx, m.chef, m.projet.id)).toEqual(attendu);
   });
 

@@ -84,7 +84,7 @@ describe('Projets : règles ajoutées après T1 (D-028)', () => {
     expect(corps(parAdmin).chef_id).toBe(c2.id);
   });
 
-  it('PRJ-19 : un refus sur un projet (404 pour un autre chef, 403 pour une ressource affectée) ne modifie ni ne supprime rien', async () => {
+  it('PRJ-19-r1 : un refus sur un projet (404 pour un autre chef, 404 pour une ressource affectée) ne modifie ni ne supprime rien', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
@@ -109,12 +109,12 @@ describe('Projets : règles ajoutées après T1 (D-028)', () => {
       expect((await autre.delete(`/api/projets/${id}`)).statusCode).toBe(404);
       expect(await etat(), `DELETE ${id} par un autre chef`).toEqual(avant);
     }
-    // ressource affectée : projet visible → 403, rien n'est modifié ni supprimé
+    // ressource affectée : projet invisible (révision 6b, D-148 (2)) → 404, rien n'est modifié ni supprimé
     const ressource = appel(ctx, alice);
     for (const id of [cible.id, feuille.id]) {
-      expect((await ressource.patch(`/api/projets/${id}`, modifications)).statusCode).toBe(403);
+      expect((await ressource.patch(`/api/projets/${id}`, modifications)).statusCode).toBe(404);
       expect(await etat(), `PATCH ${id} par une ressource`).toEqual(avant);
-      expect((await ressource.delete(`/api/projets/${id}`)).statusCode).toBe(403);
+      expect((await ressource.delete(`/api/projets/${id}`)).statusCode).toBe(404);
       expect(await etat(), `DELETE ${id} par une ressource`).toEqual(avant);
     }
   });

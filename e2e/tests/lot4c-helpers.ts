@@ -48,6 +48,24 @@ export const alerte = (page: Page, texte: string) =>
 export const statutOk = (page: Page, texte: string) =>
   page.getByRole('status').filter({ hasText: texte });
 
+/**
+ * Refus 422 ou 404 (D-145 (2)) : dialogue fermé, alerte `role="alert"` hors de tout dialogue, entièrement
+ * au-dessus du tableau « Feuilles de temps à valider ».
+ */
+export async function attendreAlerteAuDessus(page: Page, texte: string): Promise<void> {
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const a = alerte(page, texte);
+  await expect(a).toBeVisible();
+  await expect(a).toHaveCount(1);
+  const ba = await a.boundingBox();
+  const bt = await tableauValidation(page).boundingBox();
+  if (!ba || !bt) throw new Error('alerte ou tableau sans boîte');
+  expect(
+    ba.y + ba.height,
+    `bas de l'alerte ${ba.y + ba.height}, haut du tableau ${bt.y}`,
+  ).toBeLessThanOrEqual(bt.y);
+}
+
 /** Ouvre l'écran Validation (horloge du navigateur déjà figée) et attend son titre. */
 export async function ouvrirValidation(page: Page, semaine: string = S): Promise<void> {
   await page.goto(adresseValidation(semaine));

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 
 /*
  * Contrat d'interface du lot 1b-C (libellés accessibles exacts) :
@@ -381,7 +382,7 @@ test('E2E-22 : l’administrateur supprime un projet depuis sa fiche ; Annuler n
   expect((await request.get(`/api/projets/${projet.id}`)).status()).toBe(404);
 });
 
-test('E2E-23 : lecture seule — une ressource sans bouton d’écriture, un chef sur un modèle', async ({
+test('E2E-23-r1 : lecture seule — un chef affecté au projet d’un autre chef sans bouton d’écriture, un chef sur un modèle', async ({
   page,
   request,
   browser,
@@ -400,7 +401,8 @@ test('E2E-23 : lecture seule — une ressource sans bouton d’écriture, un che
   await api.activite(modele.id, 'Tâche modèle E2E23');
   await api.jalon(modele.id, 'Jalon modèle E2E23');
 
-  await connecterAvec(page, 'alice-e2e23@example.test');
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, projet.id, 'E2E23'));
   await page.getByRole('link', { name: 'Projets' }).click();
   await expect(page.getByRole('link', { name: 'Projet E2E23', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: BOUTONS_ECRITURE })).toHaveCount(0);

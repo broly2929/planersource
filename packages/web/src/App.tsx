@@ -4,9 +4,11 @@ import { Layout } from './components/Layout';
 import { Redirect, usePath } from './router';
 import { Accueil } from './screens/Accueil';
 import { CalendrierDetail, Calendriers } from './screens/Calendriers';
+import { Equipes } from './screens/Equipes';
 import { Connexion } from './screens/Connexion';
 import { FeuilleTemps } from './screens/FeuilleTemps';
 import { Validation } from './screens/Validation';
+import { MesTaches } from './screens/MesTaches';
 import { Modeles } from './screens/Modeles';
 import { PlanningManuel } from './screens/PlanningManuel';
 import { ProjetDetail, Projets } from './screens/Projets';
@@ -32,9 +34,16 @@ function Routes() {
     );
   }
   if (etat.statut === 'anonyme') return <Redirect to="/connexion" />;
+  // Rôle ressource (D-148 (5)) : aucun accès aux projets, redirection vers « Mes tâches ».
+  const restreint = etat.user.role === 'ressource';
+  if (path === '/mes-taches') return <MesTaches />;
+  if (restreint && (path === '/' || /^\/(projets|modeles|validation)(\/|$)/.test(path))) {
+    return <Redirect to="/mes-taches" />;
+  }
   if (path === '/') return <Accueil />;
   if (path === '/utilisateurs') return <Utilisateurs />;
   if (path === '/calendriers') return <Calendriers />;
+  if (path === '/equipes') return <Equipes />;
   const detail = /^\/calendriers\/(\d+)$/.exec(path);
   if (detail) return <CalendrierDetail id={detail[1]!} />;
   if (path === '/projets') return <Projets />;

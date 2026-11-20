@@ -79,7 +79,7 @@ describe('Jalons (lot 1, T2)', () => {
     expect(corps(ok)).toMatchObject({ type: 'fixe', date_validee: '2027-01-06' });
   });
 
-  it('JLN-6 : chef de projet et administrateur écrivent ; chef d’un autre projet → 404 ; ressource affectée → 403', async () => {
+  it('JLN-6-r1 : chef de projet et administrateur écrivent ; chef d’un autre projet → 404 ; ressource affectée → 404', async () => {
     const m = await creerMonde(ctx);
     const j = await creerJalon(ctx, m.admin, m.projet.id);
     expect(
@@ -97,12 +97,12 @@ describe('Jalons (lot 1, T2)', () => {
     expect(liste(await appel(ctx, m.admin).get(url.jalons(m.projet.id)))).toHaveLength(2);
   });
 
-  it('JLN-7 : la ressource lit les jalons de son projet', async () => {
+  it('JLN-7-r1 : la ressource affectée ne lit plus les jalons de son projet (404)', async () => {
     const m = await creerMonde(ctx);
     const j = await creerJalon(ctx, m.chef, m.projet.id);
-    const lecture = await appel(ctx, m.alice).get(url.jalons(m.projet.id));
-    expect(lecture.statusCode).toBe(200);
-    expect(liste(lecture).map((x) => x.id)).toEqual([j.id]);
+    expect(j.id).toBeGreaterThan(0);
+    // Révision 6b (D-031, D-148 (2)) : la ressource affectée ne voit plus le projet → 404.
+    expect((await appel(ctx, m.alice).get(url.jalons(m.projet.id))).statusCode).toBe(404);
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     expect((await appel(ctx, carole).get(url.jalons(m.projet.id))).statusCode).toBe(404);
   });

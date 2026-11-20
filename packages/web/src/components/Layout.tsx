@@ -6,7 +6,9 @@ import {
   LayoutTemplate,
   LogOut,
   Users,
+  UsersRound,
   Home,
+  ListTodo,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '../auth';
@@ -62,15 +64,29 @@ export function Layout({
       <aside className="flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white">
         <div className="px-4 py-3 text-titre font-semibold text-accent">PlanerSource</div>
         <nav aria-label="Navigation principale" className="flex flex-1 flex-col gap-1 px-2">
-          <NavLink to="/" icone={Home}>
-            Accueil
-          </NavLink>
+          {(user?.est_ressource || user?.role === 'ressource') && (
+            <NavLink to="/mes-taches" icone={ListTodo}>
+              Mes tâches
+            </NavLink>
+          )}
+          {user?.role !== 'ressource' && (
+            <NavLink to="/" icone={Home}>
+              Accueil
+            </NavLink>
+          )}
           <NavLink to="/calendriers" icone={CalendarDays}>
             Calendriers
           </NavLink>
-          <NavLink to="/projets" icone={FolderKanban}>
-            Projets
-          </NavLink>
+          {user?.role === 'administrateur' && (
+            <NavLink to="/equipes" icone={UsersRound}>
+              Équipes
+            </NavLink>
+          )}
+          {user?.role !== 'ressource' && (
+            <NavLink to="/projets" icone={FolderKanban}>
+              Projets
+            </NavLink>
+          )}
           {user?.est_ressource && (
             <NavLink to="/imputations" icone={ClipboardList}>
               Imputations

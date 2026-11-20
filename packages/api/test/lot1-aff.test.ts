@@ -52,7 +52,7 @@ describe('Affectations projet (lot 1, T1)', () => {
     expect(liste(await appel(ctx, admin).get(affectations(projet.id)))).toHaveLength(1);
   });
 
-  it('AFF-3-r1 : écriture réservée à l’administrateur et au chef du projet ; chef d’un autre projet → 404 ; ressource affectée → 403', async () => {
+  it('AFF-3-r2 : écriture réservée à l’administrateur et au chef du projet ; chef d’un autre projet → 404 ; ressource affectée → 404', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
@@ -68,24 +68,23 @@ describe('Affectations projet (lot 1, T1)', () => {
     await refus(404, () => appel(ctx, c2).post(affectations(a.id), { ressource_id: alice.id }));
     await refus(404, () => appel(ctx, c2).patch(`/api/affectations/${parAdmin.id}`, { taux: 10 }));
     await refus(404, () => appel(ctx, c2).delete(`/api/affectations/${parAdmin.id}`));
-    // ressource affectée : projet visible, rôle insuffisant
+    // ressource affectée : projet invisible pour le rôle ressource (révision 6b, D-148 (2))
     const apiAlice = appel(ctx, alice);
-    await refus(403, () => apiAlice.post(affectations(a.id), { ressource_id: alice.id }));
-    await refus(403, () => apiAlice.patch(`/api/affectations/${parAdmin.id}`, { taux: 10 }));
-    await refus(403, () => apiAlice.delete(`/api/affectations/${parAdmin.id}`));
+    await refus(404, () => apiAlice.post(affectations(a.id), { ressource_id: alice.id }));
+    await refus(404, () => apiAlice.patch(`/api/affectations/${parAdmin.id}`, { taux: 10 }));
+    await refus(404, () => apiAlice.delete(`/api/affectations/${parAdmin.id}`));
     expect(b.id).toBeGreaterThan(0);
   });
 
-  it('AFF-4 : la ressource voit les affectations d’un projet où elle est affectée ; projet non affecté → 404', async () => {
+  it('AFF-4-r1 : la ressource ne voit plus les affectations d’un projet où elle est affectée (404) ; projet non affecté → 404', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const alice = await creerActeur(ctx, 'alice@example.test', 'ressource', true);
     const a = await creerProjet(ctx, admin);
     const b = await creerProjet(ctx, admin);
     await affecterParApi(ctx, admin, a.id, alice.id);
     const api = appel(ctx, alice);
-    const res = await api.get(affectations(a.id));
-    expect(res.statusCode).toBe(200);
-    expect(liste(res).map((x) => x.ressource_id)).toEqual([alice.id]);
+    // Révision 6b (D-031, D-148 (2)) : 404, comme un projet illisible.
+    expect((await api.get(affectations(a.id))).statusCode).toBe(404);
     expect((await api.get(affectations(b.id))).statusCode).toBe(404);
   });
 

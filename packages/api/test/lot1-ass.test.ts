@@ -133,7 +133,7 @@ describe('Assignations (lot 1, T2)', () => {
     expect(rows).toEqual([{ charge_reelle: 0 }]);
   });
 
-  it('ASS-9 : écriture chef et administrateur ; chef d’un autre projet → 404 ; ressource affectée → 403 ; sans session → 401', async () => {
+  it('ASS-9-r1 : écriture chef et administrateur ; chef d’un autre projet → 404 ; ressource affectée → 404 ; sans session → 401', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.chef, m.projet.id);
     const parChef = await appel(ctx, m.chef).post(url.assignationsActivite(a.id), {
@@ -165,13 +165,15 @@ describe('Assignations (lot 1, T2)', () => {
     expect(await compter(ctx, 'assignation')).toBe(2);
   });
 
-  it('ASS-10 : la ressource lit les assignations d’un projet où elle est affectée', async () => {
+  it('ASS-10-r1 : la ressource affectée ne lit plus les assignations du projet (404)', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.chef, m.projet.id);
     const s = await creerAssignation(ctx, m.chef, a.id, m.bob.id);
-    const lecture = await appel(ctx, m.alice).get(url.assignationsProjet(m.projet.id));
-    expect(lecture.statusCode).toBe(200);
-    expect(liste(lecture).map((x) => x.id)).toEqual([s.id]);
+    expect(s.id).toBeGreaterThan(0);
+    // Révision 6b (D-031, D-148 (2)) : la ressource affectée ne voit plus le projet → 404.
+    expect((await appel(ctx, m.alice).get(url.assignationsProjet(m.projet.id))).statusCode).toBe(
+      404,
+    );
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     expect((await appel(ctx, carole).get(url.assignationsProjet(m.projet.id))).statusCode).toBe(
       404,

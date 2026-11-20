@@ -181,7 +181,8 @@ export async function verifierRefus(ctx: TestCtx, m: Monde, requetes: Requete[])
     const attendus: [string, Acteur | undefined, number][] = [
       ['sans session', undefined, 401],
       ["chef d'un autre projet", m.autreChef, 404],
-      ['ressource affectée', m.alice, 403],
+      // Révision 6b (D-031, D-148 (2)) : la ressource affectée ne voit plus le projet → 404.
+      ['ressource affectée', m.alice, 404],
     ];
     for (const [qui, acteur, statut] of attendus) {
       const avant = await etatProjet(ctx, m.admin, m.projet.id);

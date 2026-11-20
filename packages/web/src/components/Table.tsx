@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 export interface Colonne<T> {
   titre: string;
@@ -26,6 +26,7 @@ export function Table<T>({
   cle,
   compact = false,
   attributsLigne,
+  tableRef,
 }: {
   legende: string;
   colonnes: Colonne<T>[];
@@ -35,6 +36,8 @@ export function Table<T>({
   compact?: boolean;
   /** Attributs `data-*` ajoutés à la ligne (marqueurs des tests et de l'apparence). */
   attributsLigne?: (ligne: T) => Record<`data-${string}`, string | number | undefined>;
+  /** Rend le tableau focalisable par programme (`tabIndex=-1`, hors tabulation) et donne accès à son élément. */
+  tableRef?: Ref<HTMLTableElement>;
 }) {
   return (
     <div
@@ -42,7 +45,11 @@ export function Table<T>({
         compact ? '' : 'overflow-x-auto rounded-ui border border-gray-200 bg-white shadow-ui'
       }
     >
-      <table className="w-full border-collapse text-left">
+      <table
+        ref={tableRef}
+        tabIndex={tableRef ? -1 : undefined}
+        className="w-full border-collapse text-left"
+      >
         <caption className="sr-only">{legende}</caption>
         <thead className="bg-gray-100 text-gray-700">
           <tr>

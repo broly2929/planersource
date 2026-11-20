@@ -12,9 +12,10 @@
 //     un geste ou un calcul ; une annulation à la fois.
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b } from './lot3b-helpers.js';
 import { remettreAdminSeul } from './lot3c-helpers.js';
-import { retarderPatchs, suivreReponsesPatch } from './patch-helpers.js';
+import { appliquerGeste, retarderPatchs } from './patch-helpers.js';
 
 const J06 = '2027-01-06T10:00:00';
 const PX_JOUR = 24;
@@ -73,6 +74,10 @@ async function glisser(page: Page, cible: Locator, dx: number): Promise<void> {
   await page.mouse.up();
   await laisserPasser(page);
 }
+
+/** Glisser de `dx` px puis attente de l'écran (D-146 (2)) : contour posé ailleurs, barre libérée. */
+const glisserApplique = (page: Page, id: number, dx: number) =>
+  appliquerGeste(barre(page, id), contours(page, id), () => glisser(page, barre(page, id), dx));
 
 /** Requêtes d'écriture de l'API émises par la page, dans l'ordre. */
 interface Ecriture {
@@ -498,21 +503,18 @@ test('E2E-263 : ligne déplacée au clavier par « Déplacer » (onglet Planning
   await expect(boutonAnnuler(page)).toBeDisabled();
 });
 
-test('E2E-264-r1 : Ctrl+Z puis Meta+Z (focus sur le calendrier) annulent chacun un geste de barre', async ({
+test('E2E-264-r2 : Ctrl+Z puis Meta+Z (focus sur le calendrier) annulent chacun un geste de barre', async ({
   page,
   request,
 }) => {
   const m = await mondeStart(request, 'E2E264');
   const e = suivreEcritures(page);
-  const reponses = suivreReponsesPatch(page, m.a.id);
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
 
-  // Révision E2E-264-r1 (D-031, D-142 (4)) : réponse du PATCH attendue après chaque glisser.
-  await glisser(page, barre(page, m.a.id), PX_JOUR);
-  await expect.poll(() => reponses()).toBe(1);
-  await glisser(page, barre(page, m.a.id), 2 * PX_JOUR);
-  await expect.poll(() => reponses()).toBe(2);
+  // Révision E2E-264-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus la réponse réseau.
+  await glisserApplique(page, m.a.id, PX_JOUR);
+  await glisserApplique(page, m.a.id, 2 * PX_JOUR);
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(2);
 
   await calendrier(page).focus();
@@ -598,7 +600,7 @@ test('E2E-265 : Ctrl+Z sans effet dans un champ, dans un dialogue ouvert, pendan
   await expect(boutonAnnuler(page)).toBeEnabled();
 });
 
-test('E2E-266 : bouton « Annuler » : title, icône, place après « Copier », désactivé pile vide et en lecture seule', async ({
+test('E2E-266-r1 : bouton « Annuler » : title, icône, place après « Copier », désactivé pile vide et en lecture seule', async ({
   page,
   request,
 }) => {
@@ -618,31 +620,30 @@ test('E2E-266 : bouton « Annuler » : title, icône, place après « Copier »,
     }),
   ).toBe('Annuler (Ctrl+Z)');
 
-  // Ressource affectée (lecture seule) : présent et désactivé.
+  // Chef affecté au projet d'un autre chef (lecture seule) : présent et désactivé.
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E266'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.a.id)).toHaveAttribute('aria-label', BARRE_A);
   await expect(boutonAnnuler(page)).toHaveCount(1);
   await expect(boutonAnnuler(page)).toBeDisabled();
 });
 
-test('E2E-267 : 21 gestes puis 20 annulations : base à la valeur du 1er geste, bouton désactivé, Ctrl+Z sans requête', async ({
+test('E2E-267-r2 : 21 gestes puis 20 annulations : base à la valeur du 1er geste, bouton désactivé, Ctrl+Z sans requête', async ({
   page,
   request,
 }) => {
   test.setTimeout(180_000);
   const m = await mondeStart(request, 'E2E267');
   const e = suivreEcritures(page);
-  // Révision E2E-267-r1 (D-031) : retard injecté sur la réponse des PATCH (E2E_RETARD_PATCH, en ms, 0 par
-  // défaut), assistant partagé (D-142 (5)) ; la barre est « retenue » jusqu'à la réponse (D-094 (10)).
-  const reponses = suivreReponsesPatch(page, m.a.id);
+  // Révision E2E-267-r2 (D-031, D-146 (2)) : retards injectés (E2E_RETARD_PATCH, E2E_RETARD_CORPS, ms, 0 par
+  // défaut), assistant partagé ; la barre est « retenue » (D-094 (10)) : écran attendu après chaque glisser.
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
   for (let i = 1; i <= 21; i++) {
-    await glisser(page, barre(page, m.a.id), i * PX_JOUR);
+    await glisserApplique(page, m.a.id, i * PX_JOUR);
     await expect.poll(() => patchsDe(e, m.a.id).length).toBe(i);
-    await expect.poll(() => reponses()).toBe(i);
     await laisserPasser(page);
   }
   expect(patchsDe(e, m.a.id)[0]!.corps).toEqual({ debut_valide: '2027-01-12' });
@@ -665,20 +666,17 @@ test('E2E-267 : 21 gestes puis 20 annulations : base à la valeur du 1er geste, 
 });
 
 for (const statut of [409, 422]) {
-  test(`E2E-268-r1 (${statut}) : échec de la requête inverse : alerte, pile vidée, valeur du second geste gardée`, async ({
+  test(`E2E-268-r2 (${statut}) : échec de la requête inverse : alerte, pile vidée, valeur du second geste gardée`, async ({
     page,
     request,
   }) => {
     const m = await mondeStart(request, `E2E268-${statut}`);
     const e = suivreEcritures(page);
-    const reponses = suivreReponsesPatch(page, m.a.id);
     await retarderPatchs(page, m.a.id);
     await ouvrir(page, m);
-    // Révision E2E-268-r1 (D-031, D-142 (4)) : réponse du PATCH attendue après chaque glisser.
-    await glisser(page, barre(page, m.a.id), PX_JOUR);
-    await expect.poll(() => reponses()).toBe(1);
-    await glisser(page, barre(page, m.a.id), 2 * PX_JOUR);
-    await expect.poll(() => reponses()).toBe(2);
+    // Révision E2E-268-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus la réponse réseau.
+    await glisserApplique(page, m.a.id, PX_JOUR);
+    await glisserApplique(page, m.a.id, 2 * PX_JOUR);
     await expect.poll(() => patchsDe(e, m.a.id).length).toBe(2);
     await page.route(`**/api/activites/${m.a.id}`, (route) =>
       route.request().method() === 'PATCH'
@@ -809,20 +807,17 @@ test('E2E-271 : création par le menu, modification par un dialogue (activité, 
   expect((await dependancesBase(request, m.projet.id))[0]!.delai).toBe(2);
 });
 
-test('E2E-272-r1 : une annulation à la fois : inverse retenu, Ctrl+Z deux fois et un clic : une seule requête', async ({
+test('E2E-272-r2 : une annulation à la fois : inverse retenu, Ctrl+Z deux fois et un clic : une seule requête', async ({
   page,
   request,
 }) => {
   const m = await mondeStart(request, 'E2E272');
   const e = suivreEcritures(page);
-  const reponses = suivreReponsesPatch(page, m.a.id);
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
-  // Révision E2E-272-r1 (D-031, D-142 (4)) : réponse du PATCH attendue après chaque glisser.
-  await glisser(page, barre(page, m.a.id), PX_JOUR);
-  await expect.poll(() => reponses()).toBe(1);
-  await glisser(page, barre(page, m.a.id), 2 * PX_JOUR);
-  await expect.poll(() => reponses()).toBe(2);
+  // Révision E2E-272-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus la réponse réseau.
+  await glisserApplique(page, m.a.id, PX_JOUR);
+  await glisserApplique(page, m.a.id, 2 * PX_JOUR);
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(2);
 
   let liberer: () => void = () => undefined;
@@ -846,25 +841,22 @@ test('E2E-272-r1 : une annulation à la fois : inverse retenu, Ctrl+Z deux fois 
   expect((await activiteBase(request, m.projet.id, m.a.id)).debut_valide).toBe('2027-01-12');
 });
 
-test('E2E-277-r1 : deux gestes sur la même barre : la première annulation garde le contour du premier geste, la seconde le retire', async ({
+test('E2E-277-r2 : deux gestes sur la même barre : la première annulation garde le contour du premier geste, la seconde le retire', async ({
   page,
   request,
 }) => {
   const m = await mondeStart(request, 'E2E277');
   const e = suivreEcritures(page);
-  const reponses = suivreReponsesPatch(page, m.a.id);
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
 
-  // Révision E2E-277-r1 (D-031, D-142 (4)) : réponse du PATCH attendue après chaque glisser.
-  await glisser(page, barre(page, m.a.id), PX_JOUR);
-  await expect.poll(() => reponses()).toBe(1);
+  // Révision E2E-277-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour relu, barre libérée), plus la réponse réseau.
+  await glisserApplique(page, m.a.id, PX_JOUR);
   await expect(contours(page, m.a.id)).toHaveCount(1);
   const x1 = (await contours(page, m.a.id).boundingBox())!.x;
-  await glisser(page, barre(page, m.a.id), 2 * PX_JOUR);
-  await expect.poll(() => reponses()).toBe(2);
+  await glisserApplique(page, m.a.id, 2 * PX_JOUR);
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(2);
-  expect((await contours(page, m.a.id).boundingBox())!.x).not.toBe(x1);
+  await expect.poll(async () => (await contours(page, m.a.id).boundingBox())!.x).not.toBe(x1);
 
   await boutonAnnuler(page).click();
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(3);
@@ -873,7 +865,7 @@ test('E2E-277-r1 : deux gestes sur la même barre : la première annulation gard
     .poll(async () => (await activiteBase(request, m.projet.id, m.a.id)).debut_valide)
     .toBe('2027-01-12');
   await expect(contours(page, m.a.id)).toHaveCount(1);
-  expect((await contours(page, m.a.id).boundingBox())!.x).toBe(x1);
+  await expect.poll(async () => (await contours(page, m.a.id).boundingBox())!.x).toBe(x1);
 
   await boutonAnnuler(page).click();
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(4);

@@ -48,7 +48,7 @@ export function TableauFeuille({
       <table className="w-full table-fixed border-collapse text-left">
         <caption className="sr-only">Imputations de la semaine</caption>
         <colgroup>
-          <col className="w-16" />
+          <col className="w-28" />
           <col />
           <col className="w-14" />
           <col className="w-16" />

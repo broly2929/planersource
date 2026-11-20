@@ -14,11 +14,13 @@ import { assignationsRoutes } from './routes/assignations.js';
 import { calculRoutes } from './routes/calcul.js';
 import { calendriersRoutes } from './routes/calendriers.js';
 import { dependancesRoutes } from './routes/dependances.js';
+import { equipesRoutes } from './routes/equipes.js';
 import { elementsRoutes } from './routes/elements.js';
 import { feuillesRoutes } from './routes/feuilles.js';
 import { ganttRoutes } from './routes/gantt.js';
 import { travailRoutes } from './routes/travail.js';
 import { historiqueRoutes } from './routes/historique.js';
+import { mesTachesRoutes } from './routes/mes-taches.js';
 import { projetsRoutes } from './routes/projets.js';
 import { saisiesRoutes } from './routes/saisies.js';
 import { utilisateursRoutes } from './routes/utilisateurs.js';
@@ -80,6 +82,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => utilisateursRoutes(instance, deps, sessionsOrigine));
   app.register(async (instance) => annuaireRoutes(instance, deps));
   app.register(async (instance) => calendriersRoutes(instance, deps));
+  app.register(async (instance) => equipesRoutes(instance, deps));
   app.register(async (instance) => projetsRoutes(instance, deps));
   app.register(async (instance) => affectationsRoutes(instance, deps));
   app.register(async (instance) => elementsRoutes(instance, deps));
@@ -91,6 +94,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => ganttRoutes(instance, deps));
   app.register(async (instance) => travailRoutes(instance, deps));
   app.register(async (instance) => feuillesRoutes(instance, deps));
+  app.register(async (instance) => mesTachesRoutes(instance, deps));
   if (deps.dossierWeb) servirWeb(app, deps.dossierWeb);
   return app;
 }

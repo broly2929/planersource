@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activite, clore, libelleCase, lireSaisies, monde, poserSaisies } from './lot2e-helpers.js';
 
 /*
@@ -115,7 +116,7 @@ test('E2E-28 : décocher une saisie enregistrée et enregistrer la supprime', as
   expect(await lireSaisies(request, m.man.id, '2027-01')).toEqual([]);
 });
 
-test('E2E-29 : lecture seule (ressource, activité close) et pas de bouton sur une activité ASAP', async ({
+test('E2E-29-r1 : lecture seule (chef affecté au projet d’un autre chef, activité close) et pas de bouton sur une activité ASAP', async ({
   page,
   request,
 }) => {
@@ -130,8 +131,9 @@ test('E2E-29 : lecture seule (ressource, activité close) et pas de bouton sur u
     name: libelleCase(m.nomAlice, 5, 'janvier', 'matin'),
   });
 
-  // Alice (ressource) : grille visible, cases désactivées, aucun bouton d'écriture
-  await connecterAvec(page, m.emailAlice);
+  // Chef lecteur : grille visible, cases désactivées, aucun bouton d'écriture
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E2E29'));
   await page.goto(adresse);
   await expect(caseMatin).toBeChecked();
   await expect(caseMatin).toBeDisabled();

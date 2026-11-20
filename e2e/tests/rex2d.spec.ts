@@ -72,12 +72,15 @@ async function seConnecter(page: Page, identifiant: string, motDePasse: string):
   await page.getByLabel('Mot de passe').fill(motDePasse);
   await page.getByRole('button', { name: 'Se connecter' }).click();
   const refus = page.getByRole('alert');
-  const accueil = page.getByRole('link', { name: 'Accueil', exact: true });
+  // Révision 6b (D-031, D-148 (5)) : la ressource n'a plus « Accueil » ; « Mes tâches » prouve aussi la connexion.
+  const accueil = page
+    .getByRole('link', { name: 'Accueil', exact: true })
+    .or(page.getByRole('link', { name: 'Mes tâches', exact: true }));
   await refus.or(accueil).first().waitFor();
   return !(await refus.isVisible());
 }
 
-test('E2E-71 création sans email avec Identifiant et Initiales : la ligne les affiche, l’utilisateur se connecte avec l’identifiant', async ({
+test('E2E-71-r1 création sans email avec Identifiant et Initiales : la ligne les affiche, l’utilisateur se connecte avec l’identifiant', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -94,7 +97,7 @@ test('E2E-71 création sans email avec Identifiant et Initiales : la ligne les a
   expect(await seConnecter(page, 'bob71', 'a'), 'connexion avec « bob71 »').toBe(true);
 });
 
-test('E2E-72 « Modifier <nom> » : identifiant et initiales changés, email vidé ; la ligne est à jour, le nouvel identifiant connecte', async ({
+test('E2E-72-r1 « Modifier <nom> » : identifiant et initiales changés, email vidé ; la ligne est à jour, le nouvel identifiant connecte', async ({
   page,
 }) => {
   await loginAsAdmin(page);

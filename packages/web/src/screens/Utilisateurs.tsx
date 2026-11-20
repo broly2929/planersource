@@ -12,8 +12,9 @@ import { Layout } from '../components/Layout';
 import { Notification } from '../components/Notification';
 import { Select } from '../components/Select';
 import { Table, type Colonne } from '../components/Table';
-import { FormulaireDialogue } from './projet/commun';
+import { FormulaireDialogue, messageErreur } from './projet/commun';
 import type { Calendrier } from './Calendriers';
+import type { Equipe } from './Equipes';
 
 const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({
   value: r,
@@ -22,6 +23,7 @@ const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({
 
 const EMAIL_UTILISE = 'Cet email est déjà utilisé.';
 const LOGIN_UTILISE = 'Cet identifiant est déjà utilisé.';
+const EQUIPE_INCONNUE = "Cette équipe n'existe plus.";
 const LOGIN_OU_EMAIL = 'Renseignez un identifiant ou un email.';
 
 /** Validation locale (rien n'est envoyé) : identifiant ou email requis. */
@@ -40,13 +42,26 @@ function conflitUtilisateur(err: ApiError): string {
   return EMAIL_UTILISE;
 }
 
+/** Refus 422 « Équipe inconnue » (D-147 (6)) ; les autres refus gardent leurs textes. */
+function texteErreurUtilisateur(err: unknown): string {
+  return err instanceof ApiError && err.status === 422 && err.erreur === 'Équipe inconnue'
+    ? EQUIPE_INCONNUE
+    : messageErreur(err, conflitUtilisateur);
+}
+
 type Liste =
   | { statut: 'chargement' }
   | { statut: 'erreur'; message: string }
-  | { statut: 'ok'; utilisateurs: Utilisateur[]; calendriers: Calendrier[] };
+  | {
+      statut: 'ok';
+      utilisateurs: Utilisateur[];
+      calendriers: Calendrier[];
+      equipes: Equipe[];
+    };
 
 interface Commun {
   calendriers: Calendrier[];
+  equipes: Equipe[];
   onSucces: () => void;
   onAnnuler: () => void;
 }
@@ -55,7 +70,17 @@ function optionsCalendrier(calendriers: Calendrier[]) {
   return calendriers.map((c) => ({ value: String(c.id), label: c.nom }));
 }
 
-function FormulaireCreation({ calendriers, onSucces, onAnnuler }: Commun) {
+/** Valeur de la liste « Équipe » pour « Aucune ». */
+const AUCUNE = '';
+
+function optionsEquipe(equipes: Equipe[]) {
+  return [
+    { value: AUCUNE, label: 'Aucune' },
+    ...equipes.map((e) => ({ value: String(e.id), label: e.nom })),
+  ];
+}
+
+function FormulaireCreation({ calendriers, equipes, onSucces, onAnnuler }: Commun) {
   const [nom, setNom] = useState('');
   const [login, setLogin] = useState('');
   const [initiales, setInitiales] = useState('');
@@ -67,6 +92,7 @@ function FormulaireCreation({ calendriers, onSucces, onAnnuler }: Commun) {
   const [calendrier, setCalendrier] = useState(
     String((calendriers.find((c) => c.est_defaut) ?? calendriers[0])?.id ?? ''),
   );
+  const [equipe, setEquipe] = useState(AUCUNE);
   return (
     <FormulaireDialogue
       libelle="Créer"
@@ -84,12 +110,13 @@ function FormulaireCreation({ calendriers, onSucces, onAnnuler }: Commun) {
             est_ressource: ressource,
             capacite: Number(capacite),
             ...(calendrier ? { calendrier_id: Number(calendrier) } : {}),
+            ...(equipe !== AUCUNE ? { equipe_id: Number(equipe) } : {}),
           },
         });
       }}
       onSucces={onSucces}
       onAnnuler={onAnnuler}
-      conflit={conflitUtilisateur}
+      texteErreur={texteErreurUtilisateur}
     >
       <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
       <Field
@@ -145,6 +172,12 @@ function FormulaireCreation({ calendriers, onSucces, onAnnuler }: Commun) {
         value={calendrier}
         onChange={(e) => setCalendrier(e.target.value)}
       />
+      <Select
+        label="Équipe"
+        options={optionsEquipe(equipes)}
+        value={equipe}
+        onChange={(e) => setEquipe(e.target.value)}
+      />
     </FormulaireDialogue>
   );
 }
@@ -152,6 +185,7 @@ function FormulaireCreation({ calendriers, onSucces, onAnnuler }: Commun) {
 function FormulaireModification({
   utilisateur: u,
   calendriers,
+  equipes,
   onSucces,
   onAnnuler,
 }: Commun & { utilisateur: Utilisateur }) {
@@ -163,6 +197,7 @@ function FormulaireModification({
   const [ressource, setRessource] = useState(u.est_ressource);
   const [capacite, setCapacite] = useState(String(u.capacite));
   const [calendrier, setCalendrier] = useState(String(u.calendrier_id));
+  const [equipe, setEquipe] = useState(u.equipe_id === null ? AUCUNE : String(u.equipe_id));
   const [actif, setActif] = useState(u.actif);
   const [motDePasse, setMotDePasse] = useState('');
 
@@ -180,6 +215,9 @@ function FormulaireModification({
     ...(ressource !== u.est_ressource ? { est_ressource: ressource } : {}),
     ...(Number(capacite) !== u.capacite ? { capacite: Number(capacite) } : {}),
     ...(calendrier !== String(u.calendrier_id) ? { calendrier_id: Number(calendrier) } : {}),
+    ...(equipe !== (u.equipe_id === null ? AUCUNE : String(u.equipe_id))
+      ? { equipe_id: equipe === AUCUNE ? null : Number(equipe) }
+      : {}),
     ...(actif !== u.actif ? { actif } : {}),
     ...(motDePasse !== '' ? { mot_de_passe: motDePasse } : {}),
   });
@@ -193,7 +231,7 @@ function FormulaireModification({
       }}
       onSucces={onSucces}
       onAnnuler={onAnnuler}
-      conflit={conflitUtilisateur}
+      texteErreur={texteErreurUtilisateur}
     >
       <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
       <Field
@@ -241,6 +279,12 @@ function FormulaireModification({
         value={calendrier}
         onChange={(e) => setCalendrier(e.target.value)}
       />
+      <Select
+        label="Équipe"
+        options={optionsEquipe(equipes)}
+        value={equipe}
+        onChange={(e) => setEquipe(e.target.value)}
+      />
       <Case label="Actif" checked={actif} onChange={(e) => setActif(e.target.checked)} />
       <Field
         label="Nouveau mot de passe"
@@ -259,8 +303,14 @@ export function Utilisateurs() {
   const [aModifier, setAModifier] = useState<Utilisateur | null>(null);
 
   const charger = useCallback(() => {
-    Promise.all([api<Utilisateur[]>('/api/utilisateurs'), api<Calendrier[]>('/api/calendriers')])
-      .then(([utilisateurs, calendriers]) => setListe({ statut: 'ok', utilisateurs, calendriers }))
+    Promise.all([
+      api<Utilisateur[]>('/api/utilisateurs'),
+      api<Calendrier[]>('/api/calendriers'),
+      api<Equipe[]>('/api/equipes'),
+    ])
+      .then(([utilisateurs, calendriers, equipes]) =>
+        setListe({ statut: 'ok', utilisateurs, calendriers, equipes }),
+      )
       .catch((err) =>
         setListe({
           statut: 'erreur',
@@ -275,6 +325,7 @@ export function Utilisateurs() {
   useEffect(charger, [charger]);
 
   const calendriers = liste.statut === 'ok' ? liste.calendriers : [];
+  const equipes = liste.statut === 'ok' ? liste.equipes : [];
   const colonnes: Colonne<Utilisateur>[] = [
     { titre: 'Nom', cellule: (u) => u.nom },
     { titre: 'Identifiant', cellule: (u) => u.login || '—' },
@@ -286,6 +337,10 @@ export function Utilisateurs() {
     {
       titre: 'Calendrier',
       cellule: (u) => calendriers.find((c) => c.id === u.calendrier_id)?.nom ?? '—',
+    },
+    {
+      titre: 'Équipe',
+      cellule: (u) => equipes.find((e) => e.id === u.equipe_id)?.nom ?? '—',
     },
     {
       titre: 'Statut',
@@ -337,6 +392,7 @@ export function Utilisateurs() {
       >
         <FormulaireCreation
           calendriers={calendriers}
+          equipes={equipes}
           onAnnuler={() => setCreation(false)}
           onSucces={apres(() => setCreation(false))}
         />
@@ -351,6 +407,7 @@ export function Utilisateurs() {
           <FormulaireModification
             utilisateur={aModifier}
             calendriers={calendriers}
+            equipes={equipes}
             onAnnuler={() => setAModifier(null)}
             onSucces={apres(() => setAModifier(null))}
           />

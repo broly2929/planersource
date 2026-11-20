@@ -151,3 +151,40 @@ Arbitrage : D-132 ((a) ombre portée à gauche de la colonne Drapeaux, (b) pas u
 - Semaine `lundi − 14` : Bob « Validée » ; Alice « Rejetée », commentaire « Imputations du jeudi à revoir » (bouton Voir, ou Feuille de temps d'Alice).
 - Semaine `lundi` : Alice brouillon (lundi seulement).
 - Comptes : chefa, chefb, admin (mot de passe = identifiant).
+
+## Captures de 5d
+- Relecture à l'image de `e2e/captures/validation-alerte-{1440,1024}.png` (alerte de refus 422/404 au-dessus du tableau Validation) et `e2e/captures/feuille-codes-{1440,1024}.png` (colonne Projet `w-28`, codes de 11 et 30 caractères), selon docs/ui.md ; aucune nouvelle tranche (D-133 (3)).
+- Conformes : alerte pleine largeur, rouge sur fond rose avec icône, contraste correct, placée entre la navigation et le tableau sans chevauchement ; code de 11 caractères (`PRJ-1234567`) entier dans la colonne Projet ; code de 30 caractères coupé par une ellipse (`DEMO-AAA...`) sans débordement.
+- Défauts non bloquants : (1) Feuille de temps à 1024 px : la colonne Activité est réduite à « 1 T... », illisible, et son en-tête touche « Assigné » ; (2) Validation à 1024 px : les badges Projets passent sur trois lignes, ligne de tableau plus haute, et le libellé de semaine passe sous les boutons (déjà noté en 4c (3)) ; (3) l'alerte n'a pas de bouton de fermeture visible, elle reste affichée jusqu'au prochain rechargement ; (4) le code complet tronqué n'est lisible sur aucune capture (infobulle `title` non vérifiable à l'image) ; (5) le badge de 30 caractères du tableau Validation reste long à 1440 px, il occupe près d'un tiers de la colonne Projets.
+- Reste ouvert : REX du porteur à l'écran.
+
+## Captures de 6a
+- Relecture à l'image de `e2e/captures/equipes-{liste,nouvelle,suppression,utilisateurs,utilisateur-creation}-{1440,1024}.png`, selon docs/ui.md ; aucune nouvelle tranche (D-133 (3)). Tous les défauts sont non bloquants.
+- Conformes : écran Équipes (liste, dialogues Nouvelle équipe et Supprimer) lisible aux deux largeurs, alertes rouge sur rose avec icône, boutons d'action alignés, pas de débordement.
+- Défauts non bloquants :
+  - (1) Utilisateurs à 1024 px : le tableau déborde, les colonnes Capacité (coupée), Calendrier, Équipe, Statut et Actions sont hors écran ; aucun indice de défilement horizontal, le bouton de modification est inaccessible sans défiler.
+  - (2) Utilisateurs à 1440 px : Nom, Identifiant et Email passent sur deux lignes (« Admin / E2E », « admin- / e2e@… »), lignes plus hautes ; la colonne Équipe ajoutée aggrave la densité.
+  - (3) Dialogue Nouvel utilisateur (1440 et 1024 px) : la boîte touche le haut et le bas de la fenêtre, le champ « Équipe » et les boutons Annuler / Créer ne sont pas visibles sur la capture ; le défilement interne n'est pas signalé, le champ Équipe n'est pas vérifiable à l'image.
+  - (4) Liste Équipes : colonnes Nom, Membres, Actions réparties sans lien visuel (Membres et Actions très à droite à 1440 px) ; la colonne Nom pourrait être plus large, Membres alignée à droite.
+  - (5) Équipe vide d'un utilisateur affichée « — » comme Initiales : pas de distinction entre « sans équipe » et « non renseigné ».
+  - (6) Dialogue Supprimer : le bouton Supprimer reste actif alors que l'équipe a des membres (refus connu seulement après clic) ; le message d'erreur passe sur deux lignes.
+  - (7) Dialogue Nouvelle équipe : l'erreur « Cette équipe existe déjà. » est en haut, éloignée du champ Nom ; le champ n'a pas d'état invalide visible (bordure grise).
+  - (8) Aucune capture des états chargement, vide et erreur de l'écran Équipes.
+- Reste ouvert : REX du porteur à l'écran.
+
+## Captures de 6b
+- Relecture à l'image de `e2e/captures/mes-taches-{contenu,vide}-{1440,1024}.png` (écran Mes tâches et menu réduit du rôle ressource), selon docs/ui.md ; aucune nouvelle tranche (D-133 (3)). Tous les défauts sont non bloquants.
+- Conformes : menu réduit à trois entrées, entrée active lisible, pas de débordement aux deux largeurs, tableau aligné, dates et « — » cohérents, état vide en cadre pointillé lisible.
+- Défauts non bloquants :
+  - (1) Colonnes numériques (Assigné, Réel, Reste) alignées à gauche, en-têtes compris : comparaison verticale des valeurs peu aisée ; à aligner à droite.
+  - (2) Colonnes Début et Fin vides affichées « — » sans indication que la tâche n'est pas planifiée.
+  - (3) Aucune unité sur Assigné, Réel, Reste (jours ou heures) ; l'en-tête ne la précise pas.
+  - (4) Aucune mise en évidence du reste ni tri : pas de repère pour les tâches à traiter en premier.
+  - (5) Lignes non cliquables : aucun lien vers la Feuille de temps ou les Imputations depuis une tâche.
+  - (6) Pas de nom de projet, seulement le code (MT1) ; l'infobulle n'est pas vérifiable à l'image.
+  - (7) À 1440 px, la colonne Activité est très large et les colonnes Début à Reste très espacées ; à 1024 px, la répartition est meilleure.
+  - (8) État vide : message centré sans icône ni indication de la suite à donner (« contactez votre chef de projet »).
+  - (9) Pied de menu : le nom de la ressource en petit texte gris sans libellé de rôle ; contraste faible à vérifier.
+  - (10) Titre de page seul : pas de sous-titre ni de compte de tâches.
+  - (11) Aucune capture des états chargement et erreur de l'écran.
+- Reste ouvert : REX du porteur à l'écran.

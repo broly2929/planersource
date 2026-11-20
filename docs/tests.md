@@ -1852,3 +1852,241 @@ Preuves (D-142 (3), (4), (5)) : voir docs/state.md, section 5c.
 |---|---|---|---|---|
 | PUB-1 | Aucun fichier suivi par git (`git ls-files`) ne contient de référence nommée à un produit tiers de gestion de projet (motif construit par concaténation dans le test, non écrit en clair) | D-143 | publication | scripts/test/aucune-reference-externe.test.ts |
 | PUB-2 | Aucun fichier suivi par git ne contient de trace de l'environnement personnel du porteur : commande de tunnel SSH, chemin absolu du dossier personnel, chemin relatif au dossier personnel du dépôt (motifs construits par concaténation dans le test, non écrits en clair) | D-143 | publication | scripts/test/aucune-reference-externe.test.ts |
+
+## Tests du lot 5d et REX-4 (D-145)
+
+Fichiers : packages/web/test/validation.test.ts (VFT-11 à VFT-13, fonction pure `cibleFocus` à créer dans `validation/logique.ts`), e2e/tests/lot4c.spec.ts (révisions -r1), e2e/tests/lot5d.spec.ts (E2E-323 à E2E-333) et e2e/tests/lot5d-captures.spec.ts (E2E-334). Monde de lot4c-helpers.ts (`monde4c`), plus des projets à code long créés par l'API. Chaque test d'écriture relit la base (statut de la feuille avant et après, `etatFeuille`). Signature de la règle de focus (D-145 (2)) : `cibleFocus(origine: { feuilleId: number; action: 'valider' | 'rejeter' }, feuilles: FeuilleValidation[])` → `{ genre: 'bouton'; action }` si la feuille est dans la liste relue et `peutValider` (origine valider) ou `peutRejeter` (origine rejeter) ; sinon `{ genre: 'voir' }` si la feuille est dans la liste relue ; sinon `{ genre: 'tableau' }`. Choix de cadrage : « action suivante » (D-145 (2)) = clic sur un bouton de ligne (Voir, Valider, Rejeter) ; « simulé » = réponse du POST remplacée par un 200 `{}` sans atteindre le serveur, la base reste inchangée (une validation réelle retire toujours « Valider » ; la branche « bouton d'origine encore actif » ne peut s'obtenir autrement après un succès).
+
+### Révisions D-031 de 5d (décision du porteur, D-145 (2))
+
+Recherche faite dans lot4c.spec.ts (et lot4c-captures.spec.ts) : seuls E2E-312 et E2E-314 interceptent un 422 ou un 404. E2E-313 (403), E2E-315 (400) et E2E-316 (500) sont inchangés (dialogue ouvert, D-145 (2)) ; leur contrôle d'emplacement du message est ajouté par E2E-332 et E2E-333.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-312-r1 | Révision de E2E-312 (D-031). Ancienne attente : valider, 422 `statut_invalide` (interception) → alerte « La feuille a changé de statut. » en un lieu non précisé (le dialogue restait ouvert avec le message dedans), liste relue, base inchangée. Nouvelle attente : dialogue fermé ; alerte `role="alert"` « La feuille a changé de statut. » hors du dialogue, au-dessus du tableau ; liste relue (GET /api/validations de plus) ; base inchangée (statut `soumise`, aucune validation) ; focus sur « Valider la feuille de Alice 4B » (la feuille est soumise, le bouton existe encore) | D-145 (2) | 5d | e2e/tests/lot4c.spec.ts |
+| E2E-314-r1 | Révision de E2E-314 (D-031). Ancienne attente : rejeter, 404 (interception) → alerte « Feuille introuvable. » en un lieu non précisé (dans le dialogue resté ouvert), liste relue, base inchangée. Nouvelle attente : dialogue fermé ; alerte « Feuille introuvable. » hors du dialogue, au-dessus du tableau ; liste relue ; base inchangée ; focus sur « Rejeter la feuille de Alice 4B » | D-145 (2) | 5d | e2e/tests/lot4c.spec.ts |
+
+### Tests unitaires web (D-145)
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| VFT-11 | `cibleFocus`, branche « bouton » : origine valider, feuille soumise avec un projet `peut_valider` non validé → `{ genre: 'bouton', action: 'valider' }` ; origine rejeter, feuille soumise avec un projet `peut_valider` → `{ genre: 'bouton', action: 'rejeter' }` ; autres feuilles de la liste sans effet | D-145 (2) | 5d | packages/web/test/validation.test.ts |
+| VFT-12 | `cibleFocus`, branche « voir » : feuille présente mais bouton d'origine absent (origine valider, feuille validée ; origine valider, tous les projets `peut_valider` validés mais feuille soumise ; origine rejeter, feuille rejetée) → `{ genre: 'voir' }` | D-145 (2) | 5d | packages/web/test/validation.test.ts |
+| VFT-13 | `cibleFocus`, branche « tableau » : feuille absente de la liste relue (liste d'autres feuilles) → `{ genre: 'tableau' }` ; liste vide → `{ genre: 'tableau' }` | D-145 (2) | 5d | packages/web/test/validation.test.ts |
+
+### REX-4 : colonne Projet (D-145 (3))
+
+Projets créés par l'API pour Alice (ressource, une assignation chacun, imputation du lundi de la semaine S) : code de 11 caractères `PRJ-1234567` et code de 30 caractères `DEMO-` suivi de 25 « A ». Écran Feuille de temps d'Alice, horloge au mercredi 14/01/2026.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-323 (a) | Code de 11 caractères entièrement visible, à 1440 et à 1024 px : cellule d'en-tête de ligne du projet, largeur rendue (`clientWidth`) ≥ `scrollWidth` | D-145 (3) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-323 (b) | Code de 30 caractères tronqué à 1440 et à 1024 px (`scrollWidth` > `clientWidth`, `text-overflow: ellipsis`), `title` égal au code complet | D-145 (3) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-323 (c) | Témoin de D-134 (2), avec les deux codes présents : à 1024 px, `scrollWidth` = `clientWidth` du conteneur du tableau, écran Feuille de temps d'Alice, puis écran Validation, dialogue « Voir la feuille de Alice 4B » (administrateur) | D-134 (2), D-145 (3) | 5d | e2e/tests/lot5d.spec.ts |
+
+### E2E de l'écran Validation (D-145 (2))
+
+Monde de lot4c : Alice soumise sur P4B et Q4B (chef de P : « Valider » et « Rejeter » ; administrateur : les deux projets). Alerte « au-dessus du tableau » : boîte de l'alerte entièrement au-dessus de celle du tableau (bas de l'alerte ≤ haut du tableau), hors de tout `role="dialog"`.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-324 | Succès réel de Valider (administrateur), branche « Voir » : « Feuille validée. », dialogue fermé, liste relue ; base : `soumise` → `validee` ; « Valider » et « Rejeter » disparus ; focus sur « Voir la feuille de Alice 4B » | D-145 (2) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-325 | Succès simulé de Valider (POST remplacé par 200 `{}`, rien d'écrit), branche « bouton d'origine » : dialogue fermé, liste relue, la feuille reste soumise (base inchangée avant et après), focus sur « Valider la feuille de Alice 4B » | D-145 (2) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-326 | Succès simulé de Valider, la liste relue ne contient plus la feuille d'Alice (GET /api/validations filtré) mais celle de Bob (brouillon, autre ressource), branche « tableau » : dialogue fermé, focus sur le tableau « Feuilles de temps à valider » (`tabIndex` = -1) ; base : Alice soumise avant et après | D-145 (2) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-327 | Succès réel de Rejeter (chef de P) : « Feuille rejetée. », dialogue fermé, liste relue ; base : `soumise` → `rejetee`, commentaire enregistré ; focus sur « Voir la feuille de Alice 4B » | D-145 (2) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-328 | Rejeter, 422 `statut_invalide` (interception) : dialogue fermé, alerte « La feuille a changé de statut. » au-dessus du tableau, liste relue, base inchangée, focus sur « Rejeter la feuille de Alice 4B » | D-145 (2), D-135 (8) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-329 | Valider, 404 (interception) : dialogue fermé, alerte « Feuille introuvable. » au-dessus du tableau, liste relue, base inchangée, focus sur « Valider la feuille de Alice 4B » | D-145 (2), D-135 (8) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-330 | Alerte effacée à l'action suivante : après un 422 (alerte visible), clic sur « Valider la feuille de Alice 4B » → alerte absente, dialogue ouvert ; base inchangée | D-145 (2) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-331 | Alerte effacée au changement de semaine : après un 422 (alerte visible), « Semaine précédente » → alerte absente, libellé de la semaine précédente ; base inchangée | D-145 (2) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-332 | Témoin, Valider 403 (interception) : dialogue resté ouvert, alerte « Vous n’avez pas le droit d’agir sur cette feuille. » dans le dialogue, aucune alerte hors du dialogue, base inchangée (complète E2E-313) | D-145 (2), D-135 (8) | 5d | e2e/tests/lot5d.spec.ts |
+| E2E-333 | Témoin, Rejeter 500 (interception) : dialogue resté ouvert, alerte « Une erreur est survenue. » dans le dialogue, aucune alerte hors du dialogue, base inchangée (complète E2E-316) | D-145 (2), D-135 (8) | 5d | e2e/tests/lot5d.spec.ts |
+
+### Captures de 5d (relecture d'apparence)
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-334 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement, comme E2E-245) : écran Validation avec l'alerte d'un refus 422 (administrateur) ; Feuille de temps d'Alice avec les codes de 11 et de 30 caractères ; 1440 et 1024 px ; e2e/captures/validation-alerte-{1440,1024}.png, feuille-codes-{1440,1024}.png | D-145 | 5d | e2e/tests/lot5d-captures.spec.ts |
+
+### Couverture des champs, 5d
+
+Aucun champ d'API modifiable nouveau, aucune route nouvelle : les champs de 4c (voir « Couverture des champs, lot 4c ») gardent leurs écrans ; E2E-324, E2E-327 couvrent à nouveau le POST valider et le POST rejeter `commentaire` par l'écran.
+
+## Révisions D-031 de D-146 (décision du porteur)
+
+Tag `tests-rex3b-d146` (`tests-rex3b-r2` existe déjà : REX-3b-r2), aucun code de production. Valeurs attendues inchangées (dates, nombres de PATCH, textes). Écart avec D-146 (2) : le libellé de la barre n'est pas un signal fiable (il ne change que pendant que la barre est retenue, puis revient aux dates planifiées) ; signal retenu : contour et barre libérée (assistant `appliquerGeste`, patch-helpers.ts). Assistant `E2E_RETARD_CORPS` (ms, 0 par défaut) dans e2e/tests/patch-helpers.ts : retard de la lecture du corps du PATCH dans le navigateur, après l'arrivée de la réponse. Rouge prouvé : versions d'avant rouges avec `E2E_RETARD_CORPS=300`, vertes sans retard.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-264-r2 | Révision de E2E-264-r1 (D-031) : ancienne attente : réponse réseau du PATCH (`suivreReponsesPatch`) après chaque glisser ; nouvelle : écran (contour posé à une position différente, relu par `expect.poll`, et barre libérée : classe `cursor-grab`) | D-146 | REX-3b | e2e/tests/rex3b.spec.ts |
+| E2E-267-r2 | Révision de E2E-267-r1 : idem, à chacun des 21 gestes | D-146 | REX-3b | e2e/tests/rex3b.spec.ts |
+| E2E-268-r2 | Révision de E2E-268-r1 (409 et 422) : idem après chaque glisser | D-146 | REX-3b | e2e/tests/rex3b.spec.ts |
+| E2E-272-r2 | Révision de E2E-272-r1 : idem après chaque glisser | D-146 | REX-3b | e2e/tests/rex3b.spec.ts |
+| E2E-277-r2 | Révision de E2E-277-r1 : ancienne attente : réponse réseau ; nouvelle : idem, contour relu par `expect.poll` (position distincte de la précédente) | D-146 | REX-3b | e2e/tests/rex3b.spec.ts |
+| E2E-280-r2 | Révision de E2E-280-r1 : idem E2E-264-r2 | D-146 | REX-3b | e2e/tests/rex3b-r2.spec.ts |
+
+## Tests du lot 6a, équipe facultative de l'utilisateur (D-147)
+
+API : `packages/api/test/lot6a-equipes.test.ts` (EQP, USR) et `packages/api/test/lot6a-migration.test.ts` (MIG-9). Chaque refus relève les tables `equipe` et `utilisateur` avant et après (`refusSansEffet`) : base inchangée. Valeurs attendues recopiées de SPEC « Équipes (lot 6a, D-147) » et de D-147. E2E : `e2e/tests/lot6a.spec.ts`, base « administrateur seul » avant et après chaque test (équipes comprises, `lot6a-helpers.ts`). Choix de l'écran laissés à Claude Code (D-147 (5) ne tranche pas) : le formulaire « Nouvelle équipe » est un dialogue ouvert par le bouton « Nouvelle équipe » (patron de l'écran Calendriers) ; aucun texte d'état vide testé.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| MIG-9 | Migration 013 : base amenée à la version 12 avec deux utilisateurs, puis migration (versions du dépôt > 12 appliquées, schema_version = liste complète tirée de MIGRATIONS_DIR) : table `equipe` (id, nom) ; `utilisateur.equipe_id` nul pour les comptes existants ; nom en double à la casse près refusé (« Atelier » puis « ATELIER »), nom vide ou de 101 caractères refusés, nom de 100 caractères accepté ; `equipe_id` inexistant refusé (clé étrangère) ; suppression d'une équipe portée par un utilisateur refusée | 3, D-147 (2) | 6a | packages/api/test/lot6a-migration.test.ts |
+| EQP-1 | GET /api/equipes : 200 `[{ id, nom }]` pour l'administrateur, le chef de projet et la ressource (mêmes données) ; sans session 401, base inchangée | 2, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-2 | Tri par nom sans tenir compte de la casse : créées « bravo », « Alpha », « Écho », « alpha2 », « Charlie » (ordre d'insertion mêlé) → liste « Alpha », « alpha2 », « bravo », « Charlie », « Écho » | 3, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-3 | POST /api/equipes par l'administrateur : 201 `{ id, nom }` ; « Atelier » avec espaces de bord relu « Atelier » (trim) ; un nom de 100 caractères accepté ; relu par GET | 3, D-147 (2, 3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-4 | PATCH /api/equipes/:id par l'administrateur : 200 `{ id, nom }` ; relu par GET ; renommer en changeant seulement la casse de son propre nom : 200 | 3, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-5 | DELETE /api/equipes/:id par l'administrateur : 204 ; relu : l'équipe a disparu, les autres restent ; le nom supprimé peut être recréé | 3, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-6 | Chef de projet et ressource : POST, PATCH et DELETE → 403 ; base inchangée (6 refus) | 2, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-7 | 400, base inchangée, en POST et en PATCH : nom vide, nom d'espaces seuls, nom de 101 caractères, nom absent, nom non textuel, clé inconnue en plus du nom | 3, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-8 | 409 `{ erreur: 'Équipe déjà existante' }`, base inchangée : POST d'un nom égal à la casse près (« atelier » pour « Atelier ») ; PATCH d'une équipe vers le nom d'une autre à la casse près | 3, D-147 (2, 3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-9 | DELETE d'une équipe portée par un utilisateur inactif, puis par un utilisateur actif : 409 `{ erreur: 'Équipe utilisée : suppression refusée' }`, base inchangée ; après retrait de l'équipe aux deux utilisateurs : 204 | 3, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-10 | PATCH et DELETE d'une équipe inconnue, d'un identifiant hors plage (2147483648), de 0 et de « abc » → 404, base inchangée | 2, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| EQP-11 | Ordre des refus, base inchangée : sans session sur équipe inconnue → 401 ; chef sur équipe inconnue → 403 ; administrateur, équipe inconnue et corps invalide → 404 ; administrateur, équipe existante, corps invalide dont le nom doublonne → 400 ; équipe existante, corps valide mais doublon → 409 | 2, D-147 (3) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| USR-26 | POST /api/utilisateurs avec `equipe_id` → 201 portant `equipe_id` ; sans `equipe_id` → 201, `equipe_id` null ; relus par GET /api/utilisateurs | 3, D-147 (4) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| USR-27 | PATCH `equipe_id` vers une autre équipe → 200 portant le nouvel identifiant ; PATCH `equipe_id: null` → 200, null ; un PATCH sans `equipe_id` ne change pas l'équipe ; relus par GET | 3, D-147 (4) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| USR-28 | Équipe inexistante en POST et en PATCH → 422 `{ erreur: 'Équipe inconnue' }`, base inchangée ; un calendrier inexistant garde 422 'Calendrier inconnu' (POST et PATCH), base inchangée ; `equipe_id` à 0, négatif, hors plage (2147483648), non entier ou textuel → 400, base inchangée | 2, D-147 (4) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| USR-29 | Garde (rouge en phase rouge faute de la route /api/equipes de sa préparation ; capacité d'échec prouvée par mutation locale en phase verte : `equipe_id` ajouté à la requête de l'annuaire, test rouge, mutation annulée) : GET /api/annuaire d'un utilisateur ayant une équipe ne contient pas `equipe_id` ni la clé `equipe` | 2, D-147 (4) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| USR-30 | GET /api/auth/me porte `equipe_id` : identifiant de l'équipe pour un utilisateur qui en a une (administrateur connecté), null pour un autre | 2, D-147 (4) | 6a | packages/api/test/lot6a-equipes.test.ts |
+| E2E-335 | Administrateur : entrée « Équipes » de la navigation, juste après « Calendriers » ; clic : titre « Équipes » (niveau 1), adresse /equipes, tableau « Liste des équipes » aux colonnes Nom, Membres, Actions, bouton « Nouvelle équipe » | 2, D-147 (5) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-336 | Chef de projet et ressource : entrée « Équipes » absente de la navigation | 2, D-147 (5) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-337 | Créer une équipe par l'écran : « Nouvelle équipe », champ Nom, « Créer » ; dialogue fermé, ligne « Atelier 6a » avec Membres 0 ; base : une ligne `equipe` de ce nom ; après rechargement la ligne reste | 3, D-147 (5) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-338 | Renommer par l'écran : « Renommer Atelier 6a », dialogue au champ Nom prérempli, « Enregistrer » ; ligne au nouveau nom, ancienne absente, Membres inchangé ; base : nom changé, même identifiant | 3, D-147 (5) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-339 | Supprimer par l'écran : « Supprimer Atelier 6a », confirmation « Supprimer Atelier 6a ? », « Supprimer » ; ligne disparue ; base : table `equipe` vide | 3, D-147 (5) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-340 | Refus doublon : création d'« atelier 6a » (casse différente) puis renommage d'une autre équipe vers ce nom : « Cette équipe existe déjà. » dans le dialogue, dialogue ouvert ; base inchangée | D-147 (5) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-341 | Refus équipe utilisée : équipe portée par un utilisateur (colonne Membres 1) ; « Supprimer » puis confirmer : « Cette équipe a des membres : retirez-les d'abord. » dans la confirmation, confirmation ouverte ; base inchangée ; après retrait de l'équipe à l'utilisateur, la suppression réussit | D-147 (3, 5) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-342 | Écran Utilisateurs, création : liste « Équipe » aux options « Aucune », puis les équipes triées par nom sans tenir compte de la casse (créées dans le désordre) ; « Aucune » présélectionnée ; création sans équipe : corps du POST sans `equipe_id`, colonne « Équipe » « — » ; création avec une équipe : corps du POST avec `equipe_id` (identifiant), colonne « Équipe » au nom de l'équipe | 3, D-147 (6) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-343 | Écran Utilisateurs, modification : « Modifier <nom> », liste « Équipe » sur l'équipe actuelle ; enregistrer sans toucher : corps du PATCH sans `equipe_id` ; changer d'équipe : corps `{ equipe_id: <id> }` seul, colonne au nouveau nom ; choisir « Aucune » : corps `{ equipe_id: null }`, colonne « — » ; effet vérifié dans l'écran Équipes (colonne Membres) ; base relue | 3, D-147 (6) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-344 | Refus 422 : liste de la modification ouverte, équipe supprimée par l'API, équipe supprimée choisie, « Enregistrer » : « Cette équipe n'existe plus. », dialogue ouvert, base inchangée ; même refus en création | D-147 (4, 6) | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-345 | Extension du parcours complet (administrateur seul, tout à l'écran, gestes d'E2E-317) : calendrier, équipe « Équipe 6a » créée à l'écran, ressource créée à l'écran avec cette équipe, projet, affectation, activité, assignation ; colonne « Équipe » de l'écran Utilisateurs et colonne Membres 1 de l'écran Équipes | D-147 (7), règle « Parcours IHM » | 6a | e2e/tests/lot6a.spec.ts |
+| E2E-346 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement, comme E2E-334) : écran Équipes (liste, dialogue « Nouvelle équipe » avec refus doublon, confirmation de suppression refusée) ; écran Utilisateurs (colonne « Équipe », dialogue de création avec la liste « Équipe ») ; 1440 et 1024 px ; e2e/captures/equipes-*.png | D-147, D-133 (3) | 6a | e2e/tests/lot6a-captures.spec.ts |
+
+### Couverture des champs, lot 6a (règle « Couverture des champs »)
+
+| Champ de l'API | Champ d'écran | Test |
+|---|---|---|
+| POST et PATCH /api/equipes `nom` | champ « Nom » des dialogues « Nouvelle équipe » et « Renommer <nom> » | E2E-337, E2E-338, E2E-340 |
+| DELETE /api/equipes/:id | bouton de ligne « Supprimer <nom> » et sa confirmation | E2E-339, E2E-341 |
+| GET /api/equipes | tableau « Liste des équipes » ; liste « Équipe » de l'écran Utilisateurs | E2E-335, E2E-342 |
+| POST et PATCH /api/utilisateurs `equipe_id` | liste « Équipe » (création et modification) | E2E-342, E2E-343, E2E-345 |
+
+### Preuves de la phase rouge de 6a (D-147)
+
+Rouges prouvés : 17 vitest (route absente 404, relation `equipe` absente, `equipe_id` absent de /api/auth/me, migration 013 absente) ; 11 e2e sur 12 (route ou entrée « Équipes » absente). E2E-336 vert d'emblée (entrée absente pour le chef et la ressource) : prouvé par mutation locale (entrée ajoutée à tous les rôles dans Layout.tsx, test rouge, `git diff` vide sur src après annulation).
+
+## Révisions D-031 de 6a (décision du porteur, D-147 (8))
+
+Tag `tests-lot6a-r1`, aucun code de production. Seul l'assistant `cellule` (e2e/tests/lot6a-helpers.ts) change : il attend que l'en-tête `titre` soit visible avant de lire les en-têtes du tableau. Appelants : E2E-337, E2E-338, E2E-341, E2E-342, E2E-343, E2E-345 (assertions inchangées).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-343-r1 | Révision d'E2E-343 (D-031) : ancienne attente : `cellule` lisait les en-têtes juste après `allerA(page, 'Équipes')`, avant le chargement du tableau (indice -1, échec constaté 3 fois sur 3) ; nouvelle : attente de l'en-tête exact `titre` visible avant la lecture. Valeurs attendues inchangées | D-147 (6, 8) | 6a | e2e/tests/lot6a.spec.ts |
+
+## Tests du lot 6b, vue restreinte de la ressource (D-148)
+
+API : `packages/api/test/lot6b-ressource.test.ts` (RES) et `packages/api/test/lot6b-mes-taches.test.ts` (MTA). Chaque refus relève toutes les tables avant et après (`refusSansEffet` sur l'empreinte de la base) : base inchangée. Valeurs attendues recopiées de SPEC « Vue restreinte de la ressource (lot 6b, D-148) » et de D-148. E2E : `e2e/tests/lot6b.spec.ts` et `e2e/tests/lot6b-captures.spec.ts`, base « administrateur seul » avant et après chaque test. Choix laissés à Claude Code (D-148 ne tranche pas) : ordre du menu de la ressource « Mes tâches », puis l'ordre actuel (Calendriers, Imputations) ; dates JJ/MM/AAAA et charges à la virgule décimale, comme le Gantt (3b point 2) ; MTA ne teste pas un sous-projet ouvert sous un projet clos (D-148 (3) ne le tranche pas).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| RES-1 | Listes sans identifiant, rôle ressource affectée : GET /api/projets et GET /api/modeles → 403 `{ erreur: 'Interdit' }` ; sans session → 401 ; base inchangée | D-148 (2) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-2 | Projet désigné, ressource affectée au projet : GET, PATCH (corps valide et corps invalide), DELETE /api/projets/:id, POST /api/projets/:id/copie, GET …/gantt, …/travail, …/planning, …/historique → 404 ; même chose sur un modèle où elle est affectée ; base inchangée | D-148 (2) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-3 | Éléments : GET et POST /api/projets/:id/activites et …/jalons, PATCH et DELETE /api/activites/:id et /api/jalons/:id, POST /api/elements/:id/deplacer → 404 (corps invalide compris : 404 avant 400) ; base inchangée | D-148 (2) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-4 | Dépendances : GET et POST /api/projets/:id/dependances, PATCH et DELETE /api/dependances/:id → 404 ; base inchangée | D-148 (2) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-5 | Affectations : GET et POST /api/projets/:id/affectations, PATCH et DELETE /api/affectations/:id (sa propre affectation) → 404 ; base inchangée | D-148 (2) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-6 | Assignations : GET /api/projets/:id/assignations, POST /api/activites/:id/assignations, PATCH et DELETE /api/assignations/:id (sa propre assignation) → 404 ; base inchangée | D-148 (2) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-7 | Saisies manuelles, activité MAN où elle est assignée : GET /api/activites/:id/saisies, GET …/jours-non-ouvres, PUT …/saisies (corps valide, corps invalide, mois invalide) → 404 ; base inchangée | D-148 (2) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-8 | Témoin (vert d'emblée, prouvé par mutation) : chef de projet `est_ressource` affecté au projet d'un autre chef : GET /api/projets contient le projet (`peut_ecrire` faux), GET …/gantt 200, GET …/saisies 200, PATCH /api/projets/:id 403 ; base inchangée | D-148 (1) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-9 | Témoin (vert d'emblée, prouvé par mutation) : administrateur `est_ressource` affecté au projet : GET /api/projets contient le projet (`peut_ecrire` vrai), GET …/gantt 200, PATCH /api/projets/:id 200 | D-148 (1) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| RES-10 | Témoin (vert d'emblée, prouvé par mutation) : routes inchangées pour la ressource : GET /api/auth/me 200, GET /api/feuilles?semaine=… 200 avec la ligne de son assignation, PUT /api/feuilles 200, GET /api/annuaire 200, GET /api/calendriers et /api/calendriers/:id 200, GET /api/equipes 200, GET /api/validations?semaine=… 200 `[]` (D-148 (8)) | D-148 (2, 8) | 6b | packages/api/test/lot6b-ressource.test.ts |
+| MTA-1 | GET /api/mes-taches, ressource à deux assignations ouvertes (charges 2 et 3, réel 0,5 et reste 1,5 posés sur la première) : 200, deux entrées aux valeurs exactes (`assignation_id`, `projet` { code, nom }, `activite` { nom, wbs }, `charge_assignee`, `charge_reelle`, `reste_a_faire`, `debut_planifie`, `fin_planifiee`) ; la route n'écrit rien | D-148 (3) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| MTA-2 | Exclusions : activité close, projet clos, modèle (ressource affectée et assignée), assignation d'une autre ressource → absentes ; seule l'assignation ouverte reste | D-148 (3) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| MTA-3 | Tri : début planifié croissant, null en dernier ; à début égal, code du projet sans tenir compte de la casse (« a6b » avant « B6B ») ; à projet égal, numéro WBS (1 avant 2) | D-148 (3) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| MTA-4 | Dates : `debut_planifie` et `fin_planifiee` null avant calcul ; après POST /api/calcul, égales aux dates planifiées de l'activité relues en base | D-148 (3) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| MTA-5 | Liste vide : utilisateur connecté sans assignation (administrateur) → 200 `[]` ; sans session → 401 | D-148 (3) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| MTA-6 | Champs exacts : clés de chaque entrée exactement les huit de D-148 (3), de `projet` exactement { code, nom }, d'`activite` exactement { nom, wbs } ; aucune autre clé | D-148 (3, 6) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| MTA-7 | Tout utilisateur connecté : chef de projet `est_ressource` assigné sur le projet d'un autre chef → 200, sa tâche | D-148 (1, 3) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| MTA-8 | Exclusions de D-148 (10) : activité sous une activité ancêtre close (clôture forcée en base) et activité d'un projet sous un projet ancêtre clos (forcée en base) → absentes ; une tâche ouverte témoin reste | D-148 (10) | 6b | packages/api/test/lot6b-mes-taches.test.ts |
+| E2E-347 | Menu du rôle ressource : liens de la Navigation principale exactement « Mes tâches », « Calendriers », « Imputations », « Mes tâches » en tête ; ni Accueil, ni Projets, ni Modèles, ni Validation | D-148 (4, 5) | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-348 | Redirections du rôle ressource : après connexion, adresse /mes-taches ; « / », /projets, /projets/<id>, /projets/<id>/planning-manuel/<id>, /modeles et /validation → /mes-taches, titre « Mes tâches » ; aucune requête vers /api/projets, /api/modeles ni /api/validations | D-148 (5) | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-349 | Écran Mes tâches, contenu : tableau « Mes tâches » aux colonnes Projet, Activité, Début, Fin, Assigné, Réel, Reste ; lignes dans l'ordre de l'API ; Projet = code avec `title` = nom ; Début et Fin JJ/MM/AAAA après calcul, « — » avant calcul (deux projets) ; charges à la virgule décimale ; aucun bouton | D-148 (4) | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-350 | Écran Mes tâches, état vide : ressource sans assignation : « Aucune tâche en cours. », sans tableau | D-148 (4) | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-351 | Écran Mes tâches, échec : GET /api/mes-taches intercepté en 500 : « Impossible de charger vos tâches. », sans tableau | D-148 (4) | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-352 | Chef de projet `est_ressource` : « Mes tâches » en tête du menu, Accueil, Projets, Validation et Modèles toujours là ; clic : /mes-taches avec sa tâche ; administrateur non ressource : pas d'entrée « Mes tâches » | D-148 (1, 4, 5) | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-353 | Extension du parcours complet (administrateur seul, tout à l'écran) : l'administrateur crée la ressource, le chef et le projet ; le chef affecte la ressource, crée l'activité et l'assigne (2 j) à l'écran ; la ressource se connecte et voit la tâche dans Mes tâches (code, activité, « — », 2, 0, 2) ; base relue | D-148 (4), règle « Parcours IHM » | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-354 | Témoin (vert d'emblée, prouvé par mutation) : Feuille de temps de la ressource inchangée : entrée « Imputations », titre « Feuille de temps », ligne de son assignation, saisie de 0,5, « Feuille enregistrée. », relue par l'API | D-148 (2), §7 | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-355 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement) : Mes tâches (contenu, état vide), menu de la ressource ; 1440 et 1024 px ; e2e/captures/mes-taches-*.png | D-148 (4, 5), D-133 (3) | 6b | e2e/tests/lot6b-captures.spec.ts |
+| E2E-356 | Utilisateur de rôle ressource non `est_ressource` : entrée « Mes tâches » présente, « Imputations » absente, état vide « Aucune tâche en cours. » | D-148 (11) | 6b | e2e/tests/lot6b.spec.ts |
+| E2E-357 | Page d'arrivée après connexion : administrateur, chef de projet non ressource et chef ressource → « / » (Accueil) ; ressource → /mes-taches | D-148 (11) | 6b | e2e/tests/lot6b.spec.ts |
+
+### Couverture des champs, lot 6b (règle « Couverture des champs »)
+
+Aucun champ modifiable nouveau : GET /api/mes-taches est en lecture seule, affiché par l'écran Mes tâches (E2E-349, E2E-353).
+
+## Révisions D-031 de 6b (décision du porteur, D-148 (7), (9))
+
+Tag `tests-lot6b`, aucun code de production. Assistants révisés, appelants sans changement d'assertion : `connecterAvec` (e2e/tests/lot1-helpers.ts) attend l'adresse « / » ou « /mes-taches » après la connexion (la ressource est redirigée, D-148 (5)) ; nouvel assistant `chefLecteur` (e2e/tests/lot6b-helpers.ts) : chef de projet `est_ressource` affecté au projet d'un autre chef (D-148 (9)). Assistants vitest révisés : `verifierRefus` (lot1-t2-helpers.ts) et `trio` (lot1-complements.test.ts), ressource affectée 403 → 404.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| ACT-12-r1 | Ancienne : ressource affectée → 403 en POST, PATCH, DELETE (`verifierRefus`) ; nouvelle : 404, base inchangée | D-148 (2) | 6b | packages/api/test/lot1-act.test.ts |
+| ACT-13-r1 | Ancienne : la ressource affectée lit les activités (200) ; nouvelle : 404 ; non affectée 404 inchangé | D-148 (2) | 6b | packages/api/test/lot1-act.test.ts |
+| ASS-9-r1 | Ancienne : ressource affectée → 403 (`verifierRefus`) ; nouvelle : 404 | D-148 (2) | 6b | packages/api/test/lot1-ass.test.ts |
+| ASS-10-r1 | Ancienne : la ressource affectée lit les assignations (200) ; nouvelle : 404 | D-148 (2) | 6b | packages/api/test/lot1-ass.test.ts |
+| JLN-6-r1 | Ancienne : ressource affectée → 403 (`verifierRefus`) ; nouvelle : 404 | D-148 (2) | 6b | packages/api/test/lot1-jln.test.ts |
+| JLN-7-r1 | Ancienne : la ressource lit les jalons de son projet (200) ; nouvelle : 404 | D-148 (2) | 6b | packages/api/test/lot1-jln.test.ts |
+| LIEN-11-r1 | Ancienne : ressource affectée → 403 en écriture, 200 en lecture ; nouvelle : 404 et 404 | D-148 (2) | 6b | packages/api/test/lot1-lien.test.ts |
+| WBS-8-r1 | Ancienne : déplacer, ressource affectée → 403 (`verifierRefus`) ; nouvelle : 404 | D-148 (2) | 6b | packages/api/test/lot1-wbs.test.ts |
+| AFF-3-r2 | Ancienne : ressource affectée → 403 en POST, PATCH, DELETE d'affectation ; nouvelle : 404, base inchangée | D-148 (2) | 6b | packages/api/test/lot1-aff.test.ts |
+| AFF-4-r1 | Ancienne : la ressource voit les affectations de son projet (200) ; nouvelle : 404 ; projet non affecté 404 inchangé | D-148 (2) | 6b | packages/api/test/lot1-aff.test.ts |
+| REF-1-r1 | Ancienne : ressource affectée → 403 sur PATCH /api/projets/:id et dans `trio` (DELETE projet, POST, PATCH, DELETE affectation) ; nouvelle : 404 ; POST /api/projets et écritures de calendriers par la ressource : 403 inchangé ; empreinte de la base inchangée | D-148 (2) | 6b | packages/api/test/lot1-complements.test.ts |
+| REF-2-r1 | Ancienne : ressource affectée → 403 dans `trio` (activités, jalons, déplacer, dépendances, assignations) ; nouvelle : 404 ; empreinte inchangée | D-148 (2) | 6b | packages/api/test/lot1-complements.test.ts |
+| PRJ-7-r2 | Ancienne : GET /api/projets = [projet affecté], GET de la fiche 200, PATCH et DELETE 403 ; nouvelle : GET /api/projets 403, fiche 404, PATCH et DELETE 404 ; projet non affecté 404 et POST /api/projets 403 inchangés ; base inchangée | D-148 (2) | 6b | packages/api/test/lot1-prj.test.ts |
+| PRJ-19-r1 | Ancienne : ressource affectée → 403 en PATCH et DELETE ; nouvelle : 404, rien de modifié ni supprimé | D-148 (2) | 6b | packages/api/test/lot1-prj-t2.test.ts |
+| PRJ-22-r1 | Ancienne : `peut_ecrire` faux pour la ressource dans la liste et la fiche ; nouvelle : liste 403, fiche 404 ; valeurs de l'administrateur et du chef inchangées | D-148 (2) | 6b | packages/api/test/lot1-pe.test.ts |
+| HIS-12-r1 | Ancienne : PATCH projet, PATCH activité, PATCH assignation, DELETE activité par la ressource → 403 ; nouvelle : 404 ; aucune entrée d'historique | D-148 (2) | 6b | packages/api/test/lot1-his.test.ts |
+| HIS-13-r1 | Ancienne : historique d'un projet, ressource affectée → 403 ; nouvelle : 404 ; historique transversal 403 inchangé | D-148 (2) | 6b | packages/api/test/lot1-his.test.ts |
+| COPIE-8-r1 | Ancienne : copie par la ressource affectée → 403 ; nouvelle : 404, base inchangée | D-148 (2) | 6b | packages/api/test/lot1b-copie.test.ts |
+| MOD-9-r1 | Ancienne : GET /api/projets de la ressource = [] ; nouvelle : 403 ; GET /api/modeles 403 et 404 sur le modèle inchangés | D-148 (2) | 6b | packages/api/test/lot1b-mod.test.ts |
+| GANTT-8-r1 | Ancienne : ressource affectée → 200, `peut_ecrire` faux ; nouvelle : 404 ; autres cas inchangés | D-148 (2) | 6b | packages/api/test/lot3a-gantt.test.ts |
+| GANTT-9-r1 | Ancienne : Alice (ressource) lit P, `sous_projets` vide ; nouvelle : Alice 404 ; un chef de projet affecté à P seul lit P, `sous_projets` vide ; administrateur inchangé | D-148 (2, 9) | 6b | packages/api/test/lot3a-gantt.test.ts |
+| TRAV-5-r1 | Ancienne : Alice (ressource affectée) 200, mêmes lignes ; nouvelle : Alice 404 ; chef et administrateur inchangés | D-148 (2) | 6b | packages/api/test/lot3g-travail.test.ts |
+| SAI-7-r1 | Ancienne : GET des saisies par la ressource affectée 200, PUT 403 ; nouvelle : 404 et 404 | D-148 (2) | 6b | packages/api/test/lot2e-saisies.test.ts |
+| SAI-10-r1 | Ancienne : ressource affectée → 403 avant 400 et avant 422 ; nouvelle : ressource affectée → 404 ; l'ordre 403 avant 400 et avant 422 est vérifié avec un chef de projet affecté au projet d'un autre chef | D-148 (2, 9) | 6b | packages/api/test/lot2e-saisies.test.ts |
+| SAI-24-r1 | Ancienne : GET …/jours-non-ouvres, ressource affectée 200 ; nouvelle : 404 | D-148 (2) | 6b | packages/api/test/rex3a-saisies.test.ts |
+| E2E-10-r1 | Ancienne : la ressource consulte Projets et la fiche sans bouton d'écriture ; nouvelle : même parcours et mêmes assertions par un chef de projet affecté au projet d'un autre chef | D-148 (9) | 6b | e2e/tests/lot1.spec.ts |
+| E2E-13-r1 | Ancienne : la ressource a le lien « Projets » ; nouvelle : ni « Projets » ni « Modèles » | D-148 (5) | 6b | e2e/tests/lot1b.spec.ts |
+| E2E-23-r1 | Ancienne : la ressource lit Projets, la fiche et Affectations sans bouton d'écriture ; nouvelle : chef lecteur ; partie modèle inchangée | D-148 (9) | 6b | e2e/tests/lot1b-c.spec.ts |
+| E2E-29-r1 | Ancienne : Alice (ressource) voit la grille du planning manuel désactivée ; nouvelle : chef lecteur ; activité close et ASAP inchangées | D-148 (9) | 6b | e2e/tests/lot2e.spec.ts |
+| E2E-38-r2 | Ancienne : Alice voit P sans P1 et sans bouton d'écriture ; nouvelle : chef lecteur affecté à P seul | D-148 (9) | 6b | e2e/tests/lot3b.spec.ts |
+| E2E-64-r1 | Ancienne : pas de « Calculer » pour la ressource et le chef lecteur ; nouvelle : chef lecteur seul (la ressource n'ouvre plus le Gantt) | D-148 (9) | 6b | e2e/tests/lot3c.spec.ts |
+| E2E-83-r1 | Ancienne : la ressource voit le sous-projet comme racine, en lecture seule ; nouvelle : chef lecteur affecté au sous-projet seul | D-148 (9) | 6b | e2e/tests/rex2c.spec.ts |
+| E2E-91-r1 | Ancienne : Accueil d'une ressource affectée au sous-projet seul ; nouvelle : chef lecteur affecté au sous-projet seul (racine S91, « Calculer » absent) | D-148 (9) | 6b | e2e/tests/accueil-g2.spec.ts |
+| E2E-105-r1 | Ancienne : projet affiché sans « Calculer » pour la ressource et le chef lecteur ; nouvelle : chef lecteur seul | D-148 (9) | 6b | e2e/tests/accueil-g4.spec.ts |
+| E2E-139-r1 | Ancienne : ressource sans geste ni poignée ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3d3a.spec.ts |
+| E2E-150-r1 | Ancienne : ressource, barre active sans dialogue ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3d3b.spec.ts |
+| E2E-158-r1 | Ancienne : case « Recalcul automatique » absente pour la ressource ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3d4.spec.ts |
+| E2E-171-r1 | Ancienne : aucun connecteur pour la ressource ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3e.spec.ts |
+| E2E-178-r2 | Ancienne : sans droit d'écriture (ressource), ni dialogue ni curseur pointer ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3e.spec.ts |
+| E2E-181-r1 | Ancienne : aucune poignée de ligne pour la ressource ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3f1.spec.ts |
+| E2E-189-r1 | Ancienne : la ressource n'a pas de bouton « Déplacer » ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3f1.spec.ts |
+| E2E-195-r1 | Ancienne : aucun menu contextuel pour la ressource (Gantt), Accueil vu par l'administrateur ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3f2.spec.ts |
+| E2E-197-r1 | Ancienne : Maj+F10 et touche Menu sans menu pour la ressource ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3f2.spec.ts |
+| E2E-204-r1 | Ancienne : pas de bouton « Copier » pour la ressource ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3f2.spec.ts |
+| E2E-218-r1 | Ancienne : planning manuel en lecture seule pour la ressource ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/lot3g.spec.ts |
+| E2E-249-r1 | Ancienne : sans droit d'écriture (ressource), noms en texte dans l'onglet Planning ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/rex3a.spec.ts |
+| E2E-266-r1 | Ancienne : ressource affectée, « Annuler » présent et désactivé ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/rex3b.spec.ts |
+| E2E-276-r1 | Ancienne : ressource, noms en texte sur l'Accueil et dans l'onglet Gantt ; nouvelle : chef lecteur | D-148 (9) | 6b | e2e/tests/rex3b-modif.spec.ts |
+| E2E-319-r1 | Ancienne : la ressource ouvre /validation et lit « Accès réservé aux chefs de projet et aux administrateurs. » ; nouvelle : /validation redirige vers /mes-taches ; aucun appel à /api/validations (inchangé) | D-148 (5) | 6b | e2e/tests/lot4c.spec.ts |
+| E2E-53-r1 | Ancienne : connexion réussie = lien « Accueil » affiché ; nouvelle : lien « Accueil » ou « Mes tâches » (ressource créée à l'écran) | D-148 (5) | 6b | e2e/tests/rex1.spec.ts |
+| E2E-69-r1 | Idem E2E-53-r1 (assistant `seConnecter`) | D-148 (5) | 6b | e2e/tests/rex2.spec.ts |
+| E2E-70-r1 | Idem E2E-53-r1 | D-148 (5) | 6b | e2e/tests/rex2.spec.ts |
+| E2E-71-r1 | Idem E2E-53-r1 (assistant `seConnecter` de rex2d) | D-148 (5) | 6b | e2e/tests/rex2d.spec.ts |
+| E2E-72-r1 | Idem E2E-71-r1 | D-148 (5) | 6b | e2e/tests/rex2d.spec.ts |
+
+Tests inchangés relevés à l'inventaire (attente identique sous D-148) : CALC-4 (calcul par la ressource, 403 par le rôle), MOD-16 (404), CAL-6-r1 et EQP-6 (403 en écriture), VAL-3 (liste vide, D-148 (8)), lots 4a et 4b (feuille de temps), E2E-299 et E2E-336 (menu : Imputations présent, Validation et Équipes absents), E2E de la Feuille de temps (via `connecterAvec`).
+
+### Preuves de la phase rouge de 6b (D-148)
+
+- Vitest révisés : 25 rouges (403 ou 200 au lieu de 404, 200 au lieu de 403 sur GET /api/projets). Nouveaux : RES-1 à RES-7 rouges (la ressource lit ou reçoit 403 au lieu de 404, 200 au lieu de 403), MTA-1 à MTA-7 rouges (route GET /api/mes-taches absente, 404). RES-8 à RES-10 verts d'emblée, prouvés par mutation locale : visibilité par affectation retirée aux non-administrateurs (RES-8), projets où l'administrateur est affecté retirés de sa portée (RES-9), GET /api/validations refusée au rôle ressource (RES-10) ; trois rouges, mutations annulées.
+- E2E révisés : E2E-13-r1 (lien « Projets » présent) et E2E-319-r1 (pas de redirection) rouges. Témoins verts d'emblée : les 22 tests au chef lecteur (dont E2E-64-r1 et E2E-105-r1), prouvés par mutation locale (`peut_ecrire` toujours vrai dans `lireVisibles`) : 21 rouges ; E2E-266-r1, vert sous cette mutation (« Annuler » désactivé faute de geste), prouvé par une seconde mutation (« Annuler » masqué sans droit d'écriture) ; E2E-53-r1, 69-r1, 70-r1, 71-r1, 72-r1 prouvés par mutation (lien « Accueil » retiré) : rouges. E2E-150-r1 : le chef lecteur est affecté à P et au sous-projet S (Alice l'était aussi ; le préambule exige la barre de S).
+- Nouveaux e2e : E2E-347 à E2E-353 et E2E-355 rouges (menu, redirection, écran « Mes tâches » absents ; E2E-353 passe toute la chaîne à l'écran et échoue à la redirection finale de la ressource). E2E-354 vert d'emblée, prouvé par mutation (« Imputations » masqué pour le rôle ressource) : rouge.
+- Après chaque mutation : `git diff` vide sur packages/api/src et packages/web/src. Lint et typecheck verts.

@@ -60,12 +60,15 @@ async function seConnecter(page: Page, email: string, motDePasse: string): Promi
   await page.getByLabel('Mot de passe').fill(motDePasse);
   await page.getByRole('button', { name: 'Se connecter' }).click();
   const refus = page.getByRole('alert');
-  const accueil = page.getByRole('link', { name: 'Accueil', exact: true });
+  // Révision 6b (D-031, D-148 (5)) : la ressource n'a plus « Accueil » ; « Mes tâches » prouve aussi la connexion.
+  const accueil = page
+    .getByRole('link', { name: 'Accueil', exact: true })
+    .or(page.getByRole('link', { name: 'Mes tâches', exact: true }));
   await refus.or(accueil).first().waitFor();
   return !(await refus.isVisible());
 }
 
-test('E2E-69 utilisateur créé à l’écran avec le mot de passe « a » : il se connecte avec « a »', async ({
+test('E2E-69-r1 utilisateur créé à l’écran avec le mot de passe « a » : il se connecte avec « a »', async ({
   page,
 }) => {
   await remettreAdminSeul();
@@ -75,7 +78,7 @@ test('E2E-69 utilisateur créé à l’écran avec le mot de passe « a » : il 
   expect(await seConnecter(page, 'court-r2-69@rex2.test', 'a'), 'connexion avec « a »').toBe(true);
 });
 
-test('E2E-70 nouveau mot de passe « b » saisi dans « Modifier <nom> » : il connecte', async ({
+test('E2E-70-r1 nouveau mot de passe « b » saisi dans « Modifier <nom> » : il connecte', async ({
   page,
 }) => {
   await remettreAdminSeul();

@@ -19,6 +19,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, monde3b, sousProjet } from './lot3b-helpers.js';
 import {
   allerA,
@@ -186,7 +187,7 @@ async function ouvrirLiens(page: Page, m: Monde, options: { email?: string; zoom
   );
 }
 
-test('E2E-171 : connecteur sur A, B et J seulement, jour et semaine, pour le chef ; aucun au zoom mois ni pour une ressource', async ({
+test('E2E-171-r1 : connecteur sur A, B et J seulement, jour et semaine, pour le chef ; aucun au zoom mois ni pour un chef en lecture seule', async ({
   page,
   request,
 }) => {
@@ -211,7 +212,8 @@ test('E2E-171 : connecteur sur A, B et J seulement, jour et semaine, pour le che
   await expect(connecteurs(page)).toHaveCount(0);
 
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E171'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.a.id)).toHaveAttribute(
     'aria-label',
@@ -407,7 +409,7 @@ test('E2E-177 : suppression d’un lien depuis le dialogue, avec confirmation', 
   await expect(page.getByRole('row', { name: /Tâche A\s+Tâche B\s+FD/ })).toHaveCount(0);
 });
 
-test('E2E-178-r1 : clic sur un lien au zoom mois ouvre le dialogue ; sans droit d’écriture, ni dialogue ni curseur pointer', async ({
+test('E2E-178-r2 : clic sur un lien au zoom mois ouvre le dialogue ; sans droit d’écriture, ni dialogue ni curseur pointer', async ({
   page,
   request,
 }) => {
@@ -423,8 +425,9 @@ test('E2E-178-r1 : clic sur un lien au zoom mois ouvre le dialogue ; sans droit 
   await expect(dialogueLien(page)).toHaveCount(0);
 
   await page.context().clearCookies();
-  // Préambule (D-107) : A et B seulement, le sous-projet S n'est pas visible pour Alice.
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Préambule (D-107) : A et B seulement, le sous-projet S n'est pas visible pour le chef lecteur.
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E178r1'));
   await page.goto(gantt(m.projet.id));
   await expect(barre(page, m.a.id)).toHaveAttribute(
     'aria-label',

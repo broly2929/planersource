@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 
 /*
  * Contrat d'interface du lot 1 (écrans) — libellés accessibles attendus :
@@ -176,7 +177,7 @@ test('E2E-9 : un chef assigne une ressource ; une ressource non affectée n’es
   await expect(page.getByRole('row', { name: /Maçonnerie E2E9.*Alice E2E9/ })).toBeVisible();
 });
 
-test('E2E-10 : une ressource consulte le planning sans bouton d’écriture', async ({
+test('E2E-10-r1 : un chef de projet affecté au projet d’un autre chef consulte le planning sans bouton d’écriture', async ({
   page,
   request,
 }) => {
@@ -187,7 +188,8 @@ test('E2E-10 : une ressource consulte le planning sans bouton d’écriture', as
   await api.projet('E2E-10B', 'Autre projet E2E10', chef.id);
   await api.affectation(projet.id, alice.id);
   await api.activite(projet.id, 'Lecture E2E10');
-  await connecterAvec(page, 'alice-e2e10@example.test');
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, projet.id, 'E2E10'));
   await page.getByRole('link', { name: 'Projets' }).click();
   await expect(page.getByRole('row', { name: /Autre projet E2E10/ })).toHaveCount(0);
   await page.getByRole('link', { name: 'Projet E2E10' }).click();

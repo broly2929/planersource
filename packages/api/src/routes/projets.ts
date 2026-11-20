@@ -111,7 +111,10 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     return projet;
   }
 
-  app.get('/api/projets', opts, async (request) => projetsVisibles(pool, request.user!));
+  app.get('/api/projets', opts, async (request, reply) => {
+    if (request.user!.role === 'ressource') return reply.code(403).send({ erreur: 'Interdit' });
+    return projetsVisibles(pool, request.user!);
+  });
 
   app.get('/api/modeles', opts, async (request, reply) => {
     if (request.user!.role === 'ressource') return reply.code(403).send({ erreur: 'Interdit' });

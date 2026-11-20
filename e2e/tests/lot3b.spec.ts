@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { chefLecteur } from './lot6b-helpers.js';
 import { activite, poserSaisies } from './lot2e-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, monde3b, sousProjet } from './lot3b-helpers.js';
 
@@ -201,7 +202,7 @@ test('E2E-37 : avant tout calcul, bandeau et tableau sans barre ; projet sans é
   await expect(page.locator('svg [data-element-id]')).toHaveCount(0);
 });
 
-test('E2E-38-r1 : parent, sous-projet en synthèse avec lien ; Alice voit P sans P1 et sans bouton d’écriture', async ({
+test('E2E-38-r2 : parent, sous-projet en synthèse avec lien ; un chef affecté à P seul voit P sans P1 et sans bouton d’écriture', async ({
   page,
   request,
 }) => {
@@ -231,7 +232,8 @@ test('E2E-38-r1 : parent, sous-projet en synthèse avec lien ; Alice voit P sans
   await expect(lien).toHaveAttribute('href', `/projets/${p1.id}`);
 
   await page.context().clearCookies();
-  await connecterAvec(page, m.gens.Alice!.email);
+  // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
+  await connecterAvec(page, await chefLecteur(request, p, 'E2E38'));
   await page.goto(gantt(p));
   await expect(barre(page, g.id)).toHaveAttribute('data-type', 'parent');
   await expect(page.getByRole('link', { name: 'Sous-projet E2E38' })).toHaveCount(0);
