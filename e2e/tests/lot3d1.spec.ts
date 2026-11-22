@@ -11,6 +11,7 @@ import {
   creerProjetParEcran,
   dialogueCalcul,
   notification,
+  ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
 
@@ -216,12 +217,12 @@ test('E2E-130 : parcours IHM : initiales saisies à l’écran Utilisateurs, vis
   await expect(texteDe(page, a.id)).toHaveText('RP');
 });
 
-test('E2E-131 : extension du parcours complet : initiales « RC » saisies à l’écran, case cochée, texte rattaché à « Tâche »', async ({
+test('E2E-131-r1 : extension du parcours complet : initiales « RC » saisies à l’écran, case cochée, texte rattaché à « Tâche »', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 3D-131');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

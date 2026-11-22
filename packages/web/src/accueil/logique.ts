@@ -1,5 +1,7 @@
 // Règles pures de l'Accueil (G2, D-080, D-081). Sans accès réseau.
 import { joursConnus } from '../gantt/plage';
+import type { EntreeAnnuaire } from '../annuaire';
+import { VIDE, nomBarre } from '../gantt/libelles';
 import type { ElementGantt } from '../gantt/GanttSvg';
 import { aplatir, racines, type LigneArbre, type ProjetArbre } from '../projets/arbre';
 
@@ -66,3 +68,62 @@ export function nomsElementsCharges(charges: Map<number, ElementGantt[]>): Map<n
   for (const elements of charges.values()) for (const e of elements) noms.set(e.id, e.nom);
   return noms;
 }
+
+/** Ligne du planning d'une ressource (D-157 (2)) ; `projet` et `activite` null : ligne masquée. */
+export interface LigneRessource {
+  assignation_id: number;
+  projet: { id: number; code: string; nom: string } | null;
+  activite: { id: number; nom: string; wbs: string } | null;
+  debut_planifie: string | null;
+  fin_planifiee: string | null;
+  charge_assignee: number;
+  charge_reelle: number;
+  reste_a_faire: number;
+  drapeaux: string[];
+}
+
+/** Ressource choisie dans l'adresse `?ressource=<id>` ; invalide ou absente de la liste : `null`, corrigée. */
+export function parametresRessource(
+  search: URLSearchParams,
+  ids: number[],
+): { ressource: number | null; corrige: boolean } {
+  const brut = search.get('ressource');
+  if (brut === null) return { ressource: null, corrige: false };
+  const id = /^[1-9]\d{0,9}$/.test(brut) ? Number(brut) : null;
+  if (id !== null && ids.includes(id)) return { ressource: id, corrige: false };
+  return { ressource: null, corrige: true };
+}
+
+/** Recherche d'adresse avec la ressource choisie (ou sans) ; les autres paramètres sont gardés. */
+export function rechercheRessource(search: URLSearchParams, id: number | null): string {
+  const p = new URLSearchParams(search);
+  if (id === null) p.delete('ressource');
+  else p.set('ressource', String(id));
+  const texte = p.toString();
+  return texte === '' ? '' : `?${texte}`;
+}
+
+/** Options de « Planning de » : utilisateurs actifs et ressources, nom sans casse, puis identifiant. */
+export function optionsRessources(annuaire: EntreeAnnuaire[]): { id: number; nom: string }[] {
+  return annuaire
+    .filter((u) => u.actif && u.est_ressource)
+    .map((u) => ({ id: u.id, nom: u.nom }))
+    .sort((a, b) => {
+      const x = a.nom.toLowerCase();
+      const y = b.nom.toLowerCase();
+      return x < y ? -1 : x > y ? 1 : a.id - b.id;
+    });
+}
+
+export const celluleProjet = (l: LigneRessource): string => l.projet?.code ?? 'Autre projet';
+
+export const celluleActivite = (l: LigneRessource): string =>
+  l.activite ? `${l.activite.wbs} ${l.activite.nom}` : VIDE;
+
+/** Nom de la ligne pour la barre : « <code> · <wbs> <nom> » ou « Autre projet ». */
+export const nomLigneRessource = (l: LigneRessource): string =>
+  l.projet && l.activite ? `${l.projet.code} · ${celluleActivite(l)}` : 'Autre projet';
+
+/** Nom accessible de la barre : « <code> · <wbs> <nom>, du … au …, drapeaux » ou « Autre projet, du … au … ». */
+export const nomBarreRessource = (l: LigneRessource): string =>
+  nomBarre(nomLigneRessource(l), l.debut_planifie ?? '', l.fin_planifiee ?? '', l.drapeaux);

@@ -1,4 +1,4 @@
-import { Check, Eye, X } from 'lucide-react';
+import { Check, Download, Eye, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
@@ -12,6 +12,8 @@ import { Layout } from '../components/Layout';
 import { NavigationSemaine } from '../components/NavigationSemaine';
 import { Notification } from '../components/Notification';
 import { Table } from '../components/Table';
+import { DialogueExport } from '../export/DialogueExport';
+import { periodeSemaine } from '../export/logique';
 import { TableauFeuille } from '../imputations/TableauFeuille';
 import {
   aujourdhuiLocal,
@@ -75,6 +77,7 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
   const [voir, setVoir] = useState<FeuilleValidation | null>(null);
   const [valider, setValider] = useState<FeuilleValidation | null>(null);
   const [rejeter, setRejeter] = useState<FeuilleValidation | null>(null);
+  const [exporter, setExporter] = useState(false);
   // Refus 422 ou 404 (D-145 (2)) : message au-dessus du tableau, dialogue fermé.
   const [alerteRefus, setAlerteRefus] = useState<string | null>(null);
   const tableau = useRef<HTMLTableElement | null>(null);
@@ -172,6 +175,10 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
           aujourdhui={aujourdhui}
           onChanger={(cible) => navigate(adresse(cible))}
         />
+        <Button variante="secondaire" className="ml-2" onClick={ouvrir(() => setExporter(true))}>
+          <Download aria-hidden className="size-4" />
+          Exporter CSV
+        </Button>
       </div>
 
       {retour && <Notification type="succes">{retour}</Notification>}
@@ -242,6 +249,9 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
         />
       )}
 
+      {exporter && (
+        <DialogueExport {...periodeSemaine(semaine)} onFermer={fermer(() => setExporter(false))} />
+      )}
       {voir && (
         <DialogueVoir
           feuille={voir}

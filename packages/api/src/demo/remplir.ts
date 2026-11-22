@@ -72,13 +72,25 @@ export async function remplirDemo(app: FastifyInstance, { lundi }: OptionsDemo):
 
   const compte = async (login: string, nom: string, initiales: string, extra: Corps) =>
     admin.creer('/api/utilisateurs', { login, nom, initiales, mot_de_passe: login, ...extra });
-  await compte('chefa', 'Chef A', 'CA', { role: 'chef_de_projet' });
+  // Équipes (D-154 (10)) : Développement (alice, bob), Pilotage (chefa, chefb).
+  const developpement = await admin.creer('/api/equipes', { nom: 'Développement' });
+  const pilotage = await admin.creer('/api/equipes', { nom: 'Pilotage' });
+  await compte('chefa', 'Chef A', 'CA', { role: 'chef_de_projet', equipe_id: pilotage.id });
   const chefbU = await compte('chefb', 'Chef B', 'CB', {
     role: 'chef_de_projet',
     est_ressource: true,
+    equipe_id: pilotage.id,
   });
-  const aliceU = await compte('alice', 'Alice', 'AL', { role: 'ressource', est_ressource: true });
-  const bobU = await compte('bob', 'Bob', 'BO', { role: 'ressource', est_ressource: true });
+  const aliceU = await compte('alice', 'Alice', 'AL', {
+    role: 'ressource',
+    est_ressource: true,
+    equipe_id: developpement.id,
+  });
+  const bobU = await compte('bob', 'Bob', 'BO', {
+    role: 'ressource',
+    est_ressource: true,
+    equipe_id: developpement.id,
+  });
 
   const chefa = await Session.ouvrir(app, 'chefa');
   const chefb = await Session.ouvrir(app, 'chefb');
@@ -111,13 +123,20 @@ export async function remplirDemo(app: FastifyInstance, { lundi }: OptionsDemo):
     await chefa.envoyer('PATCH', `/api/activites/${a.id}`, { close: true }, 200);
   });
   const phase = await activite({ nom: 'Phase 1' });
-  const cadrage = await activite({ nom: 'Cadrage', parent_id: phase.id, mode: 'ASAP' });
+  // Charge vendue (D-149 (9)) : Cadrage vendue 4 pour 3 assignés (marge +1), Conception vendue 2 (marge −1).
+  const cadrage = await activite({
+    nom: 'Cadrage',
+    parent_id: phase.id,
+    mode: 'ASAP',
+    charge_vendue: 4,
+  });
   await assigner(cadrage, aliceU, 3);
   const conception = await activite({
     nom: 'Conception',
     parent_id: phase.id,
     mode: 'START',
     debut_valide: j(1),
+    charge_vendue: 2,
   });
   await assigner(conception, bobU, 3);
   const maquette = await activite({ nom: 'Maquette', mode: 'STARR', debut_valide: j(2) });
@@ -150,7 +169,11 @@ export async function remplirDemo(app: FastifyInstance, { lundi }: OptionsDemo):
   });
   await assigner(recette, aliceU, 4);
 
-  const jalon = await chefa.creer(`/api/projets/${r.id}/jalons`, { nom: 'Fin de phase 1' });
+  const jalon = await chefa.creer(`/api/projets/${r.id}/jalons`, {
+    nom: 'Fin de phase 1',
+    // Date client antérieure à la date planifiée : engagement dépassé (D-149 (9)).
+    date_client: j(0),
+  });
   const jalonFixe = await chefa.creer(`/api/projets/${r.id}/jalons`, {
     nom: 'Mise en service',
     type: 'fixe',

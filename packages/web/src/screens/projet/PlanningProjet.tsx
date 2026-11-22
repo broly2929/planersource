@@ -29,12 +29,14 @@ import { FormulaireDeplacement } from './FormulaireDeplacement';
 import { inverseLigne } from '../../gantt/annulation';
 import type { PileAnnulation } from './annulation';
 import {
+  ChampChargeVendue,
   FormulaireActivite,
   FormulaireJalon,
   FormulaireModifAssignation,
   FormulaireModifDependance,
   type ActiviteDetail,
   type JalonDetail,
+  useChargeVendue,
 } from './FormulairesEdition';
 
 interface Ligne {
@@ -83,23 +85,40 @@ export function FormulaireNom({
   corps,
   onSucces,
   onAnnuler,
+  avecChargeVendue = false,
 }: {
   libelle: string;
   chemin: string;
   corps: Record<string, unknown>;
   onSucces: () => void;
   onAnnuler: () => void;
+  /** Champ « Charge vendue (j) » à la création d'une activité (D-149 (7)). */
+  avecChargeVendue?: boolean;
 }) {
   const [nom, setNom] = useState('');
+  const vendue = useChargeVendue(null);
   return (
     <FormulaireDialogue
       libelle={libelle}
-      envoyer={() => api(chemin, { method: 'POST', body: { nom, ...corps } })}
+      envoyer={() =>
+        api(chemin, {
+          method: 'POST',
+          body: {
+            nom,
+            ...corps,
+            ...(avecChargeVendue && vendue.analyse.ok && vendue.analyse.valeur !== null
+              ? { charge_vendue: vendue.analyse.valeur }
+              : {}),
+          },
+        })
+      }
+      inactif={avecChargeVendue && !vendue.valide}
       cible="element"
       onSucces={onSucces}
       onAnnuler={onAnnuler}
     >
       <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
+      {avecChargeVendue && <ChampChargeVendue valeur={vendue.texte} onChange={vendue.setTexte} />}
     </FormulaireDialogue>
   );
 }
@@ -594,6 +613,7 @@ export function PlanningProjet({
           libelle="Créer"
           chemin={`${base}/activites`}
           corps={{}}
+          avecChargeVendue
           onSucces={apres}
           onAnnuler={fermer}
         />
@@ -642,6 +662,7 @@ export function PlanningProjet({
             libelle="Créer"
             chemin={`${base}/activites`}
             corps={{ parent_id: dialogue.ligne.id }}
+            avecChargeVendue
             onSucces={apres}
             onAnnuler={fermer}
           />

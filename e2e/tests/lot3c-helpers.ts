@@ -37,6 +37,16 @@ export async function allerA(page: Page, lien: string): Promise<void> {
   await expect(page.getByRole('heading', { name: lien, level: 1 })).toBeVisible();
 }
 
+/** REX-5 (D-165 (2)) : ouvre un onglet de l'écran Utilisateurs (Équipes ou Calendriers) par le menu. */
+export async function ouvrirOnglet(page: Page, onglet: 'Équipes' | 'Calendriers'): Promise<void> {
+  await allerA(page, 'Utilisateurs');
+  const tab = page.getByRole('tab', { name: onglet, exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+}
+export const ouvrirCalendriers = (page: Page): Promise<void> => ouvrirOnglet(page, 'Calendriers');
+export const ouvrirEquipes = (page: Page): Promise<void> => ouvrirOnglet(page, 'Équipes');
+
 /** Création d'un utilisateur ressource par l'écran Utilisateurs (administrateur connecté). */
 export async function creerRessourceParEcran(
   page: Page,

@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { cheminCapture } from './captures.js';
-import { allerA } from './lot3c-helpers.js';
+import { allerA, ouvrirEquipes } from './lot3c-helpers.js';
 import { equipeApi, remettreAdminSeul6a, utilisateurApi } from './lot6a-helpers.js';
 
 const LARGEURS = [1440, 1024];
@@ -18,7 +18,7 @@ async function photographier(page: Page, nom: string) {
   }
 }
 
-test('E2E-346 : captures des écrans Équipes et Utilisateurs (sans assertion fonctionnelle)', async ({
+test('E2E-346-r1 : captures des écrans Équipes et Utilisateurs (sans assertion fonctionnelle)', async ({
   page,
   request,
 }) => {
@@ -28,7 +28,7 @@ test('E2E-346 : captures des écrans Équipes et Utilisateurs (sans assertion fo
   await utilisateurApi(request, 'Alice 6a', 'alice-6a@lot6a.test', atelier);
   await utilisateurApi(request, 'Bob 6a', 'bob-6a@lot6a.test');
   await loginAsAdmin(page);
-  await allerA(page, 'Équipes');
+  await ouvrirEquipes(page);
   await expect(page.getByRole('table', { name: 'Liste des équipes' })).toBeVisible();
   await photographier(page, 'liste');
 

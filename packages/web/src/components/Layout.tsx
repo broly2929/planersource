@@ -1,14 +1,13 @@
 import {
-  CalendarDays,
   ClipboardCheck,
   ClipboardList,
   FolderKanban,
   LayoutTemplate,
   LogOut,
   Users,
-  UsersRound,
   Home,
   ListTodo,
+  ChartNoAxesGantt,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '../auth';
@@ -26,7 +25,13 @@ function NavLink({
   children: ReactNode;
 }) {
   const chemin = usePath();
-  const actif = to === '/' ? chemin === '/' : chemin === to || chemin.startsWith(`${to}/`);
+  // Le détail d'un calendrier (/calendriers/:id) relève de l'écran Utilisateurs (D-165 (3 bis)).
+  const actif =
+    to === '/'
+      ? chemin === '/'
+      : chemin === to ||
+        chemin.startsWith(`${to}/`) ||
+        (to === '/utilisateurs' && chemin.startsWith('/calendriers/'));
   return (
     <Link
       to={to}
@@ -74,17 +79,14 @@ export function Layout({
               Accueil
             </NavLink>
           )}
-          <NavLink to="/calendriers" icone={CalendarDays}>
-            Calendriers
-          </NavLink>
-          {user?.role === 'administrateur' && (
-            <NavLink to="/equipes" icone={UsersRound}>
-              Équipes
-            </NavLink>
-          )}
           {user?.role !== 'ressource' && (
             <NavLink to="/projets" icone={FolderKanban}>
               Projets
+            </NavLink>
+          )}
+          {(user?.role === 'administrateur' || user?.role === 'chef_de_projet') && (
+            <NavLink to="/plan-de-charge" icone={ChartNoAxesGantt}>
+              Plan de charge
             </NavLink>
           )}
           {user?.est_ressource && (

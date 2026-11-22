@@ -28,7 +28,7 @@ export interface Entree {
 
 /** Colonnes calculées par le moteur et valeurs hors historique (D-023, D-034) : jamais écrites. */
 const EXCLUES: Partial<Record<Entite, readonly string[]>> = {
-  activite: ['debut_planifie', 'fin_planifiee', 'drapeaux'],
+  activite: ['debut_planifie', 'fin_planifiee', 'drapeaux', 'est_parent'],
   jalon: ['date_planifiee'],
   calendrier: ['feries'],
 };

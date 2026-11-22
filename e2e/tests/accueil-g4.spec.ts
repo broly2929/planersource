@@ -18,6 +18,7 @@ import {
   libellesCases,
   lireGantt,
   notification,
+  ouvrirCalendriers,
   projetPret,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
@@ -336,12 +337,12 @@ test('E2E-109-r2 ordre de tabulation : zoom, « Calculer », « Tout déplier »
   ]);
 });
 
-test('E2E-110 parcours complet à l’écran jusqu’au calcul lancé depuis l’Accueil', async ({
+test('E2E-110-r1 parcours complet à l’écran jusqu’au calcul lancé depuis l’Accueil', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal G4-110');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

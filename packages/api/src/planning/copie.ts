@@ -55,7 +55,7 @@ async function copierContenu(
   const jalons = new Map((await lireJalons(db, source.id)).map((j) => [j.id, j]));
   // Parcours en profondeur : un parent est toujours créé avant ses enfants ; le rang source est conservé.
   const nouveaux = new Map<number, number>();
-  for (const ligne of await lirePlanning(db, source.id)) {
+  for (const ligne of await lirePlanning(db, source.id, false)) {
     const parent = ligne.parent_id === null ? null : (nouveaux.get(ligne.parent_id) ?? null);
     const a = activites.get(ligne.id);
     const j = jalons.get(ligne.id);
@@ -69,6 +69,7 @@ async function copierContenu(
         debut_valide: decalerValidee(a.debut_valide, delta),
         fin_valide: decalerValidee(a.fin_valide, delta),
         duree_validee: a.duree_validee,
+        charge_vendue: a.charge_vendue,
       });
       nouveaux.set(a.id, creee.id);
     } else if (j) {
@@ -78,6 +79,7 @@ async function copierContenu(
         rang: j.rang,
         type: j.type,
         date_validee: decalerValidee(j.date_validee, delta),
+        date_client: decalerValidee(j.date_client, delta),
       });
       nouveaux.set(j.id, cree.id);
     }

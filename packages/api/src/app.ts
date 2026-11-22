@@ -21,6 +21,9 @@ import { ganttRoutes } from './routes/gantt.js';
 import { travailRoutes } from './routes/travail.js';
 import { historiqueRoutes } from './routes/historique.js';
 import { mesTachesRoutes } from './routes/mes-taches.js';
+import { exportImputationsRoutes } from './routes/export-imputations.js';
+import { planDeChargeRoutes } from './routes/plan-de-charge.js';
+import { ressourcePlanningRoutes } from './routes/ressource-planning.js';
 import { projetsRoutes } from './routes/projets.js';
 import { saisiesRoutes } from './routes/saisies.js';
 import { utilisateursRoutes } from './routes/utilisateurs.js';
@@ -95,6 +98,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => travailRoutes(instance, deps));
   app.register(async (instance) => feuillesRoutes(instance, deps));
   app.register(async (instance) => mesTachesRoutes(instance, deps));
+  app.register(async (instance) => planDeChargeRoutes(instance, deps));
+  app.register(async (instance) => exportImputationsRoutes(instance, deps));
+  app.register(async (instance) => ressourcePlanningRoutes(instance, deps));
   if (deps.dossierWeb) servirWeb(app, deps.dossierWeb);
   return app;
 }

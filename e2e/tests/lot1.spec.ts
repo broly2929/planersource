@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { ouvrirCalendriers } from './lot3c-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 
 /*
@@ -50,10 +51,10 @@ import { chefLecteur } from './lot6b-helpers.js';
  *   « affectation » ; plus récent en premier.
  */
 
-test('E2E-5 : l’administrateur crée un calendrier avec un jour férié', async ({ page }) => {
+test('E2E-5-r1 : l’administrateur crée un calendrier avec un jour férié', async ({ page }) => {
   await loginAsAdmin(page);
-  await page.getByRole('link', { name: 'Calendriers' }).click();
-  await expect(page.getByRole('heading', { name: 'Calendriers', level: 1 })).toBeVisible();
+  // Révision -r1 (D-031, D-165 (3)) : onglet Calendriers de l'écran Utilisateurs.
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Nom').fill('Atelier E2E5');

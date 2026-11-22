@@ -27,6 +27,7 @@ import {
   RefusCloture,
   verrouillerRacines,
 } from '../planning/cloture.js';
+import { lireVendu, vueActivite, vueJalon } from '../planning/vendu.js';
 import type { AppDeps } from '../app.js';
 import { requireUser } from './acces.js';
 import { invalide, traduireErreur } from './erreurs-planning.js';
@@ -35,6 +36,13 @@ import { invalide, traduireErreur } from './erreurs-planning.js';
 const date = z.iso
   .date()
   .refine((d) => d <= '2099-12-31')
+  .nullable();
+// charge vendue (D-149 (3)) : nombre de 0 à 999999,99 à deux décimales au plus, ou null
+const chargeVendue = z
+  .number()
+  .min(0)
+  .max(999999.99)
+  .refine((v) => Number(v.toFixed(2)) === v)
   .nullable();
 const modes = z.enum(['ASAP', 'START', 'STARR', 'ALAP', 'FDUR', 'DDUR', 'REGUL', 'MAN']);
 const position = {
@@ -51,6 +59,7 @@ const creationActivite = z.strictObject({
   debut_valide: date.default(null),
   fin_valide: date.default(null),
   duree_validee: int4Corps.nullable().default(null),
+  charge_vendue: chargeVendue.default(null),
 });
 const modificationActivite = z
   .strictObject({
@@ -61,6 +70,7 @@ const modificationActivite = z
     fin_valide: date,
     duree_validee: int4Corps.nullable(),
     close: z.boolean(),
+    charge_vendue: chargeVendue,
   })
   .partial();
 const creationJalon = z.strictObject({
@@ -68,12 +78,14 @@ const creationJalon = z.strictObject({
   ...position,
   type: z.enum(['flottant', 'fixe']).default('flottant'),
   date_validee: date.default(null),
+  date_client: date.default(null),
 });
 const modificationJalon = z
   .strictObject({
     nom: z.string().trim().min(1),
     type: z.enum(['flottant', 'fixe']),
     date_validee: date,
+    date_client: date,
   })
   .partial();
 const deplacement = z.strictObject({
@@ -93,14 +105,17 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     const projetId = identifiant(request.params.id);
     const acces = await verdictProjet(pool, request.user!, projetId, false);
     if (acces.verdict) return refuser(reply, acces.verdict);
-    return lirePlanning(pool, acces.projet.id);
+    return lirePlanning(pool, acces.projet.id, acces.peutEcrire);
   });
 
   // --- activités ---
   app.get<ParamId>('/api/projets/:id/activites', opts, async (request, reply) => {
     const acces = await verdictProjet(pool, request.user!, identifiant(request.params.id), false);
     if (acces.verdict) return refuser(reply, acces.verdict);
-    return lireActivites(pool, acces.projet.id);
+    const vendu = await lireVendu(pool, acces.projet.id);
+    return (await lireActivites(pool, acces.projet.id)).map((a) =>
+      vueActivite(a, vendu, acces.peutEcrire),
+    );
   });
 
   app.post<ParamId>('/api/projets/:id/activites', opts, async (request, reply) => {
@@ -117,7 +132,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
           duree_validee: dureeParDefaut(d.mode, d.duree_validee),
         });
         await controlerDestination(db, acces.projet.id, d.parent_id);
-        return creee;
+        return vueActivite(creee, await lireVendu(db, acces.projet.id), true);
       });
       return reply.code(201).send(activite);
     } catch (err) {
@@ -149,6 +164,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
           debut_valide: fusion.debut_valide,
           fin_valide: fusion.fin_valide,
           duree_validee: dureeParDefaut(fusion.mode, fusion.duree_validee),
+          charge_vendue: fusion.charge_vendue,
           ...(close === undefined ? {} : { close }),
         });
         // D-083 (2), (3) : seules les transitions de clôture sont contrôlées (D-083 (7)).
@@ -163,7 +179,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
             (await projetOuAncetreClos(db, activite.projet_id, true));
           if (parentClos) throw new RefusCloture('parent_clos');
         }
-        return apres;
+        return vueActivite(apres, await lireVendu(db, apres.projet_id), true);
       });
       return resultat ?? refuser(reply, 'introuvable');
     } catch (err) {
@@ -191,7 +207,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
   app.get<ParamId>('/api/projets/:id/jalons', opts, async (request, reply) => {
     const acces = await verdictProjet(pool, request.user!, identifiant(request.params.id), false);
     if (acces.verdict) return refuser(reply, acces.verdict);
-    return lireJalons(pool, acces.projet.id);
+    return (await lireJalons(pool, acces.projet.id)).map((j) => vueJalon(j, acces.peutEcrire));
   });
 
   app.post<ParamId>('/api/projets/:id/jalons', opts, async (request, reply) => {
@@ -205,7 +221,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
           await verrouillerRacines(db, [acces.projet.id]);
           const cree = await creerJalon(db, request.user!.id, acces.projet.id, body.data);
           await controlerDestination(db, acces.projet.id, body.data.parent_id);
-          return cree;
+          return vueJalon(cree, true);
         }),
       );
     } catch (err) {
@@ -234,7 +250,8 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
           nom: fusion.nom,
           type: fusion.type,
           date_validee: fusion.date_validee,
-        });
+          date_client: fusion.date_client,
+        }).then((j) => vueJalon(j, true));
       });
       return resultat ?? refuser(reply, 'introuvable');
     } catch (err) {
@@ -278,7 +295,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     } catch (err) {
       return traduireErreur(err, reply);
     }
-    const lignes = await lirePlanning(pool, element.projet_id);
+    const lignes = await lirePlanning(pool, element.projet_id, true);
     return lignes.find((l) => l.id === element.id);
   });
 }

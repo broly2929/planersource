@@ -542,7 +542,7 @@ Fichier : packages/api/test/lot3a-gantt.test.ts. D0 = 2027-01-04. Le réel se po
 
 | Id | Cas | Spec | Lot | Fichier |
 |---|---|---|---|---|
-| GANTT-1-r1 | Avant calcul : forme complète de la réponse ; ordre et numéros WBS (parent, enfant, jalon) ; dates planifiées null, drapeaux [] ; une dépendance présente avec drapeaux [] | 6 (Lecture) | 3a | packages/api/test/lot3a-gantt.test.ts ; révisé : `initiales: []` sur la feuille (D-090, tests-lot3a-r1) |
+| GANTT-1-r1 | (révisé en GANTT-1-r2, D-149 (12))  Avant calcul : forme complète de la réponse ; ordre et numéros WBS (parent, enfant, jalon) ; dates planifiées null, drapeaux [] ; une dépendance présente avec drapeaux [] | 6 (Lecture) | 3a | packages/api/test/lot3a-gantt.test.ts ; révisé : `initiales: []` sur la feuille (D-090, tests-lot3a-r1) |
 | GANTT-2 | Données de DEP-1 après calcul : A du 04 au 06/01, B les 07 et 08/01 ; projet.debut_planifie 04/01, fin_planifiee 08/01 | 5.7 (DEP-1), 6 | 3a | packages/api/test/lot3a-gantt.test.ts |
 | GANTT-3 | Feuille, Alice assignée 4 j, réel 1 j, reste 3 j : charges 4, 1, 3 ; avancement 25 | 5.8, 6 | 3a | packages/api/test/lot3a-gantt.test.ts |
 | GANTT-4 | Parent G à deux feuilles (4, 1, 3 puis 2, 0, 2) : est_parent vrai, charges 6, 1, 5, avancement 16,67 ; dates de G = plus petit début, plus grande fin des enfants après calcul | 5.8, 6 | 3a | packages/api/test/lot3a-gantt.test.ts |
@@ -2090,3 +2090,457 @@ Tests inchangés relevés à l'inventaire (attente identique sous D-148) : CALC-
 - E2E révisés : E2E-13-r1 (lien « Projets » présent) et E2E-319-r1 (pas de redirection) rouges. Témoins verts d'emblée : les 22 tests au chef lecteur (dont E2E-64-r1 et E2E-105-r1), prouvés par mutation locale (`peut_ecrire` toujours vrai dans `lireVisibles`) : 21 rouges ; E2E-266-r1, vert sous cette mutation (« Annuler » désactivé faute de geste), prouvé par une seconde mutation (« Annuler » masqué sans droit d'écriture) ; E2E-53-r1, 69-r1, 70-r1, 71-r1, 72-r1 prouvés par mutation (lien « Accueil » retiré) : rouges. E2E-150-r1 : le chef lecteur est affecté à P et au sous-projet S (Alice l'était aussi ; le préambule exige la barre de S).
 - Nouveaux e2e : E2E-347 à E2E-353 et E2E-355 rouges (menu, redirection, écran « Mes tâches » absents ; E2E-353 passe toute la chaîne à l'écran et échoue à la redirection finale de la ressource). E2E-354 vert d'emblée, prouvé par mutation (« Imputations » masqué pour le rôle ressource) : rouge.
 - Après chaque mutation : `git diff` vide sur packages/api/src et packages/web/src. Lint et typecheck verts.
+
+## Révisions D-031 de 6c (décision du porteur, D-149 (12))
+
+Tag `tests-lot6c`, aucun code de production. Inventaire : seule la forme exacte de la réponse de GET …/gantt (comparée par `toEqual`) change ; elle gagne, pour l'administrateur, `charge_vendue` et `marge` (null) sur chaque activité, `date_client`, `ecart_client` (null) et `engagement_depasse` (faux) sur chaque jalon, `projet.totaux`. Aucun test existant ne compare la forme exacte d'une activité ou d'un jalon (POST, PATCH, planning, activités, jalons), ni la liste des colonnes du Gantt (les e2e lisent les colonnes par leur nom). Tests de largeurs (E2E-41a à E2E-42, E2E-288, E2E-289) : attente inchangée, ils sont relancés avec les nouvelles colonnes et ne sont révisés que s'ils échouent.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GANTT-1-r2 | Ancienne : forme complète sans les champs de 6c ; nouvelle : même scénario, l'administrateur reçoit en plus `charge_vendue` null et `marge` null (activités), `date_client` null, `ecart_client` null et `engagement_depasse` faux (jalon), `projet.totaux` { charge_vendue null, charge_assignee 2, marge null, charge_reelle 0 } ; ordre, WBS, dates et drapeaux inchangés | D-149 (4, 5) | 6c | packages/api/test/lot3a-gantt.test.ts |
+
+Révisions de la phase verte (D-151), tags `tests-lot6c-r1` à `tests-lot6c-r4`, une par commit :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| VND-8-r1 | Ancienne : Alice assignée dans le sous-projet sans y être affectée (422 à la préparation) ; nouvelle : Alice affectée au sous-projet avant ; valeurs attendues inchangées | D-151 (1) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| MOT-1-r1 | Ancienne : Alice assignée dans le second projet sans y être affectée (422) ; nouvelle : Alice affectée au second projet ; attentes inchangées | D-151 (2) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| DEMO-5-r1 | Ancienne : les activités à charge vendue non null comptaient le parent ; nouvelle : seules les activités dont est_parent est faux comptent « deux feuilles vendues » ; le parent porte la somme (D-149 (5)) | D-151 (3) | 6c | packages/api/test/demo.test.ts |
+| VIS-5-r1 | Ancienne : GET /api/validations sans paramètre (400) ; nouvelle : GET /api/validations?semaine=<lundi> (D-118 (9)) ; attentes inchangées | D-151 (4) | 6c | packages/api/test/lot6c-visibilite.test.ts |
+| MOT-1-r2 | Ancienne (MOT-1-r1) : Alice assignée dans les deux projets, calculés ensemble (capacité disputée, second projet décalé du 04/01 au 07/01) ; nouvelle : le second projet assigne Bob, affecté à ce projet ; l'affectation d'Alice au second projet est retirée ; attentes inchangées | D-152 | 6c | packages/api/test/lot6c-vendu.test.ts |
+| E2E-362-r1 | Ancienne : le projet vide s'ouvrait par `ouvrirGantt` (attente du SVG, absent sans élément) ; nouvelle : `page.goto` sur /projets/<id>?onglet=gantt, attente de la région « Totaux du projet » par toHaveText ; attentes inchangées | D-153 (1) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-366-r1 | Ancienne : aucun en-tête recouvert par Drapeaux, aux deux largeurs ; nouvelle : tous les en-têtes à 1440 px, WBS et Nom seulement à 1024 px (D-069 (b)) ; (a), (c), (d) inchangées | D-153 (2) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-367-r1 | Ancienne : ligne du jalon repérée par `getByRole('cell', { name: 'Jalon 367', exact: true })` ; nouvelle : `getByRole('button', { name: 'Jalon 367', exact: true })` ; attentes inchangées | D-153 (3) | 6c | e2e/tests/lot6c.spec.ts |
+
+## Tests du lot 6c, charge vendue et date client (D-149)
+
+Fichiers : packages/api/test/lot6c-vendu.test.ts, lot6c-client.test.ts, lot6c-visibilite.test.ts, lot6c-copie.test.ts ; packages/web/test/lot6c.test.ts ; e2e/tests/lot6c.spec.ts. Valeurs attendues recopiées de D-149. Tout refus vérifie que la base est inchangée (empreinte).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| MIG-10 | Migration 014 : base amenée à la version 13 avec une activité et un jalon, puis migration (version 14) : `activite.charge_vendue` numeric(10,2) nullable et `jalon.date_client` date nullable, valeurs existantes null ; un UPDATE SQL à −0,01 est refusé par le CHECK ; 0 et 999999,99 acceptés | D-149 (2) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-1 | POST et PATCH d'une activité feuille avec `charge_vendue` 0, 12,5, 999999,99 puis null : 201 ou 200, valeur renvoyée et relue en base ; absente du corps : null | D-149 (3) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-2 | `charge_vendue` −1, −0,01, 1000000, 1.234, « 12 », « abc », true, [], {} en POST et en PATCH : 400, base inchangée | D-149 (3) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-3 | PATCH d'une activité parente avec `charge_vendue` 5 : 422 { erreur: 'Règle de planning non respectée', code: 'activite_parente' }, base inchangée ; avec null : 200 | D-149 (3) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-4 | Parent vendu : POST d'une activité et d'un jalon sous une activité à `charge_vendue` 5, et déplacement d'un élément sous elle : 422 { erreur: 'Règle de planning non respectée', code: 'parent_vendu' }, base inchangée ; sous une activité à `charge_vendue` null : 201 et 200 | D-149 (3) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-5 | Historique : création avec 8, modification 8 → 10 (une entrée, ancienne 8, nouvelle 10), PATCH à 10 sans changement (aucune entrée), remise à null (ancienne 10, nouvelle null) | D-149 (2) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-6 | Marge d'une feuille, GET …/gantt et …/planning (administrateur) : vendue 10 et assignée 4 → 6 ; vendue 3 et assignée 4 → −1 ; vendue null → `marge` null ; vendue 5 sans assignation → 5 | D-149 (5) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-7 | Parent à trois feuilles (vendue 10 assignée 4 ; vendue 3 assignée 4 ; vendue null assignée 5) : `charge_vendue` 13, `marge` 5 ; parent dont aucune feuille n'est renseignée : null et null ; parent imbriqué : somme des feuilles descendantes | D-149 (5) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-8 | `projet.totaux` : trois feuilles renseignées (10 assignée 4 réel 1 ; 3 assignée 4 ; 2 assignée 1, close), un sous-projet avec une feuille vendue exclu : { charge_vendue 15, charge_assignee 9, marge 6, charge_reelle 1 } ; projet sans activité : { charge_vendue null, charge_assignee 0, marge null, charge_reelle 0 } | D-149 (5) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-9 | Modèles : POST et PATCH d'une activité et d'un jalon d'un modèle acceptent `charge_vendue` et `date_client` (administrateur) | D-149 (3) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| VND-10 | `projet.totaux` avec une feuille non vendue assignée : feuille vendue 10 assignée 4, feuille non vendue (null) assignée 5 : { charge_vendue 10, charge_assignee 9, marge 6, charge_reelle 0 } (GET …/gantt, administrateur) | D-150 (2) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| CLT-1 | POST et PATCH d'un jalon flottant et d'un jalon fixe avec `date_client` « 2027-01-20 », « 2099-12-31 » puis null : valeur renvoyée et relue ; absente du corps : null | D-149 (3) | 6c | packages/api/test/lot6c-client.test.ts |
+| CLT-2 | `date_client` « 2100-01-01 », « 2027-13-01 », « 2027-02-30 », « 20/01/2027 », 5, true, « » en POST et en PATCH : 400, base inchangée | D-149 (3) | 6c | packages/api/test/lot6c-client.test.ts |
+| CLT-3 | Après calcul, jalon planifié le 2027-01-08 : date client 2027-01-06 → ecart_client 2, engagement_depasse vrai ; 2027-01-08 → 0, faux ; 2027-01-11 → −3, faux ; sans date client → null, faux ; jalon non calculé (date planifiée null) → null, faux ; `drapeaux` du jalon inchangés | D-149 (5) | 6c | packages/api/test/lot6c-client.test.ts |
+| CLT-4 | Historique : création avec date client, modification, PATCH sans changement (aucune entrée), remise à null | D-149 (2) | 6c | packages/api/test/lot6c-client.test.ts |
+| VIS-1 | Chef de projet en lecture seule (affecté au projet d'un autre chef) : GET …/gantt et …/planning sans les clés `charge_vendue`, `marge`, `date_client`, `ecart_client`, `engagement_depasse` ni `projet.totaux` (clés absentes, pas null), champs ordinaires présents ; les mêmes données vues par l'administrateur portent les clés | D-149 (4, 11) | 6c | packages/api/test/lot6c-visibilite.test.ts |
+| VIS-2 | GET …/activites et …/jalons : clés absentes pour le chef lecteur, présentes pour l'administrateur | D-149 (4) | 6c | packages/api/test/lot6c-visibilite.test.ts |
+| VIS-3 | Écrivains (administrateur, chef du projet) : clés présentes, null compris, dans …/gantt, …/planning, et dans les réponses des POST et PATCH d'activités et de jalons | D-149 (4) | 6c | packages/api/test/lot6c-visibilite.test.ts |
+| VIS-4 | Rôle ressource : …/gantt, …/planning, …/activites, …/jalons 404 (inchangé) ; GET /api/mes-taches sans clé `charge_vendue` ni `marge` malgré une charge vendue en base. Témoin : rouge en phase rouge (la préparation pose une charge vendue, refusée en 400 sans la migration 014), vert attendu en phase verte, prouvé par mutation | D-149 (4), D-148 (6) | 6c | packages/api/test/lot6c-visibilite.test.ts |
+| VIS-5 | Routes inchangées, avec une charge vendue et une date client en base : GET /api/projets (aucune clé de 6c, ni `totaux`), …/travail, GET /api/validations et GET /api/feuilles sans clé de 6c. Témoin : rouge en phase rouge (même préparation que VIS-4), vert attendu en phase verte, prouvé par mutation | D-149 (4) | 6c | packages/api/test/lot6c-visibilite.test.ts |
+| CPY-1 | Copie d'un projet (début 2027-01-04 vers 2027-01-18, delta 14) : `charge_vendue` copiée (10 et null) ; `date_client` 2027-01-20 → 2027-02-03, null → null ; source inchangée | D-149 (6) | 6c | packages/api/test/lot6c-copie.test.ts |
+| CPY-2 | `date_client` 2099-12-25 décalée de 16 jours (au-delà du 31/12/2099) : copie refusée 422, aucun projet créé, base inchangée ; les dates validées seules ne dépassent pas | D-149 (6) | 6c | packages/api/test/lot6c-copie.test.ts |
+| CPY-3 | Variantes : « Créer depuis un modèle » et « Enregistrer comme modèle » copient `charge_vendue` et décalent `date_client` comme CPY-1 | D-149 (6) | 6c | packages/api/test/lot6c-copie.test.ts |
+| MOT-1 | Caractérisation du moteur : deux projets identiques, l'un avec charge vendue et date client, après POST /api/calcul : travail planifié, dates planifiées et drapeaux identiques. Rouge tant que les champs sont refusés (400) | D-149 (1, 11) | 6c | packages/api/test/lot6c-vendu.test.ts |
+| DEMO-5 | Après `remplirDemo` : deux feuilles de DEMO-R portent une charge vendue, l'une de marge positive, l'autre de marge négative (après calcul) ; un jalon de DEMO-R porte une date client antérieure à sa date planifiée (engagement dépassé) ; aucun autre projet n'en porte | D-149 (9) | 6c | packages/api/test/demo.test.ts |
+| GEO-36 | `analyserChargeVendue(texte)` → { ok: true, valeur } ou { ok: false } : « 12,5 » et « 12.5 » → 12,5 ; « 0 » → 0 ; « 999999,99 » → 999999,99 ; vide ou espaces → { ok: true, valeur: null } ; « -1 », « abc », « 1,234 », « 1000000 », « 1e3 », « 1,2,3 » → { ok: false } | D-149 (7) | 6c | packages/web/test/lot6c.test.ts |
+| GEO-37 | `texteTotaux(totaux)` : { 10, 4, 6, 1 } → « Vendu 10 j · Assigné 4 j · Marge 6 j · Réel 1 j » ; { 12,5, 4, 8,5, 0 } → « Vendu 12,5 j · Assigné 4 j · Marge 8,5 j · Réel 0 j » ; vendu et marge null → « Vendu — j · Assigné 4 j · Marge — j · Réel 0 j » ; marge négative −1 → « Marge −1 j » (signe moins typographique) | D-149 (8a) | 6c | packages/web/test/lot6c.test.ts |
+| GEO-38 | `formaterEcartClient(ecart)` : 2 → « +2 j » ; −3 → « −3 j » (signe moins typographique) ; 0 → « 0 j » | D-149 (8c) | 6c | packages/web/test/lot6c.test.ts |
+| GEO-39 | `nomJalon(nom, date, drapeaux, client?)` avec `client` { date, ecart, depasse } : « Jalon, le 08/01/2027, date client 06/01/2027, écart +2 j, engagement client dépassé » ; en retard : « Jalon, le 08/01/2027, retard, date client 11/01/2027, écart −3 j » ; écart 0 : « …, date client 08/01/2027, écart 0 j » ; sans `client` : inchangé (GEO-9) | D-149 (8e) | 6c | packages/web/test/lot6c.test.ts |
+| GEO-40 | `joursClient(lignes)` : dates client des jalons de `lignes` (hors lignes sans date client) ; `calculerPlage` avec ces jours : date client 2027-03-10 postérieure aux autres dates → fin de plage au dimanche de sa semaine plus 14 jours ; `joursConnus` reste inchangée (Accueil) | D-149 (8c) | 6c | packages/web/test/lot6c.test.ts |
+| GEO-41 | `texteRefusCode` : 'activite_parente' → « Une activité parente ne porte pas de charge vendue. » et 'parent_vendu' → « Cette activité porte une charge vendue : elle ne peut pas recevoir d'enfant. » pour la cible 'element' ; null pour la cible 'projet' | D-149 (7) | 6c | packages/web/test/lot6c.test.ts |
+| E2E-358 | Extension du parcours complet (administrateur seul, tout à l'écran, gestes d'E2E-353) : calendrier, ressource, chef, projet, affectation, activité assignée 4 j puis charge vendue 6,5 saisie à l'écran, jalon puis date client saisie à l'écran ; Gantt du projet : colonnes « Vendu » 6,5 et « Marge » 2,5, région « Totaux du projet » « Vendu 6,5 j · Assigné 4 j · Marge 2,5 j · Réel 0 j », marqueur `data-date-client` ; base relue par l'API | D-149 (10), règle « Parcours IHM » | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-359 | Dialogue d'activité (création et modification) : champ « Charge vendue (j) » présent pour une feuille, absent pour une activité parente ; « 1,234 » et « abc » : `aria-invalid`, « Charge vendue invalide. », « Enregistrer » désactivé ; « 6,5 » (virgule) enregistré 6,5 ; vide enregistré null ; modification sans changer la charge vendue : le corps du PATCH ne contient pas `charge_vendue` | D-149 (7) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-360 | Dialogue « Modifier le jalon » : champ « Date client » (date), vide au départ ; valeur enregistrée relue par l'API ; vidé : null ; ouvert depuis l'onglet Planning et depuis le Gantt (double-clic). Le dialogue « Nouveau jalon » reste limité au nom (comme la date validée) | D-149 (7) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-361 | Refus : créer une activité sous une activité vendue (par l'écran) : « Cette activité porte une charge vendue : elle ne peut pas recevoir d'enfant. », dialogue ouvert, rien créé ; PATCH intercepté en 422 'activite_parente' : « Une activité parente ne porte pas de charge vendue. », dialogue ouvert | D-149 (7) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-362 | Gantt du projet (administrateur) : colonnes « Vendu » et « Marge » après « Charge » ; activité à vendue 3 et assignée 4 : « 3 » et « −1 » en couleur flag ; activité sans charge vendue : « — » ; jalon : cellules vides ; parent : somme ; région « Totaux du projet » au-dessus du tableau, avec « — » pour un projet sans charge vendue | D-149 (8a, 8b) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-363 | Jalon planifié le 08/01/2027 avec date client 06/01/2027 : losange `data-date-client` à la position du 06/01 (même ligne que le jalon), `aria-hidden`, `pointer-events: none`, couleur flag ; texte `data-ecart-client` « +2 j » à droite du losange le plus à droite ; badge « Client » (`title` « Engagement client dépassé ») dans Drapeaux ; nom accessible « Jalon, le 08/01/2027, date client 06/01/2027, écart +2 j, engagement client dépassé » ; date client 11/01/2027 : « −3 j », couleur neutre, pas de badge | D-149 (8c, 8d, 8e) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-364 | La plage du Gantt inclut la date client : date client très postérieure (08/03/2027), losange présent dans le SVG et à l'intérieur de sa largeur | D-149 (8c) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-365 | Témoin, chef de projet en lecture seule : ni colonnes « Vendu » et « Marge », ni région « Totaux du projet », ni losange `data-date-client`, ni texte `data-ecart-client`, ni badge « Client » ; les réponses …/gantt et …/planning reçues par la page sans les clés | D-149 (11) | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-366 | Largeurs D-069 (a) à (d) avec les nouvelles colonnes, à 1440 puis 1024 px (administrateur, projet à charge vendue, marge négative et badge « Client ») : badges entièrement visibles, WBS et Nom visibles, page sans défilement horizontal, hauteur de ligne à badge égale à celle d'une ligne sans badge | D-149 (8b), D-069 | 6c | e2e/tests/lot6c.spec.ts |
+| E2E-367 | Témoin, Accueil inchangé : Gantt global de l'Accueil sans colonne « Vendu » ni « Marge », sans région « Totaux du projet » et sans marqueur client, pour un projet qui porte charge vendue et date client | D-149 (4, 8) | 6c | e2e/tests/lot6c.spec.ts |
+
+### Couverture des champs, lot 6c (règle « Couverture des champs »)
+
+| Champ de l'API | Champ d'écran | Test |
+|---|---|---|
+| POST et PATCH activités `charge_vendue` | champ « Charge vendue (j) » du dialogue d'activité (création, modification, onglet Planning, Gantt, Accueil) ; colonnes « Vendu » et « Marge » et région « Totaux du projet » du Gantt du projet | E2E-358, E2E-359, E2E-362 |
+| POST et PATCH jalons `date_client` | champ « Date client » du dialogue de jalon ; losange, texte d'écart et badge « Client » du Gantt du projet | E2E-358, E2E-360, E2E-363 |
+| `marge`, `ecart_client`, `engagement_depasse`, `projet.totaux` (lecture seule) | colonne « Marge », texte d'écart, badge « Client », région « Totaux du projet » | E2E-362, E2E-363 |
+
+### Preuves de la phase rouge de 6c (D-149)
+
+- Vitest API : 25 rouges sur 39 exécutés (fichiers lot6c-*, demo.test.ts, lot3a-gantt.test.ts) : GANTT-1-r2 (`totaux` et champs de 6c absents), MIG-10 (version 14 absente), VND-1 à VND-9, MOT-1, CLT-1 à CLT-4, VIS-1 à VIS-5, CPY-1 à CPY-3, DEMO-5. Causes relevées : 400 « Données invalides » (champs refusés par le schéma strict), colonnes `charge_vendue` et `date_client` absentes, clés absentes des réponses. Les 14 autres tests de ces fichiers restent verts.
+- VIS-4 et VIS-5 sont rouges dès la préparation (charge vendue refusée en 400) : ils ne jouent leur rôle de témoin qu'en phase verte, où une mutation locale (clés de 6c ajoutées aux routes inchangées) devra les rendre rouges.
+- Vitest web : lot6c.test.ts ne se charge pas (modules `gantt/vendu.ts` et `joursClient` absents) : GEO-36 à GEO-41 rouges.
+- E2E : 11 rouges (E2E-358 à E2E-365, E2E-366 à 1440 et 1024 px, E2E-367). E2E-358 et E2E-360 échouent à l'écran (champs « Charge vendue (j) » et « Date client » absents). Les autres échouent dès la préparation (POST d'activité ou de jalon refusé en 400) : leurs vérifications d'écran ne sont pas exercées avant la phase verte ; E2E-365 et E2E-367 (témoins) sont dans ce cas.
+- Lint et typecheck verts. Commits : révision GANTT-1-r2 séparée (9dfd946), tests rouges (dde33a0).
+
+## Révisions D-031 de 6d (D-154 (13))
+
+Inventaire des tests existants touchés par 6d, vérifié par recherche dans e2e/tests, packages/*/test :
+
+- Menu de `Layout` : l'entrée « Plan de charge » s'insère après « Projets » pour l'administrateur et le chef de projet seulement. E2E-335 (index d'« Équipes » = index de « Calendriers » + 1), E2E-336, E2E-347 (menu exact de la ressource : trois liens), E2E-352 (liens présents pour le chef ressource, ordre non testé) restent vrais : aucune révision.
+- Ordre de tabulation : aucun test existant ne tabule à travers le menu ni ne compte les liens du menu de l'administrateur ou du chef (les ordres de tabulation d'E2E-43, -92, -100, -109 partent de zones de l'écran) : aucune révision.
+- Redirections de 6b : E2E-348 liste les adresses redirigées vers /mes-taches ; sa liste reste inchangée, `/plan-de-charge` est couverte par un nouveau test (E2E-369), sans réviser E2E-348.
+- DEMO : DEMO-1 à DEMO-5 ne comparent ni le nombre d'équipes ni `equipe_id` ; l'ajout des équipes et d'une imputation (DEMO-6) ne les touche pas. À reconfirmer par l'exécution en phase verte.
+- VND-2 refuse déjà 1.234 ; VND-11 s'y ajoute (pas de révision).
+
+Aucune révision D-031 n'est donc prévue à ce stade. Si la phase verte en révèle une, elle sera listée ici (-rN) avec la décision du porteur.
+
+Révision de la phase verte (D-156), tag `tests-lot6d-r1` :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-372-r1 | Ancienne : l'en-tête du premier mois lu en une fois (`enteteMois(page)[1]`) pendant le rechargement, tableau absent ; nouvelle : `expect(tableauPlan(page).getByRole('columnheader').nth(1)).toHaveText(...)` qui attend le rechargement, pour 05/2027, 06/2027 et 04/2027 ; attentes inchangées | D-156 | 6d | e2e/tests/lot6d.spec.ts |
+
+Révision de la phase verte de 6f (D-163), tag `tests-lot6d-r2` :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-371-r1 | Ancienne : deux fériés (2027-01-12, 2027-01-13) posés sur le calendrier par défaut, partagé entre les tests ; nouvelle : calendrier propre « Cal 371 » créé par l'API (lundi au vendredi), rattaché à Alice 371, qui reçoit les deux fériés ; valeurs attendues inchangées | D-163 (1) | 6d | e2e/tests/lot6d.spec.ts |
+
+## Tests du lot 6d, plan de charge (D-154)
+
+Fichiers : packages/api/test/lot6d-plan.test.ts (PDC), packages/api/test/lot6c-vendu.test.ts (VND-11, ajout), packages/api/test/demo.test.ts (DEMO-6, ajout) ; packages/web/test/lot6d.test.ts (GEO) ; e2e/tests/lot6d.spec.ts (E2E). Valeurs attendues recopiées de D-154 ; les jours ouvrés viennent du calendrier réel de 2027 (1er janvier 2027 = vendredi) : standard lundi-vendredi, janvier 21, février 20, mars 23, avril 22, mai 21, juin 22, juillet 22, août 22, septembre 22, octobre 21, novembre 22, décembre 23 (soit 21, 20, 23, 22, 21, 22, 22, 22, 22, 21, 22, 23 pour `debut=2027-01`). Calendrier lundi-mardi-mercredi : janvier 12, février 12. Travail planifié et imputations posés par SQL (valeurs exactes, indépendantes du moteur). Tout refus relève l'empreinte de la base avant et après (`refusSansEffet` ou `empreinte`) : base inchangée.
+
+API :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| PDC-1 | Accès : sans session 401 ; ressource (`est_ressource` ou non) 403 `{ erreur: 'Interdit' }` ; administrateur et chef de projet 200 ; base inchangée pour 401 et 403 | D-154 (2) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-2 | 400 : `debut` absent, `2027-13`, `2027-00`, `2027-1`, `2027`, `abcd-ef`, `2027-01-01`, `1999-12`, `2100-01` ; `equipe` = `abc`, `1.5`, `1e2` ; base inchangée. 200 : `debut` = `2000-01` et `2099-12` | D-154 (2) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-3 | Forme : `debut=2026-11` → `mois` = 2026-11, 2026-12, 2027-01 … 2027-10 (12) ; `debut=2099-12` → premier `2099-12`, second `2100-01` ; une ressource sans charge : clés exactes `ressource_id`, `nom`, `actif`, `equipe_id`, `mois`, `projets` ; chaque mois : `mois`, `disponible`, `reel`, `planifie`, `charge`, `ecart` (nombres), `projets` [] | D-154 (3) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-4 | Disponible, calendrier par défaut, ressource sans charge, `debut=2027-01` : capacité 1 → 21, 20, 23, 22, 21, 22, 22, 22, 22, 21, 22, 23 ; capacité 0,5 → 10,5, 10, 11,5, 11, 10,5, 11, 11, 11, 11, 10,5, 11, 11,5 ; capacité 2 → 42, 40, 46, 44, 42, 44, 44, 44, 44, 42, 44, 46 ; `reel`, `planifie`, `charge` à 0, `ecart` = `disponible` | D-154 (4) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-5 | Calendrier non standard et fériés : calendrier lundi-mardi-mercredi, fériés 2027-01-05 (mardi, travaillé), 2027-01-07 (jeudi, non travaillé), 2027-01-02 (samedi) → janvier 11, février 12, capacité 1 ; même calendrier, capacité 0,5 → janvier 5,5 ; calendrier par défaut avec férié 2027-01-01 (vendredi) → janvier 20, février 20 ; un férié d'un autre calendrier est sans effet | D-154 (4) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-6 | Réel et planifié dans le même mois (Alice, capacité 1, une assignation, un projet) : planifié 2027-01-18 1,5, 2027-01-19 1, 2027-02-01 0,5 ; imputations 2027-01-05 0,75 (feuille validée), 2027-01-12 0,5 (feuille brouillon), 2027-02-02 0,25 (feuille rejetée), 2027-03-01 0,1, 2027-03-02 0,2, 2027-12-31 0,5 ; hors période : 2026-12-31 et 2028-01-03 (non comptés). Janvier : reel 1,25, planifie 2,5, charge 3,75, disponible 21, ecart 17,25 ; février : 0,25, 0,5, 0,75, 20, 19,25 ; mars : reel 0,3 (exactement), charge 0,3, disponible 23, ecart 22,7 ; décembre : reel 0,5, disponible 23, ecart 22,5 ; ligne du projet : mêmes reel, planifie, charge par mois (douze entrées) | D-154 (3), (4), (6) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-7 | Écart négatif : Bob, capacité 1, planifié 22 le 2027-01-04 : janvier charge 22, disponible 21, ecart −1 (nombre) ; le moteur n'est pas appelé (travail planifié « tel que laissé ») | D-154 (4) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-8 | Ressources prises en compte : utilisateur `est_ressource` actif sans charge présent ; `est_ressource` inactif avec planifié 2027-03-10 présent (`actif` faux, charge en mars) ; `est_ressource` inactif avec charge seulement hors période (2026-12-31, 2028-02-01) absent ; inactif sans charge absent ; chef de projet non ressource actif sans charge absent ; utilisateur dont `est_ressource` est devenu faux après assignation, avec charge dans la période : présent | D-154 (5) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-9 | Tri des ressources : créées Charles, bruno, Alice, alice → ordre Alice, alice (même nom sans casse : par id), bruno, Charles | D-154 (5) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-10 | Filtres équipe : « Dev » (alice, bob), « Pilotage » (chefa ressource), carl sans équipe ; `equipe=<Dev>` → alice, bob (`equipe_id` renvoyé) ; `equipe=<Pilotage>` → chefa ; `equipe=aucune` → carl seul ; équipe inconnue (9999) → 200, `ressources` [] ; sans `equipe` → tous ; un inactif à charge hors de l'équipe filtrée est absent, dans l'équipe filtrée présent | D-154 (2), (5) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-11 | Projets d'une ressource : seuls ceux à charge non nulle dans la période (charge en 2028-01 ou 2026-12 : projet absent) ; projet clos présent ; tri par code sans casse (créés `b-2`, `c-3`, `A-1` → `A-1`, `b-2`, `c-3`) ; aucun modèle ; un projet sans charge n'apparaît pas | D-154 (6) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-12 | Chef de projet : Alice charge dans P1 (chef = le chef, planifié janvier 2), PL (autre chef, chef en lecture seule car affecté, janvier 1), P2 et P3 (autre chef, illisibles ; P2 planifié janvier 4 et février 1, P3 reel janvier 0,5 ; codes triant avant P1). Le chef reçoit pour Alice `projets` = P1, PL (par code), puis une seule ligne `{ projet_id: null, code: null, nom: null }` en dernier (janvier reel 0,5, planifie 4, charge 4,5 ; février planifie 1, charge 1) ; totaux d'Alice janvier : reel 0,5, planifie 7, charge 7,5. Bob, charge seulement dans P2 : le chef reçoit Bob avec la seule ligne null. Sans projet illisible : aucune ligne null. Administrateur : quatre lignes P1, PL, P2, P3 par code, aucune ligne null, mêmes totaux | D-154 (6) | 6d | packages/api/test/lot6d-plan.test.ts |
+| PDC-13 | La route n'écrit rien : GET administrateur et chef avec `equipe` et sans ; empreinte de la base identique avant et après | D-154 (2) | 6d | packages/api/test/lot6d-plan.test.ts |
+| VND-11 | `charge_vendue` 1.0000000001, 0.001, 12.505, 1e-10 en POST et en PATCH d'une activité : 400, base inchangée ; 0.29, 1.15, 4.35 (deux décimales, écarts de virgule flottante) : acceptées, valeur relue en base | D-154 (12) | 6d | packages/api/test/lot6c-vendu.test.ts |
+| DEMO-6 | Après `remplirDemo` : équipe « Développement » = alice et bob ; équipe « Pilotage » = chefa et chefb ; administrateur sans équipe ; au moins une imputation d'alice à un jour passé ; GET /api/plan-de-charge (administrateur, `debut` = mois de lundi − 14) : alice présente, somme des `reel` sur les 12 mois > 0 | D-154 (10) | 6d | packages/api/test/demo.test.ts |
+
+Web (fonctions pures, `packages/web/src/plan-de-charge/logique.ts`) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GEO-42 | `parametresPlan(search, moisCourant)` : `?debut=2027-03&equipe=5` → `{ debut: '2027-03', equipe: 5, corrige: false }` ; `equipe=aucune` → `'aucune'` ; absent → `'toutes'` ; `debut` absent, `2027-13`, `1999-12`, `2100-01`, `abc` → `moisCourant`, `corrige` vrai ; `equipe=abc` ou `1.5` → `'toutes'`, `corrige` vrai | D-154 (8) | 6d | packages/web/test/lot6d.test.ts |
+| GEO-43 | `adressePlan(debut, equipe)` : `('2027-01', 'toutes')` → `/plan-de-charge?debut=2027-01` ; `('2027-01', 'aucune')` → `/plan-de-charge?debut=2027-01&equipe=aucune` ; `('2027-01', 7)` → `/plan-de-charge?debut=2027-01&equipe=7` | D-154 (8) | 6d | packages/web/test/lot6d.test.ts |
+| GEO-44 | `decalerMois(debut, n)` : `('2027-12', 1)` → `2028-01` ; `('2027-01', -1)` → `2026-12` ; `('2027-01', 0)` → `2027-01` ; `moisDe('2027-01-18')` → `2027-01` | D-154 (8) | 6d | packages/web/test/lot6d.test.ts |
+| GEO-45 | `enteteMois('2027-01')` → `01/2027` ; `libelleProjet({ code: 'P1', nom: 'Projet un' })` → `P1 · Projet un` ; `libelleProjet({ code: null, nom: null })` → `Autres projets` ; `libelleRessource('Alice', true)` → `Alice` ; `libelleRessource('Alice', false)` → `Alice (inactif)` | D-154 (9) | 6d | packages/web/test/lot6d.test.ts |
+| GEO-46 | `cellulePlan({ charge, disponible, ecart })` : (3,75 ; 21 ; 17,25) → texte `3,75`, titre `Charge 3,75 j, disponible 21 j, écart 17,25 j`, `surcharge` faux ; (22 ; 21 ; −1) → texte `22`, titre `Charge 22 j, disponible 21 j, écart −1 j` (moins typographique U+2212, comme D-149 (8)), `surcharge` vrai ; (0 ; 21 ; 21) → texte `0`, `surcharge` faux ; écart 0 : `surcharge` faux | D-154 (9) | 6d | packages/web/test/lot6d.test.ts |
+| GEO-47 | Témoin (vert d'emblée, prouvé par mutation) : `analyserChargeVendue` refuse `.5`, `,5`, `5.`, `5,` ; accepte `0.5`, `5`, `5,50` | D-154 (12) | 6d | packages/web/test/lot6d.test.ts |
+| GEO-48 | `boutonsMois(debut)` → `{ precedent, suivant }` : `2000-01` → précédent refusé, suivant permis ; `2099-12` → précédent permis, suivant refusé ; `2027-06` → les deux permis | D-155 (3) | 6d | packages/web/test/lot6d.test.ts |
+
+E2E (e2e/tests/lot6d.spec.ts ; base « administrateur seul » avant et après chaque test ; D0 = 2027-01-04, adresse `/plan-de-charge?debut=2027-01`) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-368 | Menu : administrateur et chef de projet voient « Plan de charge » juste après « Projets » ; le clic ouvre /plan-de-charge, titre de niveau 1 « Plan de charge » ; absent du menu de la ressource | D-154 (8) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-369 | Redirection : la ressource qui ouvre /plan-de-charge (adresse saisie, avec et sans paramètres) arrive sur /mes-taches, aucune requête à /api/plan-de-charge | D-154 (8) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-370 | Contenu : Alice affectée à deux projets (planifié par le calcul de l'API) ; tableau « Plan de charge » : colonne « Ressource » puis douze en-têtes « 01/2027 » à « 12/2027 » ; ligne d'Alice repliée par défaut, bouton « Déplier Alice » ; cellule de janvier à la virgule décimale, `title` « Charge X j, disponible 21 j, écart Y j » ; « Déplier Alice » → lignes « <code> · <nom> » des deux projets (charge seule), bouton devenu « Replier Alice » ; mois sans charge « 0 » ; aucun bouton ni champ dans le tableau hors Déplier / Replier (lecture seule) | D-154 (9) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-371 | Surcharge : activité de 20 j assignée à Alice, calcul, puis deux fériés (2027-01-12, 2027-01-13) ajoutés au calendrier par défaut : cellule de janvier en couleur flag (rgb(190, 18, 60)), `title` « Charge 20 j, disponible 19 j, écart −1 j », texte « , surcharge » dans un élément réservé aux lecteurs d'écran (invisible, présent dans le texte accessible) ; cellule sans écart négatif : sans ce texte | D-154 (9) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-372 | Filtres et adresse : liste « Équipe » aux options « Toutes », « Sans équipe », puis les équipes triées par nom ; choisir une équipe : adresse `?debut=2027-01&equipe=<id>` et seules ses ressources ; « Sans équipe » : `equipe=aucune` ; champ « Mois de départ » (type month) modifié : adresse et en-têtes suivent ; « Mois suivant » : `debut=2027-02`, première colonne « 02/2027 » ; « Mois précédent » : retour à `2027-01` ; adresse `?debut=abc&equipe=xyz` : valeurs par défaut (mois courant du navigateur, « Toutes »), adresse corrigée sans rechargement (marqueur posé sur `window` conservé) | D-154 (8) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-373 | États : aucune ressource (filtre sur une équipe vide) : « Aucune ressource. », sans tableau ; GET /api/plan-de-charge intercepté en 500 : « Impossible de charger le plan de charge. », sans tableau | D-154 (9) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-374 | Inactif et regroupement : ressource désactivée à charge dans la période : nom suivi de « (inactif) » ; chef de projet connecté, ressource à charge dans un projet d'un autre chef : après dépliage, ligne « Autres projets » en dernier, sans lien ni code ; l'administrateur voit le projet nommé | D-154 (6), (9) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-375 | Zone de défilement (1440 et 1024 px) : région `role="region"` de nom « Plan de charge », focalisable (Tab), anneau de focus de docs/ui.md ; la colonne « Ressource » reste visible après défilement horizontal de la région (sticky) ; la page ne défile pas en horizontal (`scrollWidth` du document ≤ largeur de fenêtre) | D-154 (9) | 6d | e2e/tests/lot6d.spec.ts |
+| E2E-376 | Extension du parcours complet (administrateur seul, tout à l'écran, gestes d'E2E-358) : calendrier, équipe « Équipe 6D » créée à l'écran, ressource créée à l'écran avec cette équipe, chef, projet, affectation, activité assignée 4 j ; calcul par l'API (hors entité saisie) ; ouverture du Plan de charge par le menu, filtre « Équipe 6D » : ligne de la ressource, charge de janvier 4, dépliage : ligne du projet à 4 | D-154 (11) | 6d | e2e/tests/lot6d.spec.ts |
+
+### Couverture des champs, lot 6d (règle « Couverture des champs »)
+
+GET /api/plan-de-charge est en lecture seule : aucun champ modifiable nouveau, tous les paramètres et champs de réponse sont affichés par l'écran « Plan de charge ». Seul champ modifiable touché : `charge_vendue` (correctif D-154 (12)).
+
+| Champ de l'API | Champ d'écran | Test |
+|---|---|---|
+| GET /api/plan-de-charge `debut` (lecture seule) | champ « Mois de départ », boutons « Mois précédent » et « Mois suivant », adresse `?debut=` | E2E-372 |
+| GET /api/plan-de-charge `equipe` (lecture seule) | liste « Équipe » (« Toutes », « Sans équipe », équipes), adresse `?equipe=` | E2E-372, E2E-376 |
+| Réponse `mois`, `ressources`, `projets` (lecture seule) | tableau « Plan de charge » : en-têtes, lignes de ressource, lignes de projet | E2E-370, E2E-371, E2E-374 |
+| POST et PATCH activités `charge_vendue` (correctif D-154 (12)) | champ « Charge vendue (j) » du dialogue d'activité, inchangé ; « .5 » et « 5. » refusés | GEO-47, E2E-359 |
+
+### Preuves de la phase rouge de 6d (D-154)
+
+- Vitest API : 15 rouges sur 32 exécutés (lot6d-plan.test.ts, lot6c-vendu.test.ts, demo.test.ts) : PDC-1 à PDC-13 (route absente : 404 « Route GET:/api/plan-de-charge… not found », atteint après préparation réussie), VND-11 (1.0000000001 accepté : 201, `charge_vendue` arrondie à 1), DEMO-6 (aucune équipe dans le jeu de démonstration).
+- Vitest web : lot6d.test.ts ne se charge pas (module `plan-de-charge/logique` absent) : GEO-42 à GEO-47 non exécutés. GEO-47 est un témoin vert d'emblée : vert avec le code actuel, rouge (« .5 » accepté) quand le motif de `analyserChargeVendue` autorise un chiffre absent avant le séparateur ; code restauré ensuite.
+- E2E : 10 rouges (E2E-368 à E2E-376, E2E-375 à 1440 et 1024 px), chacun à l'étape d'écran (lien « Plan de charge » absent, redirection absente, titre ou tableau absents) ; toutes les préparations par l'API (dont la désactivation d'Alice, les fériés, le calcul) et le parcours à l'écran d'E2E-376 jusqu'au menu passent.
+- Lint et typecheck verts. Commits : D-154 (4c01054), SPEC (52975c9), identifiants (57cfeeb), tests rouges (f46f45e). Aucune révision D-031 : pas de commit `test:` séparé.
+
+## Révisions D-031 de 6e (D-157 (9))
+
+Inventaire des tests existants touchés par 6e, vérifié par recherche dans e2e/tests et packages/*/test :
+
+- Ordre de focus de l'Accueil (D-080 point 9) : la liste « Planning de » s'insère avant les boutons de zoom. E2E-92-r5 (accueil-g2.spec.ts), E2E-100-r3 (accueil-g3.spec.ts) et E2E-109-r2 (accueil-g4.spec.ts) donnent d'abord le focus au bouton « Jour » (`focus()`), puis lisent dix tabulations : la liste est avant le point de départ, la séquence lue ne change pas. Intention et attentes inchangées : aucune révision. Le nouvel ordre complet (liste, zoom, tableau, SVG) est couvert par E2E-381.
+- Barre d'outils de l'Accueil : aucun test existant ne compte les `combobox` ou les `select` de l'Accueil (recherche `getByRole('combobox')`, `locator('select')` : aucune occurrence hors nom) ; les sélecteurs de l'Accueil sont nommés (`name:`). Aucune révision.
+- Zoom : `BoutonsZoom` reprend déjà les paramètres de l'adresse (`URLSearchParams`), donc `ressource` est conservé sans changement ; les tests de zoom de l'Accueil (E2E-91 et suivants) ne dépendent pas de l'absence d'autres paramètres. Aucune révision.
+- Annuaire : GET /api/annuaire ne change pas (D-157 (5)) ; ses tests (lot1-ann) ne sont pas touchés.
+- Parcours complet : E2E-376 reste inchangé ; l'extension de 6e est un nouveau test (E2E-382), comme E2E-376 l'était pour E2E-358.
+
+Aucune révision D-031 n'est donc prévue à ce stade : pas de commit `test:` de révision. Si la phase verte en révèle une, elle sera listée ici (-rN) avec la décision du porteur.
+
+Révisions de la phase verte (D-159), tag `tests-lot6e-r1` :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GEO-52-r1 | Ancienne : `nomBarreRessource` attendu `…, Retard` ; nouvelle : `P1 · 1.2 Analyse, du 04/01/2027 au 06/01/2027, retard` (drapeaux en minuscules, 3b point 12) ; autres attentes inchangées | D-159 (1) | 6e | packages/web/test/lot6e.test.ts |
+| E2E-377-r1 | Ancienne : base sans projet, Gantt global attendu ; nouvelle : projet ordinaire ouvert (chef « Chef 377 ») avec une activité créé par l'API avant les vérifications ; autres attentes inchangées | D-159 (2) | 6e | e2e/tests/lot6e.spec.ts |
+
+## Tests du lot 6e, planning d'une ressource sur l'Accueil (D-157)
+
+Fichiers : packages/api/test/lot6e-planning.test.ts (RPL) ; packages/web/test/lot6e.test.ts (GEO, fonctions pures de `packages/web/src/accueil/logique.ts`) ; e2e/tests/lot6e.spec.ts (E2E). Valeurs attendues recopiées de D-157. Dates planifiées posées par SQL (le moteur n'est pas appelé, sauf dans les e2e : calcul par l'API).
+
+API (GET /api/ressources/:id/planning) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| RPL-1 | Accès : sans session 401 ; rôle ressource 403 `{ erreur: 'Interdit' }`, y compris sur un identifiant inconnu (le 403 précède le 404) et sur son propre identifiant ; administrateur et chef de projet 200 ; base inchangée pour 401 et 403 | D-157 (2) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-2 | 404 : identifiant inconnu (9999), `abc`, `1.5`, `1e2`, `0`, `-1`, `2147483648`, `99999999999999999999` : 404, base inchangée. Précédé, dans le même test, d'un 200 pour un utilisateur existant (rend le rouge probant). 200 `lignes` vide : utilisateur existant sans assignation, utilisateur non ressource (l'administrateur), ressource inactive (`actif` faux) ; `ressource` = `{ id, nom, actif }` exactement | D-157 (2) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-3 | Forme : deux assignations, avant calcul : clés exactes de la réponse `ressource`, `lignes` ; de la ligne `activite`, `assignation_id`, `charge_assignee`, `charge_reelle`, `debut_planifie`, `drapeaux`, `fin_planifiee`, `projet`, `reste_a_faire` ; `projet` = `{ code, id, nom }`, `activite` = `{ id, nom, wbs }` ; dates null, `drapeaux` [] ; charges recopiées (2 / 0,5 / 1,5 et 3 / 0 / 3) ; ordre WBS 1 puis 2 | D-157 (2), (3) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-4 | Drapeaux de l'activité : `drapeaux` posés en base `['retard', 'surcharge']` sur une activité, repris tels quels dans la ligne ; une autre activité sans drapeau : `[]` ; la ligne a les dates planifiées posées | D-157 (2) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-5 | Absence de la charge vendue : `charge_vendue` posée à 12 sur l'activité (le projet n'en porte pas) ; ni la ligne, ni `projet`, ni `activite`, ni `ressource` n'ont de clé `charge_vendue` ; le texte JSON de la réponse ne contient pas `vendue` | D-157 (3) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-6 | Tri : début planifié croissant, null en dernier ; à égalité de date : code du projet sans casse (`b-2`, `A-1`, `c-3` → `A-1`, `b-2`, `c-3`) ; à égalité de code : numéro WBS dans l'ordre WBS (2 avant 10, pas l'ordre du texte) ; deux lignes sans date : code puis WBS | D-157 (3) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-7 | Filtres de clôture, un test par exclusion et une ligne témoin retenue : activité close exclue ; activité dont un ancêtre est clos (parent clos posé en base) exclue ; projet clos exclu ; projet dont un projet ancêtre est clos (sous-projet d'un projet clos) exclu ; modèle exclu ; assignation d'une autre ressource exclue ; projet ouvert sous un projet ouvert retenu | D-157 (3) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-8 | Lignes masquées pour le chef de projet : Alice assignée dans P1 (chef = le chef, lisible), PL (autre chef, chef affecté, lisible) et P2 (autre chef, illisible, début 2027-01-05, assigné 4, réel 1, reste 3, drapeau `retard`) ; le chef lit Alice : la ligne de P2 a `projet` null, `activite` null, `drapeaux` [], mêmes dates et mêmes charges (4, 1, 3), même `assignation_id` ; les lignes de P1 et PL en clair. Bob (seulement P2) : une ligne masquée pour le chef. L'autre chef (qui lit PL et P2, pas P1) : la ligne de P1 masquée, celle de P2 en clair | D-157 (4) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-9 | Même ligne en clair pour l'administrateur : `projet` = P2, `activite` renseignée, `drapeaux` = `['retard']`, mêmes dates et charges que RPL-8 ; aucune ligne masquée | D-157 (4) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-10 | Tri avec une ligne masquée : une ligne masquée (début 2027-01-05) entre deux lignes lisibles (2027-01-04 et 2027-01-06) se range par sa date ; deux lignes masquées à la même date : par `assignation_id` croissant ; une ligne masquée sans date après les lignes datées | D-157 (3) | 6e | packages/api/test/lot6e-planning.test.ts |
+| RPL-11 | La route n'écrit rien : GET administrateur et chef ; empreinte de la base identique avant et après | D-157 (1) | 6e | packages/api/test/lot6e-planning.test.ts |
+
+Web (fonctions pures, `packages/web/src/accueil/logique.ts`) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GEO-49 | `parametresRessource(search, ids)` → `{ ressource, corrige }` (`search` : `URLSearchParams`) : (`?ressource=5`, [3, 5]) → `{ 5, faux }` ; (`''`, [3, 5]) → `{ null, faux }` ; `?ressource=abc`, `1.5`, `0`, `-3`, `` (vide), `1e2` → `{ null, vrai }` ; (`?ressource=9`, [3, 5]) (absente de la liste) → `{ null, vrai }` ; (`?ressource=5&zoom=jour`, [5]) → `{ 5, faux }` | D-157 (5) | 6e | packages/web/test/lot6e.test.ts |
+| GEO-50 | `rechercheRessource(search, id)` (`search` : `URLSearchParams`, résultat `?…` ou `''`) : (`?zoom=jour&initiales=1`, 7) → `?zoom=jour&initiales=1&ressource=7` ; (`?zoom=jour&ressource=7`, null) → `?zoom=jour` ; (`''`, null) → `''` ; (`?ressource=3`, 7) → `?ressource=7` | D-157 (5) | 6e | packages/web/test/lot6e.test.ts |
+| GEO-51 | `optionsRessources(annuaire)` : garde `actif` et `est_ressource`, trie par nom sans casse, égalité par id : [Charles, bruno, alice (id 4), Alice (id 3), Dan inactif, Eve non ressource] → Alice (3), alice (4), bruno, Charles ; annuaire vide → [] | D-157 (5) | 6e | packages/web/test/lot6e.test.ts |
+| GEO-52 | Libellés : `nomBarreRessource` : (P1, wbs 1.2 « Analyse », 2027-01-04 → 2027-01-06, [`retard`]) → `P1 · 1.2 Analyse, du 04/01/2027 au 06/01/2027, Retard` ; ligne masquée → `Autre projet, du 04/01/2027 au 06/01/2027` ; `celluleProjet` : (P1) → `P1`, masquée → `Autre projet` ; `celluleActivite` : (1.2, Analyse) → `1.2 Analyse`, masquée → `—` | D-157 (6) | 6e | packages/web/test/lot6e.test.ts |
+
+E2E (e2e/tests/lot6e.spec.ts ; base « administrateur seul » avant et après chaque test ; D0 = 2027-01-04 ; adresse `/` et `/?ressource=<id>`) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-377 | Liste « Planning de » : administrateur et chef de projet la voient avant les boutons de zoom ; premier choix « Tous les projets », sélectionné par défaut, Gantt global inchangé (« Calculer », « Tout déplier », « Initiales » présents si le chef écrit) ; options suivantes : ressources actives seulement, triées sans casse (Alice, bruno, Charles ; un inactif et un non-ressource absents) ; la ressource n'a pas d'Accueil (redirigée vers /mes-taches, comme E2E-348) | D-157 (5) | 6e | e2e/tests/lot6e.spec.ts |
+| E2E-378 | Vue d'une ressource (administrateur, deux assignations calculées par l'API) : choisir Alice : adresse `/?ressource=<id>` ; tableau aux colonnes Projet, Activité, Début, Fin, Assigné, Réel, Reste, Drapeaux ; code du projet en lien vers la fiche, activité « 1 Analyse », dates JJ/MM/AAAA, charges ; « Calculer », « Tout déplier » et la case « Initiales » absents, boutons de zoom présents ; une barre de couleur accent par ligne (`role="img"`, nom « P1 · 1 Analyse, du 04/01/2027 au … ») ; lecture seule : double-clic et Entrée sur une barre n'ouvrent aucun dialogue, aucun connecteur ni poignée | D-157 (6) | 6e | e2e/tests/lot6e.spec.ts |
+| E2E-379 | Ligne masquée (chef de projet connecté, Alice aussi assignée dans un projet d'un autre chef) : ligne « Autre projet » sans lien, activité « — », barre grise (couleur différente de la barre accent), nom « Autre projet, du … au … » ; l'administrateur voit le même projet nommé, avec lien | D-157 (4), (6) | 6e | e2e/tests/lot6e.spec.ts |
+| E2E-380 | États : ressource sans assignation : « Aucune tâche pour cette ressource. », sans tableau de lignes ; assignations non calculées : bandeau « Planning non calculé » (role=status), lignes affichées, aucune barre ; GET /api/ressources/:id/planning intercepté en 500 : « Impossible de charger le planning de la ressource. » | D-157 (6) | 6e | e2e/tests/lot6e.spec.ts |
+| E2E-381 | Adresse et focus : `/?ressource=<id>&zoom=jour` : liste sur Alice, zoom « Jour » pressé ; changer de zoom garde `ressource` ; `?ressource=abc`, `?ressource=99999` (absente de la liste), `?ressource=` : « Tous les projets » choisi et adresse corrigée sans rechargement (marqueur posé sur `window` conservé) ; revenir à « Tous les projets » retire `ressource` et rend le Gantt global ; ordre de tabulation en vue ressource : « Planning de », Jour, Semaine, Mois, « Tableau du planning de la ressource », lien du projet, « Calendrier du planning de la ressource » ; zones `tabindex="0"` | D-157 (5), (6) | 6e | e2e/tests/lot6e.spec.ts |
+| E2E-382 | Extension du parcours complet (administrateur seul, tout à l'écran, gestes d'E2E-376) : calendrier, équipe, ressource, chef, projet, affectation, activité assignée 4 j créés à l'écran ; calcul par l'API (hors entité saisie) ; Accueil : choisir la ressource dans « Planning de » ; sa ligne et sa barre (nom accessible) ; retour à « Tous les projets » : Gantt global rétabli | D-157 (8) | 6e | e2e/tests/lot6e.spec.ts |
+
+### Couverture des champs, lot 6e (règle « Couverture des champs »)
+
+GET /api/ressources/:id/planning est en lecture seule : aucun champ modifiable nouveau. Tous les champs de la réponse sont affichés par l'Accueil, sauf ceux notés.
+
+| Champ de l'API | Champ d'écran | Test |
+|---|---|---|
+| Chemin `:id` (lecture seule) | liste « Planning de », adresse `?ressource=` | E2E-378, E2E-381 |
+| `ressource.nom`, `ressource.actif` (lecture seule) | hors écran : l'option de la liste porte déjà le nom, et la liste ne propose que les actifs | RPL-2 |
+| `lignes[].projet` (code, nom, id) | colonne « Projet » (code en lien vers la fiche ; nom et id : lien et nom accessible) | E2E-378, E2E-379 |
+| `lignes[].activite` (wbs, nom, id) | colonne « Activité » | E2E-378 |
+| `lignes[].debut_planifie`, `fin_planifiee` | colonnes « Début » et « Fin », barre du SVG | E2E-378, E2E-380 |
+| `lignes[].charge_assignee`, `charge_reelle`, `reste_a_faire` | colonnes « Assigné », « Réel », « Reste » | E2E-378 |
+| `lignes[].drapeaux` | colonne « Drapeaux », nom accessible de la barre | E2E-378, GEO-52 |
+| `lignes[].assignation_id` | hors écran : clé de tri et de ligne, sans libellé | RPL-3, RPL-10 |
+
+### Preuves de la phase rouge de 6e (D-157)
+
+- Vitest API : 11 rouges sur 11 (lot6e-planning.test.ts) : RPL-1 à RPL-11 ; route absente, 404 « Route GET:/api/ressources/…/planning not found », atteint après préparation réussie (la préparation de RPL-11 a été corrigée une fois : affectation manquante, 422 avant la route). RPL-2 commence par un 200 témoin, pour qu'un 404 de route absente ne passe pas pour le 404 attendu.
+- Vitest web : 4 rouges sur 4 (lot6e.test.ts) : GEO-49 à GEO-52, `… is not a function` (fonctions absentes de `accueil/logique.ts`).
+- E2E : 6 rouges sur 6 (E2E-377 à E2E-382), chacun à l'étape d'écran (liste « Planning de » absente) ; les préparations par l'API, les connexions, les calculs et, pour E2E-382, tout le parcours à l'écran jusqu'à l'Accueil passent.
+- Lint et typecheck verts. Aucune révision D-031 : pas de commit `test:` de révision.
+
+## Révisions D-031 de 6f (D-160 (8))
+
+Inventaire des tests existants touchés par 6f, vérifié par recherche dans e2e/tests et packages/*/test (écrans `/plan-de-charge` et `/validation`, barres d'outils, ordre de focus) :
+
+- Plan de charge : le bouton « Exporter CSV » s'ajoute à la barre des filtres. E2E-370 ne lit que les boutons du tableau (`tableauPlan(page).getByRole('button')`) ; E2E-372 n'énumère que les options de la liste « Équipe » et clique « Mois précédent » et « Mois suivant » par nom ; E2E-375 tabule jusqu'à la zone (40 tabulations au plus, arrêt sur la zone) : l'élément ajouté avant la zone ne change pas son résultat. Aucune révision.
+- Validation : E2E-299 à E2E-318 et E2E-324 à E2E-329 cherchent les boutons par nom (« Semaine précédente », « Voir la feuille de … », « Valider … », « Rejeter … ») ; aucun ne compte les boutons de la page ni ne tabule dans l'en-tête. Le focus rendu après Valider ou Rejeter va au bouton d'origine, à « Voir » ou au tableau, jamais au bouton d'export. Aucune révision.
+- Captures (lot4c-captures, lot5d-captures) : sans assertion sur la barre d'outils. Aucune révision.
+- Tests web (validation.test.ts, lot6d.test.ts) : fonctions pures, non touchées.
+
+Aucune révision D-031 n'est donc prévue à ce stade : pas de commit `test:` de révision (étape 4 sans objet). Si la phase verte en révèle une, elle sera listée ici (-rN) avec la décision du porteur, dans un commit `test:` séparé qui cite D-160 (8).
+
+Mise à jour de la phase verte : trois révisions ont été nécessaires, listées dans cette rubrique et juste avant la rubrique « Tests du lot 6d » : CSV-14-r1 et GEO-54-r1 (D-162, `tests-lot6f-r1`), E2E-383-r1 (D-163, `tests-lot6f-r2`) ; E2E-371-r1 (D-163, `tests-lot6d-r2`) est la révision du lot 6d.
+
+Révisions de la phase verte (D-162), tag `tests-lot6f-r1` :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| CSV-14-r1 | Ancienne : `du=2027-01-01&au=2028-01-01` attendu 400 (« 367 jours ») ; nouvelle : `au=2028-01-02` (367 jours) ; autres attentes inchangées | D-162 (1) | 6f | packages/api/test/lot6f-csv.test.ts |
+| GEO-54-r1 | Ancienne : `periodeExportValide('2027-01-01', '2028-01-01')` attendu faux ; nouvelle : `('2027-01-01', '2028-01-02')` ; autres attentes inchangées | D-162 (2) | 6f | packages/web/test/lot6f.test.ts |
+
+Révision de la phase verte (D-163), tag `tests-lot6f-r2` :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-383-r1 | Ancienne : Alice 6F et Bob 6F sur le calendrier par défaut (disponible 19 au lieu de 21 après E2E-371) ; nouvelle : calendrier propre « Cal 383 » créé par l'API (lundi au vendredi, sans férié), rattaché aux deux ressources ; valeurs exactes inchangées (disponible 21) | D-163 (2) | 6f | e2e/tests/lot6f.spec.ts |
+
+## Tests du lot 6f, exports CSV (D-160)
+
+Fichiers : packages/api/test/lot6f-csv.test.ts (CSV) ; packages/web/test/lot6f.test.ts (GEO) ; e2e/tests/lot6f.spec.ts (E2E). Valeurs attendues recopiées de D-160. Les fichiers CSV commencent par le BOM U+FEFF, finissent chaque ligne par CRLF (la dernière comprise) et se lisent en séparant sur CRLF.
+
+Contrat testé (à relire) :
+
+- `packages/api/src/export/csv.ts` (fonctions pures) : `formaterNombre(n: number): string` ; `formaterDate('AAAA-MM-JJ'): string` ; `formaterMois('AAAA-MM'): string` ; `champTexte(s: string): string` (préfixe d'injection puis guillemets) ; `produireCsv(entetes: string[], lignes: (string | number | null)[][]): string` (BOM, en-tête, lignes ; `null` = champ vide ; nombre jamais préfixé).
+- Routes : `GET /api/plan-de-charge/export` et `GET /api/imputations/export`.
+- `packages/web/src/export/logique.ts` : `periodeSemaine(lundi) → { du, au }` ; `periodeExportValide(du, au): boolean` (nombre de jours bornes comprises, de 1 à 366) ; `adresseExportPlan(debut, equipe)` ; `adresseExportImputations(du, au, equipe)` (`equipe` : `'toutes'`, `'aucune'` ou un entier).
+
+API, fonctions pures (module `export/csv.ts`) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| CSV-1 | `produireCsv(['A', 'B'], [['x', 1]])` = `﻿A;B\r\nx;1\r\n` ; en-tête seul : `﻿A;B\r\n` ; champs `a;b` → `"a;b"`, `dit "oui"` → `"dit ""oui"""`, `l1\nl2` et `l1\r\nl2` entre guillemets, `Alice` sans guillemets | D-160 (2) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-2 | `formaterNombre` : 12.5 → `12,5` ; 3 → `3` ; -1 → `-1` (signe ASCII) ; 0 → `0` ; 0.25 → `0,25` ; 3.75 → `3,75` ; 22 → `22` ; 1234.5 → `1234,5` ; 1.1 → `1,1` ; 0.1 + 0.2 → `0,3` | D-160 (2) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-3 | `formaterDate('2027-01-18')` → `18/01/2027` ; `formaterMois('2027-01')` → `01/2027` | D-160 (2) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-4 | Injection : `champTexte` préfixe d'une apostrophe `=SOMME(A1)`, `+1`, `-1x`, `@x`, tabulation + `x` ; CR + `x` → `"'\rx"` (préfixé puis entre guillemets) ; inchangés : `Alice`, `a=b`, chaîne vide ; `produireCsv([ 'N' ], [[-1], ['-1']])` → `-1` pour le nombre, `'-1` pour le texte | D-160 (2) | 6f | packages/api/test/lot6f-csv.test.ts |
+
+API, volet A (plan de charge) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| CSV-5 | Accès et refus, mêmes que PDC-1 et PDC-2 : sans session 401 ; ressource (`est_ressource` ou non) 403 `{ erreur: 'Interdit' }` ; ordre des refus : ressource avec `debut` invalide → 403, sans session avec `debut` invalide → 401 ; 400 pour `debut` absent, `2027-13`, `1999-12`, `2100-01`, `equipe=abc`, `1.5`, `1e2` ; administrateur et chef 200 ; base inchangée pour chaque refus | D-160 (3) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-6 | Fichier : `Content-Type: text/csv; charset=utf-8` ; `Content-Disposition: attachment; filename="plan-de-charge-2027-01.csv"` (et `plan-de-charge-2026-11.csv` pour `debut=2026-11`) ; corps commençant par le BOM, première ligne `Ressource;Équipe;Projet;Mois;Disponible;Réel;Planifié;Charge;Écart`, lignes finies par CRLF | D-160 (2), (3) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-7 | Contenu : Alice (équipe « Dev », capacité 1, calendrier par défaut), projet P1 « Projet un », planifié 2027-01-05 1,5, imputation 2027-01-12 0,5 ; `debut=2027-01` : 1 + 12 + 12 lignes ; lignes 1 à 12 : `Alice;Dev;Total;01/2027;21;0,5;1,5;2;19`, `Alice;Dev;Total;02/2027;20;0;0;0;20`, … `Total;12/2027` ; lignes 13 à 24 : `Alice;Dev;P1 · Projet un;01/2027;;0,5;1,5;2;` puis `…;02/2027;;0;0;0;` … ; aucune virgule de milliers | D-160 (3) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-8 | Équipe vide, inactif, écart négatif : Carl sans équipe, inactif, planifié 2027-03-10 2 : `Carl (inactif);;Total;03/2027;23;0;2;2;21` ; Bob (équipe « Dev »), planifié 22 le 2027-01-04 : `Bob;Dev;Total;01/2027;21;0;22;22;-1` (nombre négatif sans apostrophe) | D-160 (2), (3) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-9 | Chef de projet, scénario de PDC-12 : pour Alice, colonne Projet après les 12 lignes « Total » : `M-PROJ1 · Nom M-PROJ1`, `N-LECT · Nom N-LECT`, `Autres projets` (12 lignes chacun, dans cet ordre) ; aucune ligne ne contient `A-ILLISIBLE2` ni `B-ILLISIBLE3` ; ligne `Autres projets` : Disponible et Écart vides ; administrateur : A-ILLISIBLE2, B-ILLISIBLE3, M-PROJ1, N-LECT, sans « Autres projets » | D-160 (3) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-10 | Filtres et vide : `equipe=<Dev>` → seules les lignes d'Alice et Bob ; `equipe=aucune` → Carl seul ; équipe inconnue 9999 → en-tête seul (`﻿` + en-tête + CRLF) ; base sans ressource → en-tête seul ; GET administrateur et chef n'écrit rien (empreinte identique) | D-160 (1), (3) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-11 | Injection : ressource « =Eve » → champ `'=Eve` ; équipe « @Eq » → champ `'@Eq` ; projet de code `=C1` et de nom « Nom » → champ `'=C1 · Nom` ; projet de code `Z-1` et de nom « =Nom » → champ `Z-1 · =Nom` non préfixé (le champ commence par le code) ; aucun nombre préfixé | D-160 (2) | 6f | packages/api/test/lot6f-csv.test.ts |
+
+API, volet B (imputations) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| CSV-12 | Accès : sans session 401 ; ressource (`est_ressource` ou non) 403 `{ erreur: 'Interdit' }`, y compris avec des paramètres invalides (403 avant 400) ; sans session avec paramètres invalides 401 ; administrateur et chef 200 ; base inchangée pour chaque refus | D-160 (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-13 | 400 : `du` ou `au` absent ; `2027-1-1`, `2027-02-30`, `abc`, `20270101` ; `du=1999-12-31&au=2000-01-05` ; `du=2099-12-30&au=2100-01-01` ; `au` antérieur à `du` ; `equipe=abc`, `1.5`, `1e2` ; base inchangée. 200 : `du=2000-01-01&au=2000-01-01`, `du=2099-12-31&au=2099-12-31` | D-160 (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-14 | Bornes de période (nombre de jours bornes comprises) : `du=2028-01-01&au=2028-12-31` (366 jours) 200 ; `du=2027-01-01&au=2028-01-02` (367 jours) 400 (r1 : le cas d'origine `au=2028-01-01` fait 366 jours, D-162) ; `du=2027-01-01&au=2027-12-31` (365 jours) 200 ; imputations du jour `du` et du jour `au` incluses, celles de la veille de `du` et du lendemain de `au` exclues | D-160 (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-15 | Fichier et contenu : `Content-Type: text/csv; charset=utf-8` ; `filename="imputations-2027-01-01-2027-01-31.csv"` ; BOM ; en-tête `Ressource;Équipe;Semaine;Statut;Projet;Activité;Jour;Charge` ; Alice (équipe « Dev »), P1 « Projet un », activité « Analyse » (WBS `1`), imputation 0,5 le 2027-01-06 (mercredi), feuille du lundi 2027-01-04 validée : ligne `Alice;Dev;04/01/2027;Validée;P1 · Projet un;1 Analyse;06/01/2027;0,5` ; équipe vide : `Carl;;…` | D-160 (2), (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-16 | Statuts : quatre semaines, feuilles brouillon, soumise, validée, rejetée (avec commentaire) : colonne Statut `Brouillon`, `Soumise`, `Validée`, `Rejetée` ; les quatre imputations exportées ; le commentaire n'apparaît pas | D-160 (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-17 | Tri : ressources créées Charles, bruno, Alice, alice → Alice, alice (même nom sans casse : par id), bruno, Charles ; pour une ressource : jour croissant, puis code du projet sans casse (`A-1` avant `b-2` le même jour), puis ordre WBS (activités `1` puis `2` du même projet le même jour) | D-160 (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-18 | Périmètre du chef : Alice impute dans P1 (chef = le chef), PL (autre chef ; le chef y est affecté, lecture seule) et P2 (autre chef, illisible) ; chef : seules les lignes de P1 ; une ressource qui n'impute que dans P2 est absente ; administrateur : les trois projets | D-160 (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-19 | Filtre équipe : `equipe=<Dev>` → Alice ; `equipe=aucune` → Carl seul ; équipe inconnue 9999 → en-tête seul ; période sans imputation → en-tête seul ; GET n'écrit rien (empreinte identique) | D-160 (4) | 6f | packages/api/test/lot6f-csv.test.ts |
+| CSV-20 | Injection : ressource « =Eve » → `'=Eve` ; équipe « @Eq » → `'@Eq` ; activité de nom « =Nom » → champ `1 =Nom` non préfixé ; charge négative impossible en base (aucun test de nombre négatif ici) | D-160 (2) | 6f | packages/api/test/lot6f-csv.test.ts |
+
+Web (fonctions pures, `packages/web/src/export/logique.ts`) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GEO-53 | `periodeSemaine('2027-01-04')` → `{ du: '2027-01-04', au: '2027-01-10' }` ; `periodeSemaine('2026-12-28')` → `{ du: '2026-12-28', au: '2027-01-03' }` | D-160 (6) | 6f | packages/web/test/lot6f.test.ts |
+| GEO-54 | `periodeExportValide` : (`2028-01-01`, `2028-12-31`) vrai (366 jours) ; (`2027-01-01`, `2028-01-02`) faux (367 ; r1 : le cas d'origine (`2027-01-01`, `2028-01-01`) fait 366 jours, D-162) ; (`2027-01-01`, `2027-01-01`) vrai ; (`2027-01-02`, `2027-01-01`) faux ; (`''`, `2027-01-01`) faux ; (`2027-01-01`, `''`) faux | D-160 (6) | 6f | packages/web/test/lot6f.test.ts |
+| GEO-55 | `adresseExportPlan('2027-01', 'toutes')` → `/api/plan-de-charge/export?debut=2027-01` ; `('2027-01', 'aucune')` → `…?debut=2027-01&equipe=aucune` ; `('2027-01', 7)` → `…&equipe=7` ; `adresseExportImputations('2027-01-04', '2027-01-10', 'toutes')` → `/api/imputations/export?du=2027-01-04&au=2027-01-10` ; avec `'aucune'` et `7` : `&equipe=aucune`, `&equipe=7` | D-160 (5), (6) | 6f | packages/web/test/lot6f.test.ts |
+
+E2E (e2e/tests/lot6f.spec.ts ; base « administrateur seul » avant et après chaque test ; téléchargements par `page.waitForEvent('download')` et lecture du fichier) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-383 | Plan de charge : bouton « Exporter CSV » dans la barre des filtres (avant le tableau, après « Mois suivant » à la tabulation) ; Alice (équipe Alpha) et Bob (équipe Zeta) ; clic avec filtres par défaut : fichier `plan-de-charge-2027-01.csv`, en-tête de D-160 (3), lignes d'Alice et de Bob ; équipe « Alpha 6F » et mois 2027-05 : fichier `plan-de-charge-2027-05.csv`, lignes d'Alice seulement ; adresse de l'écran inchangée par le clic ; aucune requête d'écriture | D-160 (3), (5) | 6f | e2e/tests/lot6f.spec.ts |
+| E2E-384 | Validation : « Exporter CSV » ouvre le dialogue « Exporter les imputations » ; Du `2026-01-12` et Au `2026-01-18` (semaine affichée, horloge du navigateur au 14/01/2026) ; liste « Équipe » : « Toutes », « Sans équipe », équipes par nom ; « Exporter » télécharge `imputations-2026-01-12-2026-01-18.csv` avec l'en-tête de D-160 (4) et la ligne de l'imputation d'Alice ; dialogue fermé, focus sur « Exporter CSV » ; après « Semaine suivante », champs préremplis `2026-01-19` et `2026-01-25` | D-160 (4), (6) | 6f | e2e/tests/lot6f.spec.ts |
+| E2E-385 | Période invalide : Au `2026-01-11` avant Du `2026-01-12` : « Période invalide. », `aria-invalid` sur les champs, « Exporter » désactivé ; période de 367 jours : même état ; 366 jours : message absent, bouton actif ; aucun appel à /api/imputations/export pendant les états invalides ; Échap ferme le dialogue sans téléchargement, focus sur « Exporter CSV » | D-160 (6) | 6f | e2e/tests/lot6f.spec.ts |
+| E2E-386 | Chef de projet : export du plan de charge : ligne « Autres projets » pour le projet d'un autre chef, aucun nom ni code de ce projet dans le fichier ; export des imputations : seules les lignes de son projet ; rôle ressource : /plan-de-charge et /validation redirigent vers /mes-taches (aucun bouton d'export) | D-160 (3), (4) | 6f | e2e/tests/lot6f.spec.ts |
+| E2E-387 | Extension du parcours complet (administrateur seul, tout à l'écran, gestes d'E2E-382, horloge du navigateur au 14/01/2026) : calendrier, équipe « Équipe 6F », ressource, chef, projet, affectation, activité assignée créés à l'écran ; la ressource saisit 1 j le 12/01/2026 par la Feuille de temps et enregistre ; l'administrateur exporte le plan de charge (`?debut=2026-01`) et les imputations (semaine du 12/01) à l'écran : dans les fichiers, l'en-tête et la ligne `Ressource 6F;Équipe 6F;Total;01/2026;<disponible>;1;0;1;<écart>` et la ligne `Ressource 6F;Équipe 6F;12/01/2026;Brouillon;6F · Projet 6F;1 Tâche 6F;12/01/2026;1` | D-160 (7) | 6f | e2e/tests/lot6f.spec.ts |
+
+### Couverture des champs, lot 6f (règle « Couverture des champs »)
+
+Les deux routes sont en lecture seule : aucun champ modifiable nouveau.
+
+| Champ de l'API | Champ d'écran | Test |
+|---|---|---|
+| GET /api/plan-de-charge/export `debut` (lecture seule) | champ « Mois de départ » de l'écran Plan de charge, repris par « Exporter CSV » | E2E-383 |
+| GET /api/plan-de-charge/export `equipe` (lecture seule) | liste « Équipe » de l'écran Plan de charge, reprise par « Exporter CSV » | E2E-383 |
+| GET /api/imputations/export `du`, `au` (lecture seule) | champs « Du » et « Au » du dialogue « Exporter les imputations » | E2E-384, E2E-385 |
+| GET /api/imputations/export `equipe` (lecture seule) | liste « Équipe » du dialogue | E2E-384 |
+| Colonnes des deux fichiers (lecture seule) | fichiers téléchargés ; aucun affichage à l'écran | E2E-383, E2E-384, E2E-387 |
+
+### Preuves de la phase rouge de 6f (D-160)
+
+- Vitest API : 20 rouges sur 20 (lot6f-csv.test.ts). CSV-1 à CSV-4 : module `export/csv` absent (« Cannot find module »). CSV-5 à CSV-20 : route absente, 404 « Route GET:/api/plan-de-charge/export… not found » ou « /api/imputations/export… not found », atteint après préparation réussie. Le module est chargé par import dynamique pour que l'absence ne masque pas les tests de route.
+- Vitest web : lot6f.test.ts ne se charge pas (module `export/logique` absent) : GEO-53 à GEO-55 non exécutés.
+- E2E : 5 rouges (E2E-383 à E2E-387), chacun à l'étape d'écran (bouton « Exporter CSV » absent, aucun téléchargement) ; toutes les préparations par l'API et, pour E2E-387, tous les gestes d'écran de création et de saisie ont réussi avant l'échec.
+- Lint vert. Typecheck : seule erreur, TS2307 sur `../src/export/csv.js` (module absent, attendu en phase rouge).
+
+## Révisions D-031 de REX-5 (D-165 (7))
+
+Inventaire vérifié par recherche dans e2e/tests et packages/*/test : `allerA(page, 'Calendriers')`, `allerA(page, 'Équipes')`, `ouvrirEquipes`, liens de menu « Calendriers » et « Équipes », adresses `/equipes` et `/calendriers`, listes de liens du menu, boutons « Nouveau calendrier ». Tests web (packages/web/test) : aucun ne touche ces écrans (fonctions pures). Tests API : aucun (l'API ne change pas). `Calendriers.tsx` n'a aucun test de lecture seule pour un non-administrateur (mode lu par `useAdmin`, jamais exercé par un e2e) : aucun test à retirer ; E2E-393 couvre la redirection qui le remplace.
+
+Mécanique commune de la révision : le geste « ouvrir l'écran Calendriers (ou Équipes) par le menu » devient « ouvrir l'écran Utilisateurs, puis l'onglet Calendriers (ou Équipes) » par les nouveaux helpers `ouvrirCalendriers` et `ouvrirEquipes` (e2e/tests/lot3c-helpers.ts et lot6a-helpers.ts). Valeurs attendues, intentions et suite des gestes inchangées. Les helpers d'e2e ne sont pas des tests : leur changement suit les révisions listées ici.
+
+| ID | Raison de la révision | Spec | Fichier |
+|---|---|---|---|
+| E2E-5-r1 | Ouvre « Calendriers » par le lien de menu, puis vérifie le titre h1 « Calendriers » : plus de lien ni de h1 ; ouverture par l'onglet, h1 « Utilisateurs » | D-165 (3) | e2e/tests/lot1.spec.ts |
+| E2E-21-r1 | Idem (lien de menu, h1) ; la suppression du calendrier depuis le détail revient à l'onglet Calendriers | D-165 (3), (3 bis) | e2e/tests/lot1b-c.spec.ts |
+| E2E-46-r1 | Parcours complet : calendrier créé par l'écran Calendriers, désormais par l'onglet (D-165 (6)) | D-165 (6) | e2e/tests/rex1.spec.ts |
+| E2E-59-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/lot3c.spec.ts |
+| E2E-110-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/accueil-g4.spec.ts |
+| E2E-123-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/cloture-c2.spec.ts |
+| E2E-131-r1 | Extension du parcours complet : idem | D-165 (6) | e2e/tests/lot3d1.spec.ts |
+| E2E-170-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/lot3d4.spec.ts |
+| E2E-180-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/lot3e.spec.ts |
+| E2E-192-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/lot3f1.spec.ts |
+| E2E-208-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/lot3f2.spec.ts |
+| E2E-244-r2 | Parcours complet (déjà -r1) : idem | D-165 (6) | e2e/tests/lot4b.spec.ts |
+| E2E-317-r1 et E2E-318-r1 | Parcours complets (via l'assistant `parcoursJusquaSoumission`, qui ouvrait l'écran Calendriers) : idem | D-165 (6) | e2e/tests/lot4c.spec.ts |
+| E2E-345-r1 | Parcours complet avec équipe : calendrier et équipe créés par les onglets (deux endroits : création, puis retour à l'écran Équipes pour le nombre de membres) | D-165 (6) | e2e/tests/lot6a.spec.ts |
+| E2E-353-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/lot6b.spec.ts |
+| E2E-358-r1 | Parcours complet : idem | D-165 (6) | e2e/tests/lot6c.spec.ts |
+| E2E-376-r1 | Parcours complet : calendrier et équipe par les onglets | D-165 (6) | e2e/tests/lot6d.spec.ts |
+| E2E-382-r1 | Parcours complet : calendrier et équipe par les onglets | D-165 (6) | e2e/tests/lot6e.spec.ts |
+| E2E-387-r1 | Parcours complet : calendrier et équipe par les onglets | D-165 (6) | e2e/tests/lot6f.spec.ts |
+| E2E-335-r1 | Ancienne : entrée « Équipes » après « Calendriers », écran `/equipes`. Nouvelle : plus d'entrée ; l'onglet Équipes de `/utilisateurs?onglet=equipes` affiche le bouton « Nouvelle équipe » et le tableau (colonnes Nom, Membres, Actions) | D-165 (2), (3) | e2e/tests/lot6a.spec.ts |
+| E2E-336-r1 | Ancienne : entrée « Équipes » absente pour chef et ressource. Nouvelle : entrées « Équipes » et « Calendriers » absentes pour chef et ressource | D-165 (3) | e2e/tests/lot6a.spec.ts |
+| E2E-337-r1 à E2E-341-r1 | Créer, renommer, supprimer, refus de doublon, refus d'équipe utilisée : le geste d'ouverture passe par `ouvrirEquipes` (onglet) ; textes, dialogues et état en base inchangés | D-165 (2) | e2e/tests/lot6a.spec.ts |
+| E2E-343-r2 | Ancienne -r1 : effet de la modification d'un utilisateur dans l'écran Équipes (deux ouvertures). Nouvelle : même effet lu dans l'onglet Équipes | D-165 (2) | e2e/tests/lot6a.spec.ts |
+| E2E-346-r1 | Captures : écran Équipes ouvert par l'onglet (sans assertion fonctionnelle) | D-165 (2) | e2e/tests/lot6a-captures.spec.ts |
+| E2E-347-r1 | Ancienne : menu du rôle ressource `['Mes tâches', 'Calendriers', 'Imputations']`. Nouvelle : `['Mes tâches', 'Imputations']` | D-165 (5) | e2e/tests/lot6b.spec.ts |
+
+Révision de la phase verte (D-167 (2)), tag `tests-rex5-r1` :
+
+| ID | Test | Spec | Fichier |
+|---|---|---|---|
+| E2E-393-r1 | Ancienne : après `goBack`, `toHaveURL('/imputations')` ; l'écran Imputations réécrit l'adresse en `/imputations?semaine=…` (4b). Nouvelle : `toHaveURL(/\/imputations(\?|$)/)` ; autres attentes inchangées (E2E-393 de la rubrique « Tests de REX-5 » est donc E2E-393-r1) | D-167 (2) | e2e/tests/rex5.spec.ts |
+
+Aucune autre révision : les autres e2e du lot 6b (E2E-348 à E2E-352) ne touchent ni les menus ni `/calendriers`.
+
+## Tests de REX-5 (D-165)
+
+E2E (e2e/tests/rex5.spec.ts ; base « administrateur seul » avant et après chaque test ; date du jour fixée par `page.clock.setFixedTime` ; calendriers propres créés par l'API, jamais le calendrier par défaut, D-163 (3)) :
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-388 | Trois onglets « Utilisateurs », « Équipes », « Calendriers » (rôle `tab`) ; « Utilisateurs » sélectionné par défaut, adresse `/utilisateurs` ; clic « Équipes » : adresse `?onglet=equipes` ; clic « Calendriers » : `?onglet=calendriers` ; retour à « Utilisateurs » : adresse sans paramètre | D-165 (2) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-389 | Ouverture directe : `?onglet=equipes` et `?onglet=calendriers` sélectionnent l'onglet ; `?onglet=zzz` : onglet Utilisateurs sélectionné | D-165 (2) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-390 | Relecture des équipes : équipe « Atelier 5 » créée dans l'onglet Équipes ; onglet Utilisateurs, « Nouvel utilisateur » : liste « Équipe » contient « Atelier 5 », sans rechargement (marqueur `window` conservé) ; utilisateur créé avec cette équipe ; retour onglet Équipes : Membres = 1 | D-165 (2) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-391 | Relecture des calendriers : calendrier « Cal 5 » créé dans l'onglet Calendriers ; onglet Utilisateurs, « Nouvel utilisateur » : liste « Calendrier » contient « Cal 5 », sans rechargement | D-165 (2) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-392 | Administrateur : `/equipes` arrive sur `/utilisateurs?onglet=equipes`, `/calendriers` sur `/utilisateurs?onglet=calendriers`, onglet sélectionné ; aucune entrée d'historique (un retour en arrière ne revient pas sur l'ancienne adresse) | D-165 (3) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-393 | Chef de projet : `/equipes`, `/calendriers` et `/calendriers/<id>` arrivent sur « / » ; ressource : sur `/mes-taches` ; aucune entrée d'historique ; aucune requête GET /api/calendriers/<id> ni écran de détail ; base inchangée | D-165 (3), (3 bis) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-394 | Menus : administrateur et chef de projet sans « Équipes » ni « Calendriers » (administrateur avec « Utilisateurs ») ; chef de projet `est_ressource` avec « Mes tâches » | D-165 (3) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-395 | Détail d'un calendrier : lien du nom dans l'onglet Calendriers ouvre `/calendriers/<id>` ; entrée de menu « Utilisateurs » marquée active (`aria-current="page"`) ; lien « Retour aux calendriers » ramène à `/utilisateurs?onglet=calendriers`, onglet Calendriers sélectionné ; suppression du calendrier depuis le détail revient à ce même onglet | D-165 (3 bis) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-396 | « Mon calendrier », nominal : horloge au 10/03/2027 ; ressource sur un calendrier « Cal 5 » (lundi au vendredi, fériés 2027-12-25 sans libellé, 2027-05-01 « Fête du travail », 2027-03-10 « Aujourd'hui », 2027-03-09 « Hier » créés dans le désordre) ; h2 « Mon calendrier » sous le tableau « Mes tâches » ; nom « Cal 5 » ; « Jours travaillés : lundi, mardi, mercredi, jeudi, vendredi » ; tableau « Jours fériés à venir » colonnes Date et Libellé, lignes `10/03/2027 Aujourd'hui`, `01/05/2027 Fête du travail`, `25/12/2027 —` dans cet ordre, pas de ligne du 09/03/2027 ; aucun bouton d'édition | D-165 (4) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-397 | « Mon calendrier », vide : calendrier sans férié à venir (un seul férié, 2027-03-09, horloge au 10/03/2027) : « Aucun jour férié à venir. », pas de tableau « Jours fériés à venir » ; jours travaillés en toutes lettres, y compris samedi et dimanche pour un calendrier lundi au dimanche | D-165 (4) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-398 | « Mon calendrier », erreur : GET /api/calendriers/<id> intercepté en 500 : « Impossible de charger votre calendrier. », tableau des tâches affiché avec sa ligne ; inversement GET /api/mes-taches en 500 : « Impossible de charger vos tâches. » et section « Mon calendrier » affichée | D-165 (4) | REX-5 | e2e/tests/rex5.spec.ts |
+| E2E-399 | Affichage de la section : visible pour un chef de projet `est_ressource` et pour un rôle ressource ; sans entrée « Mes tâches » et sans lecture du calendrier pour un chef de projet non ressource ; requête GET /api/calendriers/<id> du `calendrier_id` de la session seulement | D-165 (4) | REX-5 | e2e/tests/rex5.spec.ts |
+
+Parcours complet : les dix-huit parcours complets listés plus haut (hors E2E-5-r1 et E2E-21-r1, qui ne sont pas des parcours complets) partent d'une base où seul l'administrateur existe et créent désormais calendrier et équipe par les onglets ; E2E-387-r1 est le plus récent, E2E-345-r1 couvre l'équipe.
+
+### Couverture des champs, REX-5 (règle « Couverture des champs »)
+
+Aucun champ d'API nouveau ni modifié (API inchangée). Champs déplacés d'écran :
+
+| Champ de l'API | Champ d'écran | Test |
+|---|---|---|
+| POST /api/equipes `nom` ; PATCH /api/equipes/:id `nom` | onglet « Équipes » : champ « Nom » de « Nouvelle équipe » et du dialogue « Renommer <nom> » | E2E-337-r1, E2E-338-r1, E2E-390 |
+| POST /api/calendriers `nom`, jours travaillés, fériés ; PATCH `nom`, jours | onglet « Calendriers » (création) et page de détail (modification) | E2E-5-r1, E2E-21-r1, E2E-391, E2E-395 |
+| GET /api/calendriers/:id (lecture seule) | section « Mon calendrier » de Mes tâches : nom, jours travaillés, fériés à venir | E2E-396 à E2E-399 |
+
+### Preuves de la phase rouge de REX-5 (D-165)
+
+- Lancés (D-128) : e2e nouveaux (E2E-388 à E2E-399) et révisés, seuls ; lint et typecheck verts (prettier, eslint, tsc : 0 erreur). Pas de vitest : aucun test web ni API touché.
+- E2E-388 à E2E-399 : 12 rouges sur 12. Onglets absents (`tab` introuvable : E2E-388, E2E-389), `/equipes` et `/calendriers` sans redirection (E2E-392, E2E-393), entrées « Équipes » et « Calendriers » encore au menu (E2E-394), onglets et lien « Retour aux calendriers » absents (E2E-390, E2E-391, E2E-395), titre h2 « Mon calendrier » absent (E2E-396 à E2E-399).
+- Révisions -r1 : E2E-5, E2E-21, E2E-46, E2E-110, E2E-335 à E2E-341, E2E-343-r2, E2E-345, E2E-346, E2E-347 lancés : tous rouges, à l'étape d'ouverture de l'onglet (« locator.click: Timeout » sur `tab`) ou à l'assertion de menu. Les autres parcours complets (E2E-59, 123, 131, 170, 180, 192, 208, 244-r2, 317, 318, 353, 358, 376, 382, 387) passent par le même assistant `ouvrirCalendriers` ou `ouvrirEquipes` et n'ont pas été lancés un à un (D-128) ; rouges à justifier à la phase verte.
+- Correction faite en cours de route : les parcours de lot4c révisés sont E2E-317 et E2E-318 (assistant `parcoursJusquaSoumission`), pas E2E-316.
+
+## Test API de REX-5 (D-167 (1))
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| AUTH-16 | Utilisateur avec une équipe (`equipe_id` non nul) et un calendrier non défaut : après `POST /api/auth/login`, la réponse de `GET /api/auth/me` (sans `mot_de_passe_origine`) est égale champ par champ à l'utilisateur de la réponse de login, `calendrier_id` et `equipe_id` compris | D-167 (1), D-147 (4) | REX-5 | packages/api/test/rex5-auth.test.ts |
+- AUTH-16 : rouge prouvé avant la correction (sortie de session) : `calendrier_id` absent de la réponse de GET /api/auth/me (« Expected … "calendrier_id": 2 » manquant) ; vert après `loadUser` sur `USER_COLUMNS`. Test et correctif dans un seul commit `fix:` (D-167 (2)).
+- Phase verte : E2E-388 à E2E-399 verts sur 3 passes ; suite complète 1030 vitest, 420 e2e.

@@ -3,6 +3,8 @@ import type { ReactNode, Ref } from 'react';
 export interface Colonne<T> {
   titre: string;
   cellule: (ligne: T) => ReactNode;
+  /** Classes ajoutées à la cellule d'une ligne (ex. couleur d'une valeur négative) ; en plus de `classeCellule`. */
+  classeCelluleLigne?: (ligne: T) => string;
   /** Classes ajoutées à l'en-tête et aux cellules de la colonne (ex. colonne figée). */
   classeEntete?: string;
   classeCellule?: string;
@@ -74,7 +76,7 @@ export function Table<T>({
               {colonnes.map((c) => (
                 <td
                   key={c.titre}
-                  className={`${compact ? 'h-8 px-2 whitespace-nowrap' : 'px-3 py-2'} ${c.classeCellule ?? ''}`}
+                  className={`${compact ? 'h-8 px-2 whitespace-nowrap' : 'px-3 py-2'} ${c.classeCellule ?? ''} ${c.classeCelluleLigne?.(ligne) ?? ''}`}
                 >
                   {c.cellule(ligne)}
                 </td>

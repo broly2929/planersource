@@ -13,10 +13,14 @@
 - 2026-11-19 (4b-corr) : bordure `flag` d'une case invalide peu visible sous l'anneau de focus.
 - 2026-11-19 (4c, relecture des tests) : typecheck du web sans `packages/web/test`.
 - 2026-11-19 (porteur, D-138 (5)) : assistant web de premier démarrage façon outils de gestion de projet existants (page de configuration verrouillée par code à usage unique).
-- 2026-11-19 (porteur) : équipe facultative de l'utilisateur (table d'équipes gérée par l'administrateur, `utilisateur.equipe` nullable).
-- 2026-11-19 (porteur) : exports CSV (plan de charge, feuilles de temps) ; pas d'import de base depuis l'application (backup.sh et restore.sh suffisent).
-- 2026-11-19 (porteur) : Accueil, planning d'une ressource (liste de choix, ses assignations sur tous les projets, Gantt).
-- 2026-11-19 (porteur) : charge vendue. Champ « charge vendue » de l'activité, vu du chef et de l'administrateur seulement ; totaux vendu, assigné, marge, réel ; moteur inchangé (planifie l'assigné). Jalon avec « date client » facultative : deux marqueurs dans le Gantt, écart affiché, drapeau « Engagement client dépassé » si date planifiée > date client ; pas de second planning.
-- 2026-11-19 (porteur) : vue restreinte de la ressource. « Mes tâches » (ses assignations, charge assignée, dates, reste, réel) et sa feuille de temps ; aucun accès aux projets, Gantt et Accueil global ; refus côté API (SPEC §2 à amender) ; la charge vendue ne lui est jamais renvoyée.
-- 2026-11-19 (porteur) : plan de charge par équipe ou global. Ressource × mois (jours affectés, jours ouvrés selon calendrier et capacité, écart coloré), projets dépliables sous la ressource, filtres équipe, année, mois de départ, export CSV.
+- 2026-11-19 (porteur) : équipe facultative de l'utilisateur (table d'équipes gérée par l'administrateur, `utilisateur.equipe` nullable). → fait (lot 6, D-164)
+- 2026-11-19 (porteur) : exports CSV (plan de charge, feuilles de temps) ; pas d'import de base depuis l'application (backup.sh et restore.sh suffisent). → fait (lot 6, D-164)
+- 2026-11-19 (porteur) : Accueil, planning d'une ressource (liste de choix, ses assignations sur tous les projets, Gantt). → fait (lot 6, D-164)
+- 2026-11-19 (porteur) : charge vendue. Champ « charge vendue » de l'activité, vu du chef et de l'administrateur seulement ; totaux vendu, assigné, marge, réel ; moteur inchangé (planifie l'assigné). Jalon avec « date client » facultative : deux marqueurs dans le Gantt, écart affiché, drapeau « Engagement client dépassé » si date planifiée > date client ; pas de second planning. → fait (lot 6, D-164)
+- 2026-11-19 (porteur) : vue restreinte de la ressource. « Mes tâches » (ses assignations, charge assignée, dates, reste, réel) et sa feuille de temps ; aucun accès aux projets, Gantt et Accueil global ; refus côté API (SPEC §2 à amender) ; la charge vendue ne lui est jamais renvoyée. → fait (lot 6, D-164)
+- 2026-11-19 (porteur) : plan de charge par équipe ou global. Ressource × mois (jours affectés, jours ouvrés selon calendrier et capacité, écart coloré), projets dépliables sous la ressource, filtres équipe, année, mois de départ, export CSV. → fait (lot 6, D-164)
 - 2026-11-19 (porteur) : ordre du lot 6 : équipe, vue restreinte, charge vendue, plan de charge, planning d'une ressource, exports CSV. → lot 6 (D-147)
+- 2026-11-20 (D-149 (8)) : Accueil sans charge vendue ni date client en 6c ; à reprendre avec le plan de charge ou le planning d'une ressource (lot 6).
+- 2026-11-22 (porteur, REX d'utilisation) : fusion de l'écran Équipes dans Utilisateurs, à cadrer après le lot 6 (D-150 (5)).
+- 2026-11-22 (porteur, REX d'utilisation) : fusion de Calendriers dans Utilisateurs, à cadrer après le lot 6, avec la question de la lecture par le rôle ressource (D-150 (5)).
+- 2026-11-22 (porteur, REX d'utilisation) : SBOM au format CycloneDX (JSON), versionné dans le dépôt. Piste : `npm sbom --sbom-format cyclonedx`, intégré à npm, sans dépendance. À cadrer après le lot 6 : emplacement, régénération (script npm), contrôle en CI que le SBOM est à jour.

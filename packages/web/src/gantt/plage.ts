@@ -65,3 +65,14 @@ export function joursConnus(lignes: LigneGantt[]): string[] {
   }
   return jours;
 }
+
+/** Dates client des jalons (D-149 (8c)) : ajoutées aux jours du Gantt du projet, jamais à ceux de l'Accueil. */
+export function joursClient(lignes: LigneGantt[]): string[] {
+  const jours: string[] = [];
+  for (const l of lignes) {
+    if (l.genre === 'element' && l.element.type === 'jalon' && l.element.date_client) {
+      jours.push(l.element.date_client);
+    }
+  }
+  return jours;
+}

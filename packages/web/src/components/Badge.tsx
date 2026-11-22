@@ -11,9 +11,18 @@ const STYLES: Record<Statut, string> = {
   neutre: 'bg-gray-100 text-gray-700 border-gray-400',
 };
 
-export function Badge({ statut, children }: { statut: Statut; children: ReactNode }) {
+export function Badge({
+  statut,
+  title,
+  children,
+}: {
+  statut: Statut;
+  title?: string;
+  children: ReactNode;
+}) {
   return (
     <span
+      title={title}
       className={`inline-block rounded-ui border px-2 text-petit font-semibold ${STYLES[statut]}`}
     >
       {children}

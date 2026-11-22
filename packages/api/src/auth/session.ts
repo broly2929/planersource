@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import type { Config } from '../config.js';
-import { toPublicUser, type UtilisateurRow } from './user.js';
+import { toPublicUser, USER_COLUMNS, type UtilisateurRow } from './user.js';
 
 export const SESSION_COOKIE = 'session';
 /**
@@ -85,7 +85,9 @@ export async function loadUser(
   const token = readToken(request);
   if (!token) return null;
   const { rows } = await pool.query<UtilisateurRow>(
-    `SELECT u.id, u.nom, u.login, u.email, u.initiales, u.role, u.est_ressource, u.capacite, u.actif, u.equipe_id
+    `SELECT ${USER_COLUMNS.split(', ')
+      .map((c) => `u.${c}`)
+      .join(', ')}
        FROM session s JOIN utilisateur u ON u.id = s.utilisateur_id
       WHERE s.jeton_hash = $1
         AND s.cree_le > now() - make_interval(hours => $2)

@@ -14,11 +14,11 @@ export async function verdictProjet(
   user: Acteur,
   projetId: number | null,
   ecriture: boolean,
-): Promise<{ verdict: Verdict } | { verdict: null; projet: Projet }> {
+): Promise<{ verdict: Verdict } | { verdict: null; projet: Projet; peutEcrire: boolean }> {
   const acces = projetId === null ? null : await accesProjet(db, user, projetId);
   if (!acces) return { verdict: 'introuvable' };
   if (ecriture && !acces.peutEcrire) return { verdict: 'interdit' };
-  return { verdict: null, projet: acces.projet };
+  return { verdict: null, projet: acces.projet, peutEcrire: acces.peutEcrire };
 }
 
 /** La route envoie la réponse correspondant au verdict, puis sort. */

@@ -188,6 +188,55 @@ describe('Jeu de démonstration (D-117)', () => {
       expect(() => exigerBaseDemo(`postgres://u:p@h:5432/${nom}`), nom).toThrow();
     }
   });
+  it('DEMO-5 : charge vendue sur deux feuilles de DEMO-R (marge positive, marge négative), date client antérieure à la date planifiée d’un jalon de DEMO-R (D-149 (9))', async () => {
+    await demarrer(ctx);
+    const admin = await connecter(ctx, 'admin');
+    const lireGantt = async (code: string) => {
+      const { rows } = await ctx.pool.query<{ id: number }>(
+        'SELECT id FROM projet WHERE code = $1',
+        [code],
+      );
+      const res = await ctx.app.inject({
+        method: 'GET',
+        url: `/api/projets/${rows[0]!.id}/gantt`,
+        headers: { cookie: admin.cookie },
+      });
+      expect(res.statusCode, res.body).toBe(200);
+      return res.json() as { elements: Record<string, unknown>[]; projet: { totaux: unknown } };
+    };
+
+    const r = await lireGantt('DEMO-R');
+    const vendues = r.elements.filter(
+      (e) => e.type === 'activite' && e.est_parent === false && e.charge_vendue != null,
+    );
+    expect(vendues).toHaveLength(2);
+    expect(vendues.every((e) => e.est_parent === false)).toBe(true);
+    const marges = vendues.map((e) => e.marge as number).sort((a, b) => a - b);
+    expect(marges[0]).toBeLessThan(0);
+    expect(marges[1]).toBeGreaterThan(0);
+
+    const jalons = r.elements.filter((e) => e.type === 'jalon' && e.date_client != null);
+    expect(jalons).toHaveLength(1);
+    const jalon = jalons[0]!;
+    expect(jalon.date_planifiee).not.toBeNull();
+    expect(String(jalon.date_client) < String(jalon.date_planifiee)).toBe(true);
+    expect(jalon.ecart_client as number).toBeGreaterThan(0);
+    expect(jalon.engagement_depasse).toBe(true);
+
+    for (const code of ['DEMO-S']) {
+      const autre = await lireGantt(code);
+      expect(
+        autre.elements.filter((e) => e.charge_vendue != null || e.date_client != null),
+        code,
+      ).toEqual([]);
+    }
+    const { rows: ailleurs } = await ctx.pool.query(
+      `SELECT 1 FROM activite a JOIN element e ON e.id = a.id JOIN projet p ON p.id = e.projet_id
+        WHERE a.charge_vendue IS NOT NULL AND p.code <> 'DEMO-R'`,
+    );
+    expect(ailleurs).toEqual([]);
+  });
+
   it('DEMO-4-r1 : feuilles de temps du jeu (statuts, commentaire, validations, imputations passées, charge réelle)', async () => {
     const lundi = lundiReel();
     const l14 = decale(lundi, -14);
@@ -259,5 +308,42 @@ describe('Jeu de démonstration (D-117)', () => {
           AND s.charge_reelle <= 0`,
     );
     expect(sansReel).toEqual([]);
+  });
+
+  it('DEMO-6 : équipes « Développement » (alice, bob) et « Pilotage » (chefa, chefb), administrateur sans équipe, imputation passée d’alice, réel d’alice visible dans le plan de charge (D-154 (10))', async () => {
+    const lundi = lundiReel();
+    await demarrer(ctx, lundi);
+    const membres = await lire(
+      ctx,
+      `SELECT e.nom AS equipe, u.login FROM utilisateur u JOIN equipe e ON e.id = u.equipe_id
+        ORDER BY e.nom, u.login`,
+    );
+    expect(membres).toEqual([
+      { equipe: 'Développement', login: 'alice' },
+      { equipe: 'Développement', login: 'bob' },
+      { equipe: 'Pilotage', login: 'chefa' },
+      { equipe: 'Pilotage', login: 'chefb' },
+    ]);
+    const passees = await lire(
+      ctx,
+      `SELECT i.jour FROM imputation i
+         JOIN assignation s ON s.id = i.assignation_id
+         JOIN utilisateur u ON u.id = s.ressource_id
+        WHERE u.login = 'alice' AND i.jour < CURRENT_DATE`,
+    );
+    expect(passees.length).toBeGreaterThan(0);
+
+    const admin = await connecter(ctx, 'admin');
+    const debut = decale(lundi, -14).slice(0, 7);
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: `/api/plan-de-charge?debut=${debut}`,
+      headers: { cookie: admin.cookie },
+    });
+    expect(res.statusCode, res.body).toBe(200);
+    const plan = res.json() as { ressources: { nom: string; mois: { reel: number }[] }[] };
+    const alice = plan.ressources.find((r) => r.nom === 'Alice');
+    expect(alice, 'Alice absente du plan de charge').toBeDefined();
+    expect(alice!.mois.reduce((somme, m) => somme + m.reel, 0)).toBeGreaterThan(0);
   });
 });

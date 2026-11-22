@@ -1,4 +1,5 @@
 import { Pencil, Plus } from 'lucide-react';
+import * as Tabs from '@radix-ui/react-tabs';
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, ROLE_LABELS, type Role, type Utilisateur } from '../api';
 import { Badge } from '../components/Badge';
@@ -12,9 +13,10 @@ import { Layout } from '../components/Layout';
 import { Notification } from '../components/Notification';
 import { Select } from '../components/Select';
 import { Table, type Colonne } from '../components/Table';
-import { FormulaireDialogue, messageErreur } from './projet/commun';
-import type { Calendrier } from './Calendriers';
-import type { Equipe } from './Equipes';
+import { navigate, usePath, useSearch } from '../router';
+import { FormulaireDialogue, messageErreur, ONGLET } from './projet/commun';
+import { OngletCalendriers, type Calendrier } from './Calendriers';
+import { OngletEquipes, type Equipe } from './Equipes';
 
 const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({
   value: r,
@@ -297,7 +299,50 @@ function FormulaireModification({
   );
 }
 
+/** Écran Utilisateurs (REX-5, D-165) : onglets Utilisateurs, Équipes et Calendriers. */
 export function Utilisateurs() {
+  const chemin = usePath();
+  const demande = useSearch().get('onglet');
+  const onglet = demande === 'equipes' || demande === 'calendriers' ? demande : 'utilisateurs';
+  const changerOnglet = (valeur: string) => {
+    const parametres = new URLSearchParams(window.location.search);
+    if (valeur === 'utilisateurs') parametres.delete('onglet');
+    else parametres.set('onglet', valeur);
+    const texte = parametres.toString();
+    navigate(texte ? `${chemin}?${texte}` : chemin);
+  };
+  return (
+    <Layout titre="Utilisateurs">
+      <Tabs.Root value={onglet} onValueChange={changerOnglet} className="flex flex-col gap-4">
+        <Tabs.List
+          aria-label="Sections de l’administration"
+          className="flex gap-2 border-b border-gray-200"
+        >
+          <Tabs.Trigger value="utilisateurs" className={ONGLET}>
+            Utilisateurs
+          </Tabs.Trigger>
+          <Tabs.Trigger value="equipes" className={ONGLET}>
+            Équipes
+          </Tabs.Trigger>
+          <Tabs.Trigger value="calendriers" className={ONGLET}>
+            Calendriers
+          </Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="utilisateurs">
+          <OngletUtilisateurs />
+        </Tabs.Content>
+        <Tabs.Content value="equipes">
+          <OngletEquipes />
+        </Tabs.Content>
+        <Tabs.Content value="calendriers">
+          <OngletCalendriers />
+        </Tabs.Content>
+      </Tabs.Root>
+    </Layout>
+  );
+}
+
+function OngletUtilisateurs() {
   const [liste, setListe] = useState<Liste>({ statut: 'chargement' });
   const [creation, setCreation] = useState(false);
   const [aModifier, setAModifier] = useState<Utilisateur | null>(null);
@@ -362,15 +407,13 @@ export function Utilisateurs() {
   };
 
   return (
-    <Layout
-      titre="Utilisateurs"
-      actions={
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
         <Button onClick={() => setCreation(true)} disabled={liste.statut !== 'ok'}>
           <Plus aria-hidden className="size-4" />
           Nouvel utilisateur
         </Button>
-      }
-    >
+      </div>
       {liste.statut === 'chargement' && <Chargement libelle="Chargement des utilisateurs…" />}
       {liste.statut === 'erreur' && <Notification type="erreur">{liste.message}</Notification>}
       {liste.statut === 'ok' && liste.utilisateurs.length === 0 && (
@@ -413,6 +456,6 @@ export function Utilisateurs() {
           />
         )}
       </Dialog>
-    </Layout>
+    </div>
   );
 }

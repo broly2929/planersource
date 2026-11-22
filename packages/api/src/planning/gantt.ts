@@ -1,5 +1,6 @@
 import type { Db } from '../db/erreurs.js';
 import { WBS_CTE } from './elements.js';
+import { champsActivite, champsJalon, lireVendu } from './vendu.js';
 import { projetsVisibles, type Acteur, type Projet } from './projets.js';
 
 /** Lecture du Gantt d'un projet (SPEC §6, lot 3a, D-065). Aucune écriture. */
@@ -21,6 +22,7 @@ interface LigneElement {
   fin_planifiee: string | null;
   close: boolean | null;
   est_parent: boolean;
+  charge_vendue: number | null;
   charge_assignee: number;
   charge_reelle: number;
   reste_a_faire: number;
@@ -29,6 +31,7 @@ interface LigneElement {
   type_jalon: string | null;
   date_validee: string | null;
   date_planifiee: string | null;
+  date_client: string | null;
 }
 
 /**
@@ -55,6 +58,7 @@ const ELEMENTS = `WITH RECURSIVE ${WBS_CTE},
          act.mode, act.priorite, act.debut_valide, act.fin_valide, act.duree_validee,
          act.debut_planifie, act.fin_planifiee, act.close,
          EXISTS (SELECT 1 FROM element f WHERE f.parent_id = a.id) AS est_parent,
+         act.charge_vendue,
          COALESCE(c.assignee, 0) AS charge_assignee,
          COALESCE(c.reelle, 0) AS charge_reelle,
          COALESCE(c.reste, 0) AS reste_a_faire,
@@ -64,14 +68,17 @@ const ELEMENTS = `WITH RECURSIVE ${WBS_CTE},
                  JOIN utilisateur u ON u.id = s.ressource_id
                 WHERE s.activite_id = a.id AND u.initiales IS NOT NULL
                 ORDER BY s.id) AS initiales,
-         j.type AS type_jalon, j.date_validee, j.date_planifiee
+         j.type AS type_jalon, j.date_validee, j.date_planifiee, j.date_client
     FROM arbre a
     LEFT JOIN activite act ON act.id = a.id
     LEFT JOIN jalon j ON j.id = a.id
     LEFT JOIN charges c ON c.id = a.id
    ORDER BY a.chemin`;
 
-function forme(l: LigneElement): Record<string, unknown> {
+function forme(
+  l: LigneElement,
+  vendu: Map<number, { charge_vendue: number | null; marge: number | null }> | null,
+): Record<string, unknown> {
   const commun = {
     id: l.id,
     type: l.type,
@@ -87,6 +94,7 @@ function forme(l: LigneElement): Record<string, unknown> {
       type_jalon: l.type_jalon,
       date_validee: l.date_validee,
       date_planifiee: l.date_planifiee,
+      ...(vendu ? champsJalon(l) : {}),
     };
   }
   return {
@@ -104,7 +112,26 @@ function forme(l: LigneElement): Record<string, unknown> {
     charge_reelle: l.charge_reelle,
     reste_a_faire: l.reste_a_faire,
     avancement: l.avancement,
+    ...(vendu ? champsActivite(vendu, l.id) : {}),
     ...(l.est_parent ? {} : { initiales: l.initiales }),
+  };
+}
+
+/**
+ * Totaux du projet (D-149 (5), D-150 (2)) : feuilles du projet seul, closes comprises. Vendu et marge :
+ * feuilles renseignées seulement ; assignée et réelle : toutes les feuilles.
+ */
+function totaux(elements: LigneElement[]) {
+  const feuilles = elements.filter((e) => e.type === 'activite' && !e.est_parent);
+  const renseignees = feuilles.filter((e) => e.charge_vendue !== null);
+  const somme = (valeurs: number[]) => Math.round(valeurs.reduce((a, b) => a + b, 0) * 100) / 100;
+  return {
+    charge_vendue: renseignees.length ? somme(renseignees.map((e) => e.charge_vendue!)) : null,
+    charge_assignee: somme(feuilles.map((e) => e.charge_assignee)),
+    marge: renseignees.length
+      ? somme(renseignees.map((e) => e.charge_vendue! - e.charge_assignee))
+      : null,
+    charge_reelle: somme(feuilles.map((e) => e.charge_reelle)),
   };
 }
 
@@ -114,6 +141,8 @@ export async function lireGantt(db: Db, user: Acteur, projet: Projet, peutEcrire
     fin_planifiee: string | null;
   }>('SELECT debut_planifie, fin_planifiee FROM projet WHERE id = $1', [projet.id]);
   const { rows: elements } = await db.query<LigneElement>(ELEMENTS, [projet.id]);
+  // D-149 (4) : champs de 6c pour qui écrit sur le projet seulement.
+  const vendu = peutEcrire ? await lireVendu(db, projet.id) : null;
   const { rows: dependances } = await db.query(
     `SELECT id, predecesseur_id, successeur_id, type, delai, drapeaux
        FROM dependance WHERE projet_id = $1 ORDER BY id`,
@@ -137,8 +166,9 @@ export async function lireGantt(db: Db, user: Acteur, projet: Projet, peutEcrire
       fin_planifiee: dates[0]!.fin_planifiee,
       clos: projet.clos,
       peut_ecrire: peutEcrire,
+      ...(vendu ? { totaux: totaux(elements) } : {}),
     },
-    elements: elements.map(forme),
+    elements: elements.map((l) => forme(l, vendu)),
     dependances,
     sous_projets: sousProjets,
   };

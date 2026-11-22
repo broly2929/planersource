@@ -3,7 +3,7 @@
 import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import pg from 'pg';
 import { MOT_DE_PASSE, preparer } from './lot1-helpers.js';
-import { allerA, remettreAdminSeul } from './lot3c-helpers.js';
+import { ouvrirEquipes, remettreAdminSeul } from './lot3c-helpers.js';
 
 async function avecBase<T>(f: (c: pg.Client) => Promise<T>): Promise<T> {
   const url = process.env.TEST_DATABASE_URL ?? '';
@@ -90,8 +90,8 @@ export const tableauEquipes = (page: Page) =>
 export const ligneEquipe = (page: Page, nom: string) =>
   tableauEquipes(page).getByRole('row', { name: new RegExp(`^${nom}\\b`) });
 
-/** Ouvre l'écran Équipes par la navigation. */
-export const ouvrirEquipes = (page: Page) => allerA(page, 'Équipes');
+/** Ouvre l'onglet Équipes de l'écran Utilisateurs (REX-5, D-165). */
+export { ouvrirEquipes };
 
 /** Création d'une équipe par l'écran (dialogue « Nouvelle équipe »), succès attendu. */
 export async function creerEquipeParEcran(page: Page, nom: string): Promise<void> {

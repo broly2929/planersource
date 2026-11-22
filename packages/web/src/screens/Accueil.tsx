@@ -17,7 +17,10 @@ import {
   joursAccueil,
   lignesAccueil,
   nomsElementsCharges,
+  optionsRessources,
+  parametresRessource,
   projetsVisibles,
+  rechercheRessource,
   type ProjetAccueil,
 } from '../accueil/logique';
 import { BoutonsZoom } from '../gantt/BoutonsZoom';
@@ -36,7 +39,10 @@ import { formaterDate } from '../gantt/libelles';
 import { calculerPlage, etendrePlage } from '../gantt/plage';
 import { useLargeur } from '../gantt/useLargeur';
 import { indentation, sousProjets, type LigneArbre } from '../projets/arbre';
-import { Link, usePath, useSearch } from '../router';
+import { useAnnuaire } from '../annuaire';
+import { Select } from '../components/Select';
+import { Link, navigate, usePath, useSearch } from '../router';
+import { PlanningRessource } from './PlanningRessource';
 import { useListe } from './projet/commun';
 import { DialogueModifProjet } from './projet/DialogueModifProjet';
 import {
@@ -480,6 +486,50 @@ function GanttGlobal() {
   );
 }
 
+/** Liste « Planning de » et vue choisie : Gantt global ou planning d'une ressource (D-157 (5)). */
+function CorpsAccueil() {
+  const annuaire = useAnnuaire();
+  const chemin = usePath();
+  const recherche = useSearch();
+  const options = useMemo(() => optionsRessources(annuaire ?? []), [annuaire]);
+  const { ressource, corrige } = parametresRessource(
+    recherche,
+    options.map((o) => o.id),
+  );
+  // Adresse corrigée sans rechargement, une fois l'annuaire connu.
+  const corrigeEffectif = annuaire !== null && corrige;
+  useEffect(() => {
+    if (corrigeEffectif)
+      navigate(`${chemin}${rechercheRessource(recherche, null)}`, { replace: true });
+  }, [corrigeEffectif, chemin, recherche]);
+
+  if (annuaire === null && recherche.has('ressource')) {
+    return <Chargement libelle="Chargement des projets…" />;
+  }
+  return (
+    <>
+      {annuaire !== null && (
+        <div className="flex items-end gap-4">
+          <Select
+            label="Planning de"
+            className="w-56"
+            value={ressource === null ? '' : String(ressource)}
+            onChange={(e) => {
+              const v = e.target.value;
+              navigate(`${chemin}${rechercheRessource(recherche, v === '' ? null : Number(v))}`);
+            }}
+            options={[
+              { value: '', label: 'Tous les projets' },
+              ...options.map((o) => ({ value: String(o.id), label: o.nom })),
+            ]}
+          />
+        </div>
+      )}
+      {ressource === null ? <GanttGlobal /> : <PlanningRessource key={ressource} id={ressource} />}
+    </>
+  );
+}
+
 export function Accueil() {
   const { etat } = useAuth();
   const user = etat.statut === 'connecte' ? etat.user : null;
@@ -492,7 +542,7 @@ export function Accueil() {
             {ROLE_LABELS[user.role]}).
           </p>
         )}
-        {user && <GanttGlobal />}
+        {user && <CorpsAccueil />}
       </div>
     </Layout>
   );

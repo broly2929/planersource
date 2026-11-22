@@ -51,7 +51,7 @@ async function poserReel(ctx: TestCtx, assignationId: number, reel: number, rest
 describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
   const ctx = useTestApp();
 
-  it('GANTT-1-r1 : avant calcul, forme complète : ordre et numéros WBS (parent, enfant, jalon), dates planifiées null, drapeaux [], dépendance avec drapeaux []', async () => {
+  it('GANTT-1-r2 : avant calcul, forme complète (avec les champs de 6c, D-149 (4), (5)) : ordre et numéros WBS (parent, enfant, jalon), dates planifiées null, drapeaux [], dépendance avec drapeaux []', async () => {
     const m = await creerMonde(ctx);
     const g = await creerActivite(ctx, m.admin, m.projet.id, { nom: 'Parent' });
     const enfant = await creerActivite(ctx, m.admin, m.projet.id, {
@@ -95,12 +95,15 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
         fin_planifiee: null,
         clos: false,
         peut_ecrire: true,
+        totaux: { charge_vendue: null, charge_assignee: 2, marge: null, charge_reelle: 0 },
       },
       elements: [
         {
           ...base(g),
           wbs: '1',
           est_parent: true,
+          charge_vendue: null,
+          marge: null,
           charge_assignee: 2,
           charge_reelle: 0,
           reste_a_faire: reste,
@@ -110,6 +113,8 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
           ...base(enfant),
           wbs: '1.1',
           est_parent: false,
+          charge_vendue: null,
+          marge: null,
           charge_assignee: 2,
           charge_reelle: 0,
           reste_a_faire: reste,
@@ -127,6 +132,9 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
           type_jalon: jalon.type,
           date_validee: jalon.date_validee,
           date_planifiee: null,
+          date_client: null,
+          ecart_client: null,
+          engagement_depasse: false,
         },
       ],
       dependances: [

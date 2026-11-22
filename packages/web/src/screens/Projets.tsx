@@ -25,7 +25,7 @@ import {
   type ElementArbre,
   type LigneArbre,
 } from '../projets/arbre';
-import { CODE_UTILISE, texteRefusCode } from './projet/commun';
+import { CODE_UTILISE, ONGLET, texteRefusCode } from './projet/commun';
 import { DialogueCopie } from './projet/DialogueCopie';
 import { DialogueModifProjet } from './projet/DialogueModifProjet';
 import { GanttProjet } from './projet/GanttProjet';
@@ -432,9 +432,6 @@ export function Projets() {
     </Layout>
   );
 }
-
-const ONGLET =
-  'h-8 border-b-2 border-transparent px-3 text-gray-700 hover:text-gray-900 data-[state=active]:border-b-2 data-[state=active]:border-accent data-[state=active]:font-semibold data-[state=active]:text-gray-900';
 
 export function ProjetDetail({ id }: { id: string }) {
   const [etat, charger] = useChargement<Projet>(

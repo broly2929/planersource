@@ -13,6 +13,7 @@ import {
   dialogueCalcul,
   J06,
   notification,
+  ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
 
@@ -345,12 +346,12 @@ test('E2E-122 « Monter » un jalon sous une activité close : alerte, ordre inc
   expect(await nomsPlanning(page)).toEqual(['Activité A122', 'Activité B122', 'Jalon J122']);
 });
 
-test('E2E-123 parcours complet à l’écran : calcul depuis l’Accueil, clôture des activités puis du projet, projet absent de l’Accueil', async ({
+test('E2E-123-r1 parcours complet à l’écran : calcul depuis l’Accueil, clôture des activités puis du projet, projet absent de l’Accueil', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal C2-123');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

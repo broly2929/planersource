@@ -12,7 +12,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec } from './lot1-helpers.js';
-import { allerA, creerRessourceParEcran } from './lot3c-helpers.js';
+import { allerA, creerRessourceParEcran, ouvrirCalendriers } from './lot3c-helpers.js';
 import {
   EMAIL_ALICE,
   EMAIL_CHEF_P,
@@ -654,11 +654,11 @@ test('E2E-243 : changement de semaine avec des modifications : confirmation ; «
   expect(f.feuille.id).toBeNull();
 });
 
-test('E2E-244-r1 : parcours complet à l’écran : saisie, soumission, validation par le chef, lecture seule ; avancement dans le Gantt du projet', async ({
+test('E2E-244-r2 : parcours complet à l’écran : saisie, soumission, validation par le chef, lecture seule ; avancement dans le Gantt du projet', async ({
   page,
 }) => {
   await loginAsAdmin(page);
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 4B-244');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

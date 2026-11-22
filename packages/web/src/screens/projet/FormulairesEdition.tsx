@@ -5,6 +5,7 @@ import { Case } from '../../components/Case';
 import { Field } from '../../components/Field';
 import { Select } from '../../components/Select';
 import { aideMode, MODES_PLANIFICATION } from '../../modes';
+import { analyserChargeVendue } from '../../gantt/vendu';
 import { FormulaireDialogue } from './commun';
 
 export interface ActiviteDetail {
@@ -16,12 +17,16 @@ export interface ActiviteDetail {
   fin_valide: string | null;
   duree_validee: number | null;
   close: boolean;
+  /** Champs de 6c, présents pour qui écrit sur le projet (D-149 (4)). */
+  charge_vendue?: number | null;
+  est_parent?: boolean;
 }
 export interface JalonDetail {
   id: number;
   nom: string;
   type: string;
   date_validee: string | null;
+  date_client?: string | null;
 }
 
 interface Commun {
@@ -30,6 +35,36 @@ interface Commun {
 }
 
 const vide = (v: string): string | null => (v === '' ? null : v);
+
+/** Valeur numérique à la virgule décimale, telle qu'affichée dans le champ de saisie. */
+const texteCharge = (n: number | null | undefined): string =>
+  n === null || n === undefined ? '' : String(n).replace('.', ',');
+
+/** Champ « Charge vendue (j) » (D-149 (7)) : texte libre, invalide → aria-invalid et message. */
+export function ChampChargeVendue({
+  valeur,
+  onChange,
+}: {
+  valeur: string;
+  onChange: (texte: string) => void;
+}) {
+  return (
+    <Field
+      label="Charge vendue (j)"
+      inputMode="decimal"
+      value={valeur}
+      onChange={(e) => onChange(e.target.value)}
+      {...(analyserChargeVendue(valeur).ok ? {} : { erreur: 'Charge vendue invalide.' })}
+    />
+  );
+}
+
+/** État du champ « Charge vendue (j) » : texte, analyse, et valeur à envoyer. */
+export function useChargeVendue(initiale: number | null | undefined) {
+  const [texte, setTexte] = useState(texteCharge(initiale));
+  const analyse = analyserChargeVendue(texte);
+  return { texte, setTexte, analyse, valide: analyse.ok };
+}
 
 export function FormulaireActivite({ activite, ...commun }: { activite: ActiviteDetail } & Commun) {
   const [nom, setNom] = useState(activite.nom);
@@ -42,9 +77,15 @@ export function FormulaireActivite({ activite, ...commun }: { activite: Activite
     activite.duree_validee === null ? '' : String(activite.duree_validee),
   );
   const [close, setClose] = useState(activite.close);
+  const vendue = useChargeVendue(activite.charge_vendue);
+  const avecVendue = activite.est_parent !== true && activite.charge_vendue !== undefined;
+  // D-149 (7) : la charge vendue n'est envoyée que si elle a changé.
+  const vendueChangee =
+    avecVendue && vendue.analyse.ok && vendue.analyse.valeur !== (activite.charge_vendue ?? null);
   return (
     <FormulaireDialogue
       libelle="Enregistrer"
+      inactif={avecVendue && !vendue.valide}
       envoyer={() =>
         api(`/api/activites/${activite.id}`, {
           method: 'PATCH',
@@ -56,6 +97,7 @@ export function FormulaireActivite({ activite, ...commun }: { activite: Activite
             fin_valide: vide(fin),
             duree_validee: duree === '' ? null : Number(duree),
             close,
+            ...(vendueChangee && vendue.analyse.ok ? { charge_vendue: vendue.analyse.valeur } : {}),
           },
         })
       }
@@ -99,6 +141,7 @@ export function FormulaireActivite({ activite, ...commun }: { activite: Activite
         value={duree}
         onChange={(e) => setDuree(e.target.value)}
       />
+      {avecVendue && <ChampChargeVendue valeur={vendue.texte} onChange={vendue.setTexte} />}
       <Case label="Close" checked={close} onChange={(e) => setClose(e.target.checked)} />
     </FormulaireDialogue>
   );
@@ -108,13 +151,23 @@ export function FormulaireJalon({ jalon, ...commun }: { jalon: JalonDetail } & C
   const [nom, setNom] = useState(jalon.nom);
   const [type, setType] = useState(jalon.type);
   const [date, setDate] = useState(jalon.date_validee ?? '');
+  const [dateClient, setDateClient] = useState(jalon.date_client ?? '');
+  const avecClient = jalon.date_client !== undefined;
   return (
     <FormulaireDialogue
       libelle="Enregistrer"
       envoyer={() =>
         api(`/api/jalons/${jalon.id}`, {
           method: 'PATCH',
-          body: { nom, type, date_validee: vide(date) },
+          body: {
+            nom,
+            type,
+            date_validee: vide(date),
+            // D-149 (7) : la date client n'est envoyée que si elle a changé.
+            ...(avecClient && dateClient !== (jalon.date_client ?? '')
+              ? { date_client: vide(dateClient) }
+              : {}),
+          },
         })
       }
       {...commun}
@@ -135,6 +188,14 @@ export function FormulaireJalon({ jalon, ...commun }: { jalon: JalonDetail } & C
         value={date}
         onChange={(e) => setDate(e.target.value)}
       />
+      {avecClient && (
+        <Field
+          label="Date client"
+          type="date"
+          value={dateClient}
+          onChange={(e) => setDateClient(e.target.value)}
+        />
+      )}
     </FormulaireDialogue>
   );
 }

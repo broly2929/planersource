@@ -5,7 +5,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { MOT_DE_PASSE, connecterAvec, preparer } from './lot1-helpers.js';
-import { NOM_ADMIN, allerA } from './lot3c-helpers.js';
+import { allerA, NOM_ADMIN, ouvrirCalendriers } from './lot3c-helpers.js';
 import {
   cellule,
   choix,
@@ -34,15 +34,16 @@ const DOUBLON = 'Cette équipe existe déjà.';
 const UTILISEE = "Cette équipe a des membres : retirez-les d'abord.";
 const INCONNUE = "Cette équipe n'existe plus.";
 
-test('E2E-335 : entrée « Équipes » après « Calendriers » pour l’administrateur ; écran et tableau', async ({
+test('E2E-335-r1 : plus d’entrée « Équipes » ni « Calendriers » pour l’administrateur ; onglet Équipes et tableau', async ({
   page,
 }) => {
   await loginAsAdmin(page);
-  const liens = await nav(page).getByRole('link').allTextContents();
-  const noms = liens.map((t) => t.trim());
-  expect(noms.indexOf('Équipes')).toBe(noms.indexOf('Calendriers') + 1);
+  // Révision -r1 (D-031, D-165 (3)) : plus d'entrées de menu ; onglet Équipes de l'écran Utilisateurs.
+  for (const lien of ['Équipes', 'Calendriers']) {
+    await expect(nav(page).getByRole('link', { name: lien, exact: true }), lien).toHaveCount(0);
+  }
   await ouvrirEquipes(page);
-  await expect(page).toHaveURL('/equipes');
+  await expect(page).toHaveURL('/utilisateurs?onglet=equipes');
   await expect(page.getByRole('button', { name: 'Nouvelle équipe' })).toBeVisible();
   await creerEquipeParEcran(page, 'Atelier 6a');
   expect(
@@ -50,7 +51,7 @@ test('E2E-335 : entrée « Équipes » après « Calendriers » pour l’adminis
   ).toEqual(['Nom', 'Membres', 'Actions']);
 });
 
-test('E2E-336 : entrée « Équipes » absente pour le chef de projet et la ressource', async ({
+test('E2E-336-r1 : entrées « Équipes » et « Calendriers » absentes pour le chef de projet et la ressource', async ({
   page,
   request,
 }) => {
@@ -59,15 +60,18 @@ test('E2E-336 : entrée « Équipes » absente pour le chef de projet et la ress
   await api.utilisateur('Ressource 6a', 'ressource-6a@lot6a.test', 'ressource', true);
   await connecterAvec(page, 'chef-6a@lot6a.test');
   await expect(nav(page).getByRole('link', { name: 'Projets', exact: true })).toBeVisible();
+  // Révision -r1 (D-031, D-165 (3)) : « Calendriers » aussi.
   await expect(nav(page).getByRole('link', { name: 'Équipes', exact: true })).toHaveCount(0);
+  await expect(nav(page).getByRole('link', { name: 'Calendriers', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page).toHaveURL('/connexion');
   await connecterAvec(page, 'ressource-6a@lot6a.test');
   await expect(nav(page).getByRole('link', { name: 'Imputations', exact: true })).toBeVisible();
   await expect(nav(page).getByRole('link', { name: 'Équipes', exact: true })).toHaveCount(0);
+  await expect(nav(page).getByRole('link', { name: 'Calendriers', exact: true })).toHaveCount(0);
 });
 
-test('E2E-337 : créer une équipe par l’écran, Membres 0, relue en base et après rechargement', async ({
+test('E2E-337-r1 : créer une équipe par l’écran, Membres 0, relue en base et après rechargement', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -79,7 +83,7 @@ test('E2E-337 : créer une équipe par l’écran, Membres 0, relue en base et a
   await expect(ligneEquipe(page, 'Atelier 6a')).toBeVisible();
 });
 
-test('E2E-338 : renommer une équipe par l’écran', async ({ page, request }) => {
+test('E2E-338-r1 : renommer une équipe par l’écran', async ({ page, request }) => {
   const id = await equipeApi(request, 'Atelier 6a');
   await utilisateurApi(request, 'Membre 338', 'membre-338@lot6a.test', id);
   await loginAsAdmin(page);
@@ -96,7 +100,10 @@ test('E2E-338 : renommer une équipe par l’écran', async ({ page, request }) 
   expect(await equipesEnBase()).toEqual([{ id, nom: 'Bureau 6a' }]);
 });
 
-test('E2E-339 : supprimer une équipe par l’écran, avec confirmation', async ({ page, request }) => {
+test('E2E-339-r1 : supprimer une équipe par l’écran, avec confirmation', async ({
+  page,
+  request,
+}) => {
   await equipeApi(request, 'Atelier 6a');
   await loginAsAdmin(page);
   await ouvrirEquipes(page);
@@ -109,7 +116,7 @@ test('E2E-339 : supprimer une équipe par l’écran, avec confirmation', async 
   expect(await equipesEnBase()).toEqual([]);
 });
 
-test('E2E-340 : refus doublon à la création et au renommage, dialogue ouvert, base inchangée', async ({
+test('E2E-340-r1 : refus doublon à la création et au renommage, dialogue ouvert, base inchangée', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -135,7 +142,7 @@ test('E2E-340 : refus doublon à la création et au renommage, dialogue ouvert, 
   expect(await releve6a()).toEqual(avant);
 });
 
-test('E2E-341 : refus d’une équipe utilisée, confirmation ouverte, base inchangée ; réussite après retrait', async ({
+test('E2E-341-r1 : refus d’une équipe utilisée, confirmation ouverte, base inchangée ; réussite après retrait', async ({
   page,
   request,
 }) => {
@@ -202,7 +209,7 @@ test('E2E-342 : écran Utilisateurs, création : liste « Équipe », corps envo
   expect(await equipeDe('Avec équipe 342')).toBe(bravo);
 });
 
-test('E2E-343-r1 : écran Utilisateurs, modification : corps du PATCH, colonne, effet dans l’écran Équipes', async ({
+test('E2E-343-r2 : écran Utilisateurs, modification : corps du PATCH, colonne, effet dans l’onglet Équipes', async ({
   page,
   request,
 }) => {
@@ -233,7 +240,7 @@ test('E2E-343-r1 : écran Utilisateurs, modification : corps du PATCH, colonne, 
   await expect(await cellule(tableau, 'Membre 343', 'Équipe')).toHaveText('bravo');
   expect(await equipeDe('Membre 343')).toBe(bravo);
 
-  await allerA(page, 'Équipes');
+  await ouvrirEquipes(page);
   await expect(await cellule(tableauEquipes(page), 'bravo', 'Membres')).toHaveText('1');
   await expect(await cellule(tableauEquipes(page), 'Alpha', 'Membres')).toHaveText('0');
   await allerA(page, 'Utilisateurs');
@@ -246,7 +253,7 @@ test('E2E-343-r1 : écran Utilisateurs, modification : corps du PATCH, colonne, 
   expect(patchs[2]).toEqual({ equipe_id: null });
   await expect(await cellule(tableau, 'Membre 343', 'Équipe')).toHaveText('—');
   expect(await equipeDe('Membre 343')).toBeNull();
-  await allerA(page, 'Équipes');
+  await ouvrirEquipes(page);
   await expect(await cellule(tableauEquipes(page), 'bravo', 'Membres')).toHaveText('0');
 });
 
@@ -286,18 +293,18 @@ test('E2E-344 : refus 422 « Équipe inconnue » en modification et en création
   expect(avant).not.toEqual(apresSuppression);
 });
 
-test('E2E-345 : parcours complet à l’écran avec une équipe, de l’administrateur seul à l’assignation', async ({
+test('E2E-345-r1 : parcours complet à l’écran avec une équipe, de l’administrateur seul à l’assignation', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6A';
   await loginAsAdmin(page);
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 6A');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: /Cal 6A/ })).toBeVisible();
 
-  await allerA(page, 'Équipes');
+  await ouvrirEquipes(page);
   await creerEquipeParEcran(page, 'Équipe 6a');
 
   await allerA(page, 'Utilisateurs');
@@ -342,7 +349,7 @@ test('E2E-345 : parcours complet à l’écran avec une équipe, de l’administ
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 6A.*${RESSOURCE}`) })).toBeVisible();
 
-  await allerA(page, 'Équipes');
+  await ouvrirEquipes(page);
   await expect(await cellule(tableauEquipes(page), 'Équipe 6a', 'Membres')).toHaveText('1');
   await allerA(page, 'Utilisateurs');
   await expect(

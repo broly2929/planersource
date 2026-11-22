@@ -39,3 +39,26 @@ Aucun blocage. Points encore reportés :
 - 6b (@reviewer) : départage par `projet_id` à code égal (sans casse) dans le tri de `lireMesTaches`, hors spec ; inoffensif (codes uniques).
 - 6b (@ui-designer) : onze défauts d'apparence non bloquants dans docs/ux-session.md, « Captures de 6b » (D-133 (3)) : alignement à droite des charges, « — » sans explication, unités, lignes non cliquables, colonnes très espacées à 1440 px, état vide, etc.
 
+- 6c (@reviewer) : `routes/elements.ts` (schéma `chargeVendue`) : la tolérance `< 1e-6` accepte une valeur comme 1.0000000001, que la base arrondit en silence à 1,00 ; D-149 (3) demande un 400 au-delà de 2 décimales. Correction possible : comparer à `Number(v.toFixed(2))`.
+- 6c (@reviewer) : `gantt/vendu.ts` : `analyserChargeVendue` refuse « .5 » et « 5. » (un chiffre est exigé avant le séparateur) ; choix non documenté dans D-149.
+- 6c (@reviewer) : le jalon n'a pas de champ « Date client » en création (« Nouveau jalon » = nom seul, état.md choix 3, accepté par D-150 (1)) ; saisie en création par l'API seulement.
+- 6c (@reviewer) : la mise en page de D-069 à 1440 px repose sur `px-1!` et `max-w-36` (noms tronqués à 144 px pour l'administrateur et le chef du projet, nom complet dans `title`) ; surveiller les e2e de largeurs en CI.
+- 6c (@ui-designer) : un commentaire de `nomJalon` (libelles.ts) a été corrigé ; trait du losange en `stroke-[1.5]` (épaisseur SVG hors charte d'espacement), noté dans docs/ui.md.
+
+- 6d (@reviewer) : `screens/PlanDeCharge.tsx` : si GET /api/equipes échoue, la liste « Équipe » reste réduite à « Toutes » et « Sans équipe », sans message ; acceptable en lecture seule.
+- 6d (@reviewer) : `planning/plan-de-charge.ts` : `mois.indexOf` par ligne de charge et lecture de tous les calendriers et fériés de la période, pas seulement ceux des ressources retenues ; négligeable à l'échelle visée.
+- 6d (@ui-designer) : le champ « Mois de départ » (`type="month"` natif) s'affiche dans la langue du navigateur (« November 2026 » sous le Chromium de test) ; le bouton de dépliage fait 24 px (`size-6`), sous les 32 px des autres contrôles (noté dans docs/ui.md) ; la base de démonstration n'a aucune surcharge, le rendu rouge n'est vu que par E2E-371.
+- 6d (clos) : le motif de `equipe` de l'adresse est aligné sur l'API (15 chiffres au plus).
+
+- 6e (@reviewer) : docs/tests.md, ligne GEO-52 : la valeur d'origine « Retard » y reste ; la révision GEO-52-r1 (D-159, « retard ») est dans la rubrique « Révisions D-031 de 6e ».
+- 6e (@reviewer) : `screens/PlanningRessource.tsx` : `datees` est recréé à chaque rendu, le `useMemo` de la plage ne mémoïse rien ; sans conséquence fonctionnelle.
+- 6e (@reviewer) : `planning/planning-ressource.ts` : à date égale, une ligne masquée se range après les lignes lisibles (ordre total choisi ; D-157 (3) ne le précise pas). RPL-10 ne couvre que des dates distinctes pour ce cas.
+- 6e (@reviewer) : le bandeau « Planning non calculé : aucune date planifiée pour les tâches affichées. » est plus long que le texte de D-157 (6), comme sur le Gantt global ; compatible avec les tests (recherche partielle).
+- 6e (@ui-designer) : à 1024 px, les colonnes Réel et Reste sont derrière la colonne Drapeaux figée ; accessibles par le défilement interne du tableau, comme sur le Gantt global ; la page ne défile pas.
+- 6f (@reviewer) : `export/imputations.ts` : `rang.get(projet_id)!.get(activite_id)!` plante si une activité manque au planning ; improbable (la requête de `lirePlanning` couvre tout le projet), un repli explicite serait plus robuste.
+- 6f (@reviewer) : `export/imputations.ts` : `lirePlanning` appelé une fois par projet (coup N+1) ; à surveiller sur des périodes de 366 jours très chargées.
+- 6f (@reviewer) : `DialogueExport.tsx` : `aria-invalid` sur Du et Au, mais seul Au porte `aria-describedby` vers « Période invalide. » ; conforme à D-160 (6).
+- 6f (@reviewer) : docs/tests.md, le bloc des révisions de D-163 pour `tests-lot6d-r2` est placé avant la rubrique « Tests du lot 6d » ; ordre sans conséquence.
+- 6f (@ui-designer) : à 1024 px, le lien « Exporter CSV » du Plan de charge passe sur une seconde ligne (flex-wrap, environ 20 px manquent) ; les champs date et mois natifs suivent la locale du navigateur.
+- E2E (D-163 (3)) : un test ne modifie jamais le calendrier par défaut ; vérifier les autres tests qui y posent des fériés.
+- REX-5 (@reviewer) : GET /api/calendriers et GET /api/calendriers/:id sont lisibles par tout utilisateur connecté (`requireUser`) : un rôle ressource peut lire un autre calendrier par l'API ; seule l'IHM limite « Mon calendrier » au sien. Comme avant REX-5 ; données peu sensibles. Restreindre plus tard si besoin (D-165 (1) : l'API ne change pas). Accepté (D-168).

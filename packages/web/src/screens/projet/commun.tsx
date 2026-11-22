@@ -34,6 +34,9 @@ export const PARENT_ASSIGNE =
   'Une activité avec des ressources assignées ne peut pas avoir d’enfant.';
 export const DEPENDANCE_HIERARCHIE =
   'Une dépendance relie cet élément à l’une de ses activités parentes.';
+export const ACTIVITE_PARENTE = 'Une activité parente ne porte pas de charge vendue.';
+export const PARENT_VENDU =
+  'Cette activité porte une charge vendue : elle ne peut pas recevoir d’enfant.';
 export const DATES_INCOHERENTES = 'Modification refusée : la fin validée précède le début validé.';
 
 /** Texte d'un 422 d'après son champ `code` (D-083 (9)), ou null si le code est absent ou autre. */
@@ -49,6 +52,10 @@ export function texteRefusCode(err: ApiError, cible: 'projet' | 'element'): stri
       return cible === 'element' ? DATES_INCOHERENTES : null;
     case 'parent_assigne':
       return cible === 'element' ? PARENT_ASSIGNE : null;
+    case 'activite_parente':
+      return cible === 'element' ? ACTIVITE_PARENTE : null;
+    case 'parent_vendu':
+      return cible === 'element' ? PARENT_VENDU : null;
     case 'dependance_hierarchie':
       return cible === 'element' ? DEPENDANCE_HIERARCHIE : null;
     default:
@@ -176,3 +183,7 @@ export interface Affectation {
   date_debut: string | null;
   date_fin: string | null;
 }
+
+/** Classes d'un onglet Radix (fiche projet, écran Utilisateurs). */
+export const ONGLET =
+  'h-8 border-b-2 border-transparent px-3 text-gray-700 hover:text-gray-900 data-[state=active]:border-b-2 data-[state=active]:border-accent data-[state=active]:font-semibold data-[state=active]:text-gray-900';

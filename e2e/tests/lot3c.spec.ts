@@ -19,6 +19,7 @@ import {
   libellesCases,
   lireGantt,
   notification,
+  ouvrirCalendriers,
   ouvrirDialogueCalcul,
   projetPret,
   remettreAdminSeul,
@@ -37,12 +38,12 @@ async function pageConnectee(browser: Browser, email: string): Promise<Page> {
   return p;
 }
 
-test('E2E-59 parcours complet à l’écran : de l’administrateur seul au planning calculé', async ({
+test('E2E-59-r1 parcours complet à l’écran : de l’administrateur seul au planning calculé', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 3C-59');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

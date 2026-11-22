@@ -5,6 +5,7 @@ import pg from 'pg';
 import { E2E_ADMIN } from './credentials.js';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, MOT_DE_PASSE, preparer } from './lot1-helpers.js';
+import { ouvrirCalendriers } from './lot3c-helpers.js';
 
 const NOM_ADMIN = 'Admin E2E';
 const CODE_UTILISE = 'Ce code est déjà utilisé.';
@@ -126,12 +127,12 @@ async function pageNeuve(browser: Browser): Promise<Page> {
   return contexte.newPage();
 }
 
-test('E2E-46 parcours complet à l’écran, base avec l’administrateur seul', async ({ page }) => {
+test('E2E-46-r1 parcours complet à l’écran, base avec l’administrateur seul', async ({ page }) => {
   await remettreAdminSeul();
   await loginAsAdmin(page);
 
   // Calendrier
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal R1-46');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

@@ -28,6 +28,7 @@ import {
   creerProjetParEcran,
   creerRessourceParEcran,
   dialogueCalcul,
+  ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
 
@@ -781,12 +782,12 @@ test('E2E-191-r3 : poignées hors tabulation, ordre de tabulation de la fiche in
   expect(await surPoignee()).toBe(false);
 });
 
-test('E2E-192 : parcours complet à l’écran (chaîne d’E2E-180), puis changement de parent par le glisser et par le dialogue', async ({
+test('E2E-192-r1 : parcours complet à l’écran (chaîne d’E2E-180), puis changement de parent par le glisser et par le dialogue', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 3F-192');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

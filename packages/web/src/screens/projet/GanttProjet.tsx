@@ -56,6 +56,7 @@ import {
   CLASSE_CELLULE_DRAPEAUX,
   CLASSE_ENTETE_DRAPEAUX,
   CLASSE_NOM_MAX,
+  CLASSE_NOM_MAX_CLIENT,
 } from '../../gantt/largeurs';
 import { dateLocale, lireInitiales, lireZoom, numeroJour } from '../../gantt/echelle';
 import {
@@ -79,7 +80,8 @@ import {
   formaterNombre,
   libelleMode,
 } from '../../gantt/libelles';
-import { calculerPlage, etendrePlage, joursConnus } from '../../gantt/plage';
+import { calculerPlage, etendrePlage, joursClient, joursConnus } from '../../gantt/plage';
+import { formaterJours, texteTotaux, type TotauxProjet } from '../../gantt/vendu';
 import { retrait } from '../../gantt/retraits';
 import { useLargeur } from '../../gantt/useLargeur';
 import {
@@ -99,10 +101,69 @@ import { texteRefusCreationLien, texteRefusDeplacement, texteRefusGeste, useList
 import { Confirmation } from '../../components/Confirmation';
 
 interface DonneesGantt {
-  projet: { id: number; date_debut: string; peut_ecrire: boolean };
+  projet: { id: number; date_debut: string; peut_ecrire: boolean; totaux?: TotauxProjet };
   elements: ElementGantt[];
   dependances: DependanceGantt[];
   sous_projets: SousProjetGantt[];
+}
+
+/** Colonnes « Vendu » et « Marge » (D-149 (8b)) : activités seulement, marge négative en couleur flag. */
+const colonnesVendu: Colonne<LigneGantt>[] = [
+  {
+    titre: 'Vendu',
+    cellule: (l) =>
+      l.genre === 'element' && l.element.type === 'activite'
+        ? formaterJours(l.element.charge_vendue ?? null)
+        : '',
+  },
+  {
+    titre: 'Marge',
+    cellule: (l) =>
+      l.genre === 'element' && l.element.type === 'activite'
+        ? formaterJours(l.element.marge ?? null)
+        : '',
+    classeCelluleLigne: (l) =>
+      l.genre === 'element' && (l.element.marge ?? 0) < 0 ? 'text-flag' : '',
+  },
+];
+
+/** Région « Totaux du projet » (D-149 (8a)) : marge négative en couleur flag. */
+function TotauxProjetRegion({ totaux }: { totaux: TotauxProjet }) {
+  const parties = texteTotaux(totaux).split(' · ');
+  return (
+    <div
+      role="region"
+      aria-label="Totaux du projet"
+      className="flex flex-wrap gap-x-1 rounded-ui border border-gray-200 bg-white px-3 py-2 shadow-ui"
+    >
+      {parties.map((p, i) => (
+        <span
+          key={p}
+          className={i === 2 && totaux.marge !== null && totaux.marge < 0 ? 'text-flag' : ''}
+        >
+          {p}
+          {i < parties.length - 1 ? ' · ' : ''}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Largeur du tableau avec les colonnes de 6c (D-149 (8)) : marges internes d'un pas (`px-1`) sur toutes les colonnes
+ * sauf Drapeaux, et nom limité à `CLASSE_NOM_MAX_CLIENT`, pour tenir dans les 4/5 de l'écran à 1440 px.
+ */
+function resserrer(client: boolean, cols: Colonne<LigneGantt>[]): Colonne<LigneGantt>[] {
+  if (!client) return cols;
+  return cols.map((c) =>
+    c.titre === 'Drapeaux'
+      ? c
+      : {
+          ...c,
+          classeEntete: `${c.classeEntete ?? ''} px-1!`,
+          classeCellule: `${c.classeCellule ?? ''} px-1!`,
+        },
+  );
 }
 
 /** Colonnes du tableau ; `poignee` rend la poignée de glisser d'une ligne d'élément (D-108 (5)). */
@@ -112,89 +173,103 @@ const colonnes = (
   modifierElement: ((element: ElementGantt) => void) | null,
   /** Ouvre « Modifier le projet » d'un sous-projet que l'utilisateur écrit ; null : pas de crayon. */
   modifierSousProjet: (sousProjet: SousProjetGantt) => (() => void) | null,
-): Colonne<LigneGantt>[] => [
-  {
-    titre: 'WBS',
-    cellule: (l) => (l.genre === 'element' ? l.element.wbs : VIDE),
-  },
-  {
-    titre: 'Nom',
-    cellule: (l) =>
-      l.genre === 'sous-projet' ? (
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/projets/${l.sousProjet.id}`}
-            title={`${l.sousProjet.code} · ${l.sousProjet.nom}`}
-            className={`block ${CLASSE_NOM_MAX} truncate text-accent underline`}
-          >
-            {`${l.sousProjet.code} · ${l.sousProjet.nom}`}
-          </Link>
-          {modifierSousProjet(l.sousProjet) && (
-            <BoutonIcone
-              libelle={`Modifier le projet ${l.sousProjet.nom}`}
-              icone={Pencil}
-              className="shrink-0"
-              onClick={modifierSousProjet(l.sousProjet)!}
-            />
-          )}
-        </div>
-      ) : (
-        <div className="flex items-center gap-1">
-          {poignee?.(l.element)}
-          {modifierElement ? (
-            <button
-              type="button"
-              title={l.element.nom}
-              onClick={() => modifierElement(l.element)}
-              className={`block ${CLASSE_NOM_MAX} cursor-pointer truncate text-left text-accent underline focus-visible:rounded-ui ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
+  /** Colonnes « Vendu » et « Marge » et badge « Client » : seulement si l'utilisateur écrit (D-149 (8)). */
+  client: boolean,
+): Colonne<LigneGantt>[] => {
+  const nomMax = client ? CLASSE_NOM_MAX_CLIENT : CLASSE_NOM_MAX;
+  return resserrer(client, [
+    {
+      titre: 'WBS',
+      cellule: (l) => (l.genre === 'element' ? l.element.wbs : VIDE),
+    },
+    {
+      titre: 'Nom',
+      cellule: (l) =>
+        l.genre === 'sous-projet' ? (
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/projets/${l.sousProjet.id}`}
+              title={`${l.sousProjet.code} · ${l.sousProjet.nom}`}
+              className={`block ${nomMax} truncate text-accent underline`}
             >
-              {l.element.nom}
-            </button>
-          ) : (
-            <span
-              title={l.element.nom}
-              className={`block ${CLASSE_NOM_MAX} truncate ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
-            >
-              {l.element.nom}
-            </span>
-          )}
-        </div>
-      ),
-  },
-  {
-    titre: 'Planification',
-    cellule: (l) =>
-      l.genre === 'sous-projet' ? (
-        <Badge statut="neutre">Sous-projet</Badge>
-      ) : l.element.mode ? (
-        libelleMode(l.element.mode)
-      ) : (
-        VIDE
-      ),
-  },
-  { titre: 'Début', cellule: (l) => formaterDate(datesLigne(l)?.debut ?? null) },
-  { titre: 'Fin', cellule: (l) => formaterDate(datesLigne(l)?.fin ?? null) },
-  {
-    titre: 'Charge',
-    cellule: (l) =>
-      l.genre === 'element' && l.element.type === 'activite'
-        ? formaterNombre(l.element.charge_assignee ?? null)
-        : VIDE,
-  },
-  {
-    titre: 'Avancement',
-    cellule: (l) =>
-      l.genre === 'element' && l.element.type === 'activite'
-        ? formaterAvancement(l.element.avancement ?? null)
-        : VIDE,
-  },
-  {
-    titre: 'Drapeaux',
-    classeEntete: CLASSE_ENTETE_DRAPEAUX,
-    classeCellule: CLASSE_CELLULE_DRAPEAUX,
-    cellule: (l) => (l.genre === 'element' ? <Drapeaux drapeaux={l.element.drapeaux} /> : VIDE),
-  },
-];
+              {`${l.sousProjet.code} · ${l.sousProjet.nom}`}
+            </Link>
+            {modifierSousProjet(l.sousProjet) && (
+              <BoutonIcone
+                libelle={`Modifier le projet ${l.sousProjet.nom}`}
+                icone={Pencil}
+                className="shrink-0"
+                onClick={modifierSousProjet(l.sousProjet)!}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            {poignee?.(l.element)}
+            {modifierElement ? (
+              <button
+                type="button"
+                title={l.element.nom}
+                onClick={() => modifierElement(l.element)}
+                className={`block ${nomMax} cursor-pointer truncate text-left text-accent underline focus-visible:rounded-ui ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
+              >
+                {l.element.nom}
+              </button>
+            ) : (
+              <span
+                title={l.element.nom}
+                className={`block ${nomMax} truncate ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
+              >
+                {l.element.nom}
+              </span>
+            )}
+          </div>
+        ),
+    },
+    {
+      titre: 'Planification',
+      cellule: (l) =>
+        l.genre === 'sous-projet' ? (
+          <Badge statut="neutre">Sous-projet</Badge>
+        ) : l.element.mode ? (
+          libelleMode(l.element.mode)
+        ) : (
+          VIDE
+        ),
+    },
+    { titre: 'Début', cellule: (l) => formaterDate(datesLigne(l)?.debut ?? null) },
+    { titre: 'Fin', cellule: (l) => formaterDate(datesLigne(l)?.fin ?? null) },
+    {
+      titre: 'Charge',
+      cellule: (l) =>
+        l.genre === 'element' && l.element.type === 'activite'
+          ? formaterNombre(l.element.charge_assignee ?? null)
+          : VIDE,
+    },
+    ...(client ? colonnesVendu : []),
+    {
+      titre: 'Avancement',
+      cellule: (l) =>
+        l.genre === 'element' && l.element.type === 'activite'
+          ? formaterAvancement(l.element.avancement ?? null)
+          : VIDE,
+    },
+    {
+      titre: 'Drapeaux',
+      classeEntete: CLASSE_ENTETE_DRAPEAUX,
+      classeCellule: CLASSE_CELLULE_DRAPEAUX,
+      cellule: (l) =>
+        l.genre === 'element' ? (
+          <Drapeaux
+            drapeaux={l.element.drapeaux}
+            engagementClient={client && l.element.engagement_depasse === true}
+          />
+        ) : (
+          VIDE
+        ),
+    },
+  ]);
+};
 
 type DialogueEdition =
   | { kind: 'activite'; activite: ActiviteDetail }
@@ -695,6 +770,7 @@ export function GanttProjet({
     return (
       <section aria-label="Gantt" className="flex flex-col gap-4">
         {retours}
+        {projet.peut_ecrire && projet.totaux && <TotauxProjetRegion totaux={projet.totaux} />}
         <Vide>Ce projet ne contient encore aucun élément.</Vide>
         {peutCalculer && (
           <div className="flex items-center justify-end gap-4">
@@ -762,7 +838,10 @@ export function GanttProjet({
     }
   };
   const calcule = lignes.some((l) => datesLigne(l) !== null);
-  const jours = joursConnus(lignes).sort((a, b) => numeroJour(a) - numeroJour(b));
+  const client = projet.peut_ecrire;
+  const jours = [...joursConnus(lignes), ...(client ? joursClient(lignes) : [])].sort(
+    (a, b) => numeroJour(a) - numeroJour(b),
+  );
   const plage = etendrePlage(
     calculerPlage({ debutProjet: projet.date_debut, jours, aujourdhui }),
     largeurSvg,
@@ -809,6 +888,7 @@ export function GanttProjet({
         </div>
       </div>
       {dialogue}
+      {client && projet.totaux && <TotauxProjetRegion totaux={projet.totaux} />}
       <div className="flex rounded-ui border border-gray-200 bg-white shadow-ui">
         <div
           ref={zoneTableau}
@@ -835,6 +915,7 @@ export function GanttProjet({
                       }
                     }
                   : null,
+              client,
             )}
             attributsLigne={attributsLigne}
             lignes={lignes}
@@ -858,6 +939,7 @@ export function GanttProjet({
             aujourdhui={aujourdhui}
             initiales={initiales}
             joursRouges={joursRouges}
+            client={client}
             clavier={{
               active: actif,
               onActiver: activer,
@@ -884,7 +966,7 @@ export function GanttProjet({
         </div>
         <div data-annonce-gantt aria-live="polite" className="sr-only">
           {ligneActive
-            ? `${nomAccessible(ligneActive) ?? ''}${
+            ? `${nomAccessible(ligneActive, client) ?? ''}${
                 ligneActive.genre === 'element'
                   ? texteSurcharge(joursRouges.get(ligneActive.element.id) ?? [])
                   : ''
@@ -944,6 +1026,7 @@ export function GanttProjet({
             libelle="Créer"
             chemin={`/api/projets/${projetId}/${creation.entree === 'jalon' ? 'jalons' : 'activites'}`}
             corps={creation.corps}
+            avecChargeVendue={creation.entree !== 'jalon'}
             onSucces={apresCreation}
             onAnnuler={fermerCreation}
           />

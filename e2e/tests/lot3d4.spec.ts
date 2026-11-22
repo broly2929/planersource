@@ -20,6 +20,7 @@ import {
   creerProjetParEcran,
   creerRessourceParEcran,
   dialogueCalcul,
+  ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
 
@@ -516,12 +517,12 @@ test('E2E-169 : GET des activités en échec à l’ouverture du dialogue : aler
   await expect(alertes(page)).toHaveCount(0);
 });
 
-test('E2E-170 : parcours complet à l’écran, puis recalcul automatique : la barre glissée prend sa nouvelle date sans clic sur « Calculer »', async ({
+test('E2E-170-r1 : parcours complet à l’écran, puis recalcul automatique : la barre glissée prend sa nouvelle date sans clic sur « Calculer »', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 3D-170');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

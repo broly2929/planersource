@@ -30,7 +30,7 @@ import {
   type TypeLien,
 } from './liens';
 import { verrou } from './verrou';
-import { libelleInitiales, nomBarre, nomJalon } from './libelles';
+import { formaterEcartClient, infoClient, libelleInitiales, nomBarre, nomJalon } from './libelles';
 
 export interface ElementGantt {
   id: number;
@@ -54,6 +54,14 @@ export interface ElementGantt {
   type_jalon?: 'flottant' | 'fixe';
   date_validee?: string | null;
   date_planifiee?: string | null;
+  /** Champs de 6c : présents seulement si l'utilisateur écrit sur le projet (D-149 (4)). */
+  charge_vendue?: number | null;
+  marge?: number | null;
+  date_client?: string | null;
+  ecart_client?: number | null;
+  engagement_depasse?: boolean;
+  /** Planning d'une ressource (lot 6e, D-157 (6)) : barre pleine, accent ou grise (ligne masquée). */
+  plein?: 'accent' | 'gris';
 }
 export interface DependanceGantt {
   id: number;
@@ -125,12 +133,15 @@ function Barre({
   origine,
   zoom,
   geste,
+  client = false,
 }: {
   ligne: LigneSvg;
   index: number;
   origine: string;
   zoom: Zoom;
   geste?: GesteBarre | undefined;
+  /** Nom accessible du jalon avec sa date client (D-149 (8e)). */
+  client?: boolean;
 }) {
   const dates =
     (geste?.dates && ligne.genre === 'element' ? geste.dates : null) ?? datesLigne(ligne);
@@ -177,7 +188,7 @@ function Barre({
       <polygon
         {...attributs}
         data-type="jalon"
-        aria-label={nomJalon(e.nom, dates.debut, e.drapeaux)}
+        aria-label={nomJalon(e.nom, dates.debut, e.drapeaux, client ? infoClient(e) : undefined)}
         points={`${cx},${centre - d} ${cx + d},${centre} ${cx},${centre + d} ${cx - d},${centre}`}
         className={retard ? 'fill-flag' : 'fill-gray-800'}
       />
@@ -196,6 +207,20 @@ function Barre({
         width={largeur}
         height={HAUTEUR_BARRE_FINE}
         className={retard ? 'fill-flag' : 'fill-gray-700'}
+      />
+    );
+  }
+  if (e.plein) {
+    return (
+      <rect
+        {...attributs}
+        data-type="activite"
+        aria-label={nom}
+        x={x}
+        y={centre - HAUTEUR_BARRE / 2}
+        width={largeur}
+        height={HAUTEUR_BARRE}
+        className={e.plein === 'gris' ? 'fill-gray-500' : 'fill-accent'}
       />
     );
   }
@@ -311,6 +336,7 @@ export function GanttSvg({
   gestes,
   clavier,
   joursRouges,
+  client = false,
 }: {
   lignes: LigneSvg[];
   dependances: DependanceGantt[];
@@ -322,6 +348,8 @@ export function GanttSvg({
   clavier?: OptionsClavier | undefined;
   /** Jours en surcharge par activité feuille (lot 3g, D-114 (4)). */
   joursRouges?: Map<number, string[]> | undefined;
+  /** Date client des jalons : losange, texte d'écart, nom accessible (lot 6c, D-149 (8c)) ; réservé au Gantt du projet. */
+  client?: boolean;
 }) {
   const [glisser, setGlisserEtat] = useState<Glisser | null>(null);
   // La référence suit l'état sans attendre le rendu : des événements pointer rapprochés la lisent.
@@ -680,6 +708,7 @@ export function GanttSvg({
               origine={plage.debut}
               zoom={zoom}
               geste={gesteBarre(l)}
+              client={client}
             />
           );
           if (l.genre !== 'element') return barre;
@@ -745,6 +774,44 @@ export function GanttSvg({
               />
             );
           })()}
+
+        {client &&
+          lignes.map((l, i) => {
+            if (l.genre !== 'element' || l.element.type !== 'jalon' || !l.element.date_client) {
+              return null;
+            }
+            const e = l.element;
+            const demiJour = PX_PAR_JOUR[zoom] / 2;
+            const cx = positionJour(plage.debut, e.date_client!, zoom) + demiJour;
+            const cy = i * HAUTEUR_LIGNE + HAUTEUR_LIGNE / 2;
+            const d = DEMI_JALON;
+            const planifie = e.date_planifiee
+              ? positionJour(plage.debut, e.date_planifiee, zoom) + demiJour
+              : cx;
+            const depasse = e.engagement_depasse === true;
+            return (
+              <g key={`client-${e.id}`}>
+                <polygon
+                  data-date-client={e.id}
+                  aria-hidden
+                  points={`${cx},${cy - d} ${cx + d},${cy} ${cx},${cy + d} ${cx - d},${cy}`}
+                  className={`pointer-events-none fill-none stroke-[1.5] [stroke-linejoin:round] ${depasse ? 'stroke-flag' : 'stroke-gray-500'}`}
+                />
+                {typeof e.ecart_client === 'number' && (
+                  <text
+                    data-ecart-client={e.id}
+                    aria-hidden
+                    x={Math.max(cx, planifie) + d + 6}
+                    y={cy}
+                    dominantBaseline="central"
+                    className={`pointer-events-none text-petit ${depasse ? 'fill-flag' : 'fill-gray-700'}`}
+                  >
+                    {formaterEcartClient(e.ecart_client)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
 
         {joursRouges &&
           lignes.map((l, i) => {

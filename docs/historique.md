@@ -55,3 +55,10 @@ Lots antérieurs faits (détail dans git et docs/decisions.md) : 4a (D-118, D-11
 - Non bloquants 4c (1) et (2) résolus. Non bloquants 5d : relecture ratée de la liste sans focus rendu ; `aFocaliser` non remis à zéro au changement de semaine en cours de relecture ; bouton retrouvé par `aria-label` ; `derniere` et `aFocaliser` en double ; défauts d'apparence dans docs/ux-session.md « Captures de 5d » (colonne Activité réduite à 1024 px, badges sur 3 lignes, alerte sans fermeture). Choix faits seul : « action suivante » = clic sur un bouton de ligne ; succès simulé (POST remplacé par 200) pour les branches de focus qu'une validation réelle ne produit pas ; message de succès effacé à l'apparition d'une alerte de refus.
 ### Fait
 - Socle et kit : SPEC (0.3), CLAUDE.md, agents, charte `docs/ui.md`. Lots 0, 0bis, 1, 1b (D-018 à D-041), 2a à 2f (moteur et API, D-042 à D-064), lot 3 cadrage (D-065), 3a, 3b, 3c (D-066 à D-075).
+
+## Extrait de docs/state.md du 2026-11-22 (clôture du lot 6)
+- 6f fait (2026-11-22). Tags `tests-lot6f`, `tests-lot6f-r1` (CSV-14-r1, GEO-54-r1, D-162), `tests-lot6f-r2` (E2E-383-r1, D-163), `tests-lot6d-r2` (E2E-371-r1, D-163). Code : routes `GET /api/plan-de-charge/export` et `GET /api/imputations/export`, module `export/csv.ts`, bouton « Exporter CSV » du Plan de charge, dialogue « Exporter les imputations » de la Validation.
+- 1029 vitest verts ; E2E complète : 408 verts, 0 rouge ; lint, typecheck, licences verts ; `npm run demo` sans erreur. E2E-383 à 387 verts sur 3 exécutions ciblées.
+- @ui-designer : espacement du bouton de la Validation, docs/ui.md complété. @reviewer : aucun bloquant, non-bloquants dans docs/non-bloquants.md.
+- Règle D-163 (3) : un test e2e ne modifie jamais le calendrier par défaut.
+- Derniers identifiants : D-160 à D-163, CSV-1 à CSV-20 (CSV-14-r1), GEO-53 à GEO-55 (GEO-54-r1), E2E-383 à E2E-387 (E2E-383-r1), E2E-371-r1.

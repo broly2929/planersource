@@ -136,3 +136,33 @@ Définis une seule fois dans `packages/web/src/index.css` (`@theme` Tailwind 4) 
 - Quatre états : `Chargement`, `Vide`, `Notification` erreur, tableau ; succès en `Notification` `succes`.
 - Captures : `e2e/captures/validation-{liste,voir,valider,rejeter}-{1440,1024}.png` (E2E-320).
 - Colonne Projet de `TableauFeuille` (REX-4, D-145 (3)) : `w-28` ; au-delà, code tronqué (`truncate`), `title` = code complet ; aucun défilement horizontal à 1024 px (D-134 (2)).
+
+## Charge vendue et date client (6c, D-149, D-150)
+
+- Colonnes « Vendu » et « Marge » du tableau du Gantt du projet, après « Charge », visibles seulement avec le droit d'écriture ; valeurs alignées comme « Charge », activités seulement (jalons vides), « — » sans valeur ; marge négative en `text-flag` (le signe « − » porte aussi l'information). Aucun composant créé : `Table` reçoit `classeCelluleLigne` (classes d'une cellule selon la ligne).
+- Région « Totaux du projet » : `role="region"` sous la barre d'outils et au-dessus du tableau, carte `rounded-ui` `border-gray-200` `bg-white` `shadow-ui`, `px-3 py-2`, parties séparées par « · » (`gap-x-1`), marge négative en `text-flag`.
+- Losange de la date client (SVG, `gantt/GanttSvg.tsx`) : contour seul (`fill-none`, trait 1,5 px, jointure arrondie), même demi-diagonale que le jalon, `pointer-events-none` et `aria-hidden` ; `stroke-gray-500` au repos, `stroke-flag` si l'engagement est dépassé. Seule exception à la règle des demi-pas : l'épaisseur du trait (`stroke-[1.5]`) d'un dessin SVG, pas un espacement.
+- Texte d'écart : `text-petit`, à droite du plus tardif du losange et du jalon (+ 6 px), « +2 j », « −3 j », « 0 j » ; `fill-gray-700` (contraste AA), `fill-flag` si dépassé.
+- Badge « Client » : `Badge` statut `flag` dans la colonne Drapeaux, à la suite des drapeaux du moteur, `title` « Engagement client dépassé » ; texte et couleur (pas la couleur seule).
+- Règle de largeur (tableau d'au plus 4/5, 933 px à 1440 px, sans défilement) : avec les colonnes de 6c, toutes les colonnes sauf Drapeaux passent en `px-1!` (un pas, `resserrer()` de `GanttProjet.tsx`) et le nom est limité à `CLASSE_NOM_MAX_CLIENT` = `max-w-36` au lieu de `max-w-56` (`gantt/largeurs.ts`). Sans 6c, rien ne change. Largeur de Drapeaux inchangée (`max-w-44`, D-086). Mesure à 1440 px (administrateur) : 913 px (1050 avant correction).
+
+## Plan de charge (lot 6d, D-154)
+
+- Écran `screens/PlanDeCharge.tsx`, composants réutilisés, aucun créé : `Layout`, `Select`, `Field`, `Button`, `Notification`, `Chargement`, `Vide`. Filtres sur une ligne `flex-wrap items-end gap-x-3 gap-y-2` : Équipe, Mois de départ (contrôles `h-8`), puis « Mois précédent » et « Mois suivant » (`Button` secondaire `px-2!`, icônes `ChevronLeft`/`ChevronRight` `size-4`), alignés sur le bas des champs.
+- Tableau : région `role="region"` « Plan de charge » (`tabIndex=0`, carte `rounded-ui` `border-gray-200` `shadow-ui`, défilement horizontal interne, la page n'en a jamais à 1440 ni 1024 px). `border-separate border-spacing-0` : les bordures des cellules figées suivent le défilement (en `border-collapse` elles restent en arrière). Colonne Ressource figée (`sticky left-0 z-10`, `min-w-48`, fond opaque `gray-100` en en-tête, `white` en ligne, `gray-50` en ligne de projet et au survol, bordure droite `gray-200`). Colonnes de mois alignées à droite, `tabular-nums`.
+- Surcharge : `font-semibold text-flag` (AA sur `white` et `gray-50`) plus « , surcharge » en `sr-only` et `title` ; en lecture seule, la valeur seule porte l'information visuelle (comme D-120).
+- Dépliage : bouton `size-6` (cible serrée, ligne de 32 px) avec chevron `size-4`, `aria-expanded`, nom « Déplier/Replier <ressource> » en `sr-only`. Lignes de projet : `bg-gray-50 text-gray-700`, indentées `pl-11` (alignées sur le nom de la ressource), séparées par `border-gray-200`.
+
+## Accueil : planning d'une ressource (lot 6e, D-157)
+
+- Liste « Planning de » : `Select` existant, largeur fixe `w-56`, dans une ligne `flex items-end gap-4` au-dessus de la barre d'outils (zoom), donc avant elle dans l'ordre de focus ; la barre d'outils garde l'espacement `gap-4` du bloc. Aucun composant créé.
+- Vue ressource (`screens/PlanningRessource.tsx`) : même carte, mêmes régions (`tabIndex=0`, contour de focus décalé vers l'intérieur) et même largeur de tableau (`w-fit max-w-4/5`) que le Gantt global ; composants `Table` compact, `BoutonsZoom`, `Drapeaux`, `GanttSvg`.
+- Barres pleines (`plein` de `ElementGantt`) : hauteur de barre standard, `fill-accent` (ligne lisible) ou `fill-gray-500` (ligne « Autre projet », projet illisible), sans part d'avancement. Ligne masquée : texte `text-gray-700` sans lien, « — » en activité.
+- Colonnes resserrées : `px-1!` sauf Drapeaux ; Activité limitée à `CLASSE_NOM_MAX_RESSOURCE` = `max-w-36` (`gantt/largeurs.ts`), `title` = texte complet. À 1024 px la page ne défile jamais en horizontal (scrollWidth = largeur de fenêtre) ; les dernières colonnes (Réel, Reste) défilent dans la région du tableau, comme l'Accueil Gantt global.
+- Captures : celles de la relecture (non suivies par git) ; aucune capture permanente créée.
+
+## Exports CSV (6f)
+
+- « Exporter CSV » (Plan de charge) : `LienTelechargement` (`components/LienTelechargement.tsx`), lien `<a download>` à l'apparence d'un `Button` secondaire (`h-8`, `border-gray-300`, icône `Download` `size-4` `aria-hidden`), dernier élément de la barre des filtres, après « Mois suivant » (ordre de focus = ordre visuel). Focus : contour global 2 px `accent`. À 1024 px la barre passe à la ligne (`flex-wrap`) et le lien se place sous les filtres, aligné à gauche ; aucun débordement horizontal.
+- « Exporter CSV » (Validation) : `Button` secondaire avec icône `Download`, à la suite de la navigation de semaine, séparé du libellé de semaine par `ml-2` (le `gap-x-1` de la barre seul le collait au texte).
+- Dialogue « Exporter les imputations » (`export/DialogueExport.tsx`) : `Dialog`, champs `Field` « Du » et « Au » côte à côte (`flex flex-wrap gap-3`, alignés en haut), `Select` « Équipe » pleine largeur, « Annuler » + « Exporter » à droite. Période invalide : bordure `danger` sur les deux dates, « Période invalide. » (`text-petit text-danger`, `aria-describedby`) sous « Au » sans décaler « Du », « Exporter » `disabled` (`opacity-60`). Le téléchargement ferme le dialogue et le focus revient au bouton d'ouverture. Aucun composant ni jeton créé ; captures de relecture non suivies par git.

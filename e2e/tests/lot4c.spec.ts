@@ -6,7 +6,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec } from './lot1-helpers.js';
-import { allerA, creerRessourceParEcran } from './lot3c-helpers.js';
+import { allerA, creerRessourceParEcran, ouvrirCalendriers } from './lot3c-helpers.js';
 import {
   EMAIL_ALICE,
   EMAIL_CHEF_P,
@@ -554,7 +554,7 @@ const LUN = 'lun. 12/01';
 /** L'administrateur crée tout à l'écran ; la ressource saisit, enregistre et soumet. Finit déconnecté. */
 async function parcoursJusquaSoumission(page: Page): Promise<void> {
   await loginAsAdmin(page);
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 4C');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();
@@ -612,7 +612,7 @@ async function parcoursJusquaSoumission(page: Page): Promise<void> {
   await expect(page).toHaveURL('/connexion');
 }
 
-test('E2E-317 : parcours complet à l’écran : saisie, soumission, validation par le chef, lecture seule chez la ressource', async ({
+test('E2E-317-r1 : parcours complet à l’écran : saisie, soumission, validation par le chef, lecture seule chez la ressource', async ({
   page,
 }) => {
   await parcoursJusquaSoumission(page);
@@ -640,7 +640,7 @@ test('E2E-317 : parcours complet à l’écran : saisie, soumission, validation 
   await expect(bouton(page, 'Soumettre')).toHaveCount(0);
 });
 
-test('E2E-318 : parcours complet à l’écran avec rejet : commentaire visible, saisie de nouveau possible', async ({
+test('E2E-318-r1 : parcours complet à l’écran avec rejet : commentaire visible, saisie de nouveau possible', async ({
   page,
 }) => {
   await parcoursJusquaSoumission(page);

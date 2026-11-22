@@ -27,6 +27,7 @@ import {
   creerProjetParEcran,
   creerRessourceParEcran,
   dialogueCalcul,
+  ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
 
@@ -507,12 +508,12 @@ test('E2E-179-r3 : liens et connecteurs hors tabulation, ordre de tabulation de 
   expect(await horsLiens()).toBe(true);
 });
 
-test('E2E-180 : parcours complet à l’écran, puis lien par le connecteur avec recalcul automatique : la première activité commence après la seconde', async ({
+test('E2E-180-r1 : parcours complet à l’écran, puis lien par le connecteur avec recalcul automatique : la première activité commence après la seconde', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 3E-180');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

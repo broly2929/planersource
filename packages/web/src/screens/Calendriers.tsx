@@ -1,7 +1,6 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
-import { useAuth } from '../auth';
 import { BoutonIcone } from '../components/BoutonIcone';
 import { Button } from '../components/Button';
 import { Case } from '../components/Case';
@@ -23,16 +22,11 @@ export interface Calendrier {
 }
 
 /** Numéros ISO 1..7. */
-const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+export const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const OUVRES_PAR_DEFAUT = [1, 2, 3, 4, 5];
 
 type Etat<T> =
   { statut: 'chargement' } | { statut: 'erreur'; message: string } | { statut: 'ok'; donnees: T };
-
-function useAdmin(): boolean {
-  const { etat } = useAuth();
-  return etat.statut === 'connecte' && etat.user.role === 'administrateur';
-}
 
 function useChargement<T>(chemin: string, message: string) {
   const [etat, setEtat] = useState<Etat<T>>({ statut: 'chargement' });
@@ -156,8 +150,8 @@ const COLONNES: Colonne<Calendrier>[] = [
   { titre: 'Jours fériés', cellule: (c) => c.feries.length },
 ];
 
-export function Calendriers() {
-  const admin = useAdmin();
+/** Onglet « Calendriers » de l'écran Utilisateurs (REX-5, D-165). */
+export function OngletCalendriers() {
   const [etat, charger] = useChargement<Calendrier[]>(
     '/api/calendriers',
     'Impossible de charger les calendriers.',
@@ -165,17 +159,13 @@ export function Calendriers() {
   const [dialogue, setDialogue] = useState(false);
 
   return (
-    <Layout
-      titre="Calendriers"
-      actions={
-        admin && (
-          <Button onClick={() => setDialogue(true)}>
-            <Plus aria-hidden className="size-4" />
-            Nouveau calendrier
-          </Button>
-        )
-      }
-    >
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setDialogue(true)}>
+          <Plus aria-hidden className="size-4" />
+          Nouveau calendrier
+        </Button>
+      </div>
       {etat.statut === 'chargement' && <Chargement libelle="Chargement des calendriers…" />}
       {etat.statut === 'erreur' && <Notification type="erreur">{etat.message}</Notification>}
       {etat.statut === 'ok' && etat.donnees.length === 0 && (
@@ -203,7 +193,7 @@ export function Calendriers() {
           }}
         />
       </Dialog>
-    </Layout>
+    </div>
   );
 }
 
@@ -257,7 +247,6 @@ function FormulaireFerie({
 }
 
 export function CalendrierDetail({ id }: { id: string }) {
-  const admin = useAdmin();
   const [etat, charger] = useChargement<Calendrier>(
     `/api/calendriers/${id}`,
     'Impossible de charger le calendrier.',
@@ -274,7 +263,7 @@ export function CalendrierDetail({ id }: { id: string }) {
   const colonnesFeries: Colonne<Calendrier['feries'][number]>[] = [
     { titre: 'Date', cellule: (f) => f.jour },
     { titre: 'Libellé', cellule: (f) => f.libelle },
-    ...(admin && calendrier
+    ...(calendrier
       ? [
           {
             titre: 'Actions',
@@ -300,7 +289,6 @@ export function CalendrierDetail({ id }: { id: string }) {
     <Layout
       titre={calendrier?.nom ?? 'Calendrier'}
       actions={
-        admin &&
         calendrier && (
           <>
             <Button variante="secondaire" onClick={() => setEdition(true)}>
@@ -324,6 +312,12 @@ export function CalendrierDetail({ id }: { id: string }) {
         )
       }
     >
+      <Link
+        to="/utilisateurs?onglet=calendriers"
+        className="mb-4 inline-block text-accent underline hover:text-accent-hover"
+      >
+        Retour aux calendriers
+      </Link>
       {etat.statut === 'chargement' && <Chargement libelle="Chargement du calendrier…" />}
       {etat.statut === 'erreur' && <Notification type="erreur">{etat.message}</Notification>}
       {calendrier && (
@@ -349,12 +343,10 @@ export function CalendrierDetail({ id }: { id: string }) {
               <h2 id="feries" className="font-semibold">
                 Jours fériés
               </h2>
-              {admin && (
-                <Button onClick={() => setDialogue(true)}>
-                  <Plus aria-hidden className="size-4" />
-                  Ajouter un jour férié
-                </Button>
-              )}
+              <Button onClick={() => setDialogue(true)}>
+                <Plus aria-hidden className="size-4" />
+                Ajouter un jour férié
+              </Button>
             </div>
             {calendrier.feries.length === 0 ? (
               <Vide>Aucun jour férié pour le moment.</Vide>
@@ -404,7 +396,7 @@ export function CalendrierDetail({ id }: { id: string }) {
               onSucces={() => {
                 const retour = suppression.retour;
                 setSuppression(null);
-                if (retour) navigate('/calendriers');
+                if (retour) navigate('/utilisateurs?onglet=calendriers');
                 else charger();
               }}
               onAnnuler={() => setSuppression(null)}

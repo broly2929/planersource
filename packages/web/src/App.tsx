@@ -3,13 +3,13 @@ import { Chargement, Vide } from './components/Etat';
 import { Layout } from './components/Layout';
 import { Redirect, usePath } from './router';
 import { Accueil } from './screens/Accueil';
-import { CalendrierDetail, Calendriers } from './screens/Calendriers';
-import { Equipes } from './screens/Equipes';
+import { CalendrierDetail } from './screens/Calendriers';
 import { Connexion } from './screens/Connexion';
 import { FeuilleTemps } from './screens/FeuilleTemps';
 import { Validation } from './screens/Validation';
 import { MesTaches } from './screens/MesTaches';
 import { Modeles } from './screens/Modeles';
+import { PlanDeCharge } from './screens/PlanDeCharge';
 import { PlanningManuel } from './screens/PlanningManuel';
 import { ProjetDetail, Projets } from './screens/Projets';
 import { Utilisateurs } from './screens/Utilisateurs';
@@ -37,17 +37,26 @@ function Routes() {
   // Rôle ressource (D-148 (5)) : aucun accès aux projets, redirection vers « Mes tâches ».
   const restreint = etat.user.role === 'ressource';
   if (path === '/mes-taches') return <MesTaches />;
-  if (restreint && (path === '/' || /^\/(projets|modeles|validation)(\/|$)/.test(path))) {
+  if (
+    restreint &&
+    (path === '/' || /^\/(projets|modeles|validation|plan-de-charge)(\/|$)/.test(path))
+  ) {
     return <Redirect to="/mes-taches" />;
   }
   if (path === '/') return <Accueil />;
   if (path === '/utilisateurs') return <Utilisateurs />;
-  if (path === '/calendriers') return <Calendriers />;
-  if (path === '/equipes') return <Equipes />;
+  // REX-5 (D-165 (3), (3 bis)) : anciens écrans Équipes et Calendriers, remplacés par des onglets.
+  const admin = etat.user.role === 'administrateur';
+  const ancien = /^\/(equipes|calendriers)$/.exec(path);
+  if (ancien) {
+    return <Redirect to={admin ? `/utilisateurs?onglet=${ancien[1]}` : '/'} />;
+  }
+  if (/^\/calendriers\/\d+$/.test(path) && !admin) return <Redirect to="/" />;
   const detail = /^\/calendriers\/(\d+)$/.exec(path);
   if (detail) return <CalendrierDetail id={detail[1]!} />;
   if (path === '/projets') return <Projets />;
   if (path === '/modeles') return <Modeles />;
+  if (path === '/plan-de-charge') return <PlanDeCharge />;
   if (path === '/imputations') return <FeuilleTemps />;
   if (path === '/validation') return <Validation />;
   const projet = /^\/projets\/(\d+)$/.exec(path);

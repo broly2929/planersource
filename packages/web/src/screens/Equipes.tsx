@@ -7,7 +7,6 @@ import { Confirmation } from '../components/Confirmation';
 import { Dialog } from '../components/Dialog';
 import { Chargement, Vide } from '../components/Etat';
 import { Field } from '../components/Field';
-import { Layout } from '../components/Layout';
 import { Notification } from '../components/Notification';
 import { Table, type Colonne } from '../components/Table';
 import { FormulaireDialogue } from './projet/commun';
@@ -71,7 +70,8 @@ function FormulaireEquipe({
   );
 }
 
-export function Equipes() {
+/** Onglet « Équipes » de l'écran Utilisateurs (REX-5, D-165). */
+export function OngletEquipes() {
   const [liste, setListe] = useState<Liste>({ statut: 'chargement' });
   const [creation, setCreation] = useState(false);
   const [aRenommer, setARenommer] = useState<Equipe | null>(null);
@@ -128,15 +128,13 @@ export function Equipes() {
   };
 
   return (
-    <Layout
-      titre="Équipes"
-      actions={
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
         <Button onClick={() => setCreation(true)} disabled={liste.statut !== 'ok'}>
           <Plus aria-hidden className="size-4" />
           Nouvelle équipe
         </Button>
-      }
-    >
+      </div>
       {liste.statut === 'chargement' && <Chargement libelle="Chargement des équipes…" />}
       {liste.statut === 'erreur' && <Notification type="erreur">{liste.message}</Notification>}
       {liste.statut === 'ok' && liste.equipes.length === 0 && (
@@ -184,6 +182,6 @@ export function Equipes() {
           onAnnuler={() => setASupprimer(null)}
         />
       )}
-    </Layout>
+    </div>
   );
 }

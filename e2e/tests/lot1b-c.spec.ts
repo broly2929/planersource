@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { ouvrirCalendriers } from './lot3c-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 
 /*
@@ -324,7 +325,7 @@ test('E2E-20 : Monter et Descendre réordonnent les frères, boutons désactivé
   await expect(page.getByRole('button', { name: 'Monter Alpha E2E20' })).toBeEnabled();
 });
 
-test('E2E-21 : l’administrateur modifie un calendrier, supprime un jour férié puis le calendrier', async ({
+test('E2E-21-r1 : l’administrateur modifie un calendrier, supprime un jour férié puis le calendrier', async ({
   page,
   request,
 }) => {
@@ -333,7 +334,8 @@ test('E2E-21 : l’administrateur modifie un calendrier, supprime un jour féri�
   await api.ferie(calendrier.id, '2027-05-01', 'Fête E2E21');
 
   await loginAsAdmin(page);
-  await page.getByRole('link', { name: 'Calendriers' }).click();
+  // Révision -r1 (D-031, D-165 (3), (3 bis)) : onglet Calendriers ; la suppression ramène à cet onglet.
+  await ouvrirCalendriers(page);
   await page.getByRole('link', { name: 'Cal E2E21', exact: true }).click();
   await page.getByRole('button', { name: 'Modifier le calendrier' }).click();
   const dialog = page.getByRole('dialog');
@@ -350,7 +352,11 @@ test('E2E-21 : l’administrateur modifie un calendrier, supprime un jour féri�
 
   await page.getByRole('button', { name: 'Supprimer le calendrier' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Calendriers', level: 1 })).toBeVisible();
+  await expect(page).toHaveURL('/utilisateurs?onglet=calendriers');
+  await expect(page.getByRole('tab', { name: 'Calendriers', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(page.getByRole('link', { name: 'Cal révisé E2E21' })).toHaveCount(0);
 });
 

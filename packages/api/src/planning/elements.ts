@@ -1,5 +1,6 @@
 import type { Db } from '../db/erreurs.js';
 import { enregistrer, verrouiller } from './historique.js';
+import { champsActivite, champsJalon, lireVendu } from './vendu.js';
 
 export interface Activite {
   id: number;
@@ -16,6 +17,9 @@ export interface Activite {
   fin_planifiee: string | null;
   drapeaux: string[];
   close: boolean;
+  charge_vendue: number | null;
+  /** Calculé à la lecture : l'activité a des enfants (jamais historisé). */
+  est_parent: boolean;
 }
 
 export interface Jalon {
@@ -27,6 +31,7 @@ export interface Jalon {
   type: string;
   date_validee: string | null;
   date_planifiee: string | null;
+  date_client: string | null;
 }
 
 export interface LignePlanning {
@@ -36,12 +41,21 @@ export interface LignePlanning {
   rang: number;
   wbs: string;
   nom: string;
+  /** Champs de 6c, pour qui écrit sur le projet seulement (D-149 (4)). */
+  charge_vendue?: number | null;
+  marge?: number | null;
+  date_client?: string | null;
+  ecart_client?: number | null;
+  engagement_depasse?: boolean;
 }
 
 const ACTIVITE = `e.id, e.projet_id, e.parent_id, e.rang, e.nom, a.mode, a.priorite, a.debut_valide,
-  a.fin_valide, a.duree_validee, a.debut_planifie, a.fin_planifiee, a.drapeaux, a.close
+  a.fin_valide, a.duree_validee, a.debut_planifie, a.fin_planifiee, a.drapeaux, a.close,
+  a.charge_vendue,
+  EXISTS (SELECT 1 FROM element f WHERE f.parent_id = e.id) AS est_parent
   FROM element e JOIN activite a ON a.id = e.id`;
-const JALON = `e.id, e.projet_id, e.parent_id, e.rang, e.nom, j.type, j.date_validee, j.date_planifiee
+const JALON = `e.id, e.projet_id, e.parent_id, e.rang, e.nom, j.type, j.date_validee, j.date_planifiee,
+  j.date_client
   FROM element e JOIN jalon j ON j.id = e.id`;
 
 export async function lireActivites(db: Db, projetId: number): Promise<Activite[]> {
@@ -107,13 +121,25 @@ export const WBS_CTE = `classes AS (
      )`;
 
 /** Éléments du projet dans l'ordre du parcours en profondeur, avec le numéro WBS calculé. */
-export async function lirePlanning(db: Db, projetId: number): Promise<LignePlanning[]> {
+export async function lirePlanning(
+  db: Db,
+  projetId: number,
+  peutEcrire: boolean,
+): Promise<LignePlanning[]> {
   const { rows } = await db.query<LignePlanning>(
     `WITH RECURSIVE ${WBS_CTE}
      SELECT id, type, parent_id, rang, wbs, nom FROM arbre ORDER BY chemin`,
     [projetId],
   );
-  return rows;
+  if (!peutEcrire) return rows;
+  // D-149 (4) : charge vendue, marge et champs client, pour qui écrit sur le projet seulement.
+  const vendu = await lireVendu(db, projetId);
+  const jalons = new Map((await lireJalons(db, projetId)).map((j) => [j.id, j]));
+  return rows.map((l) =>
+    l.type === 'activite'
+      ? { ...l, ...champsActivite(vendu, l.id) }
+      : { ...l, ...champsJalon(jalons.get(l.id)!) },
+  );
 }
 
 /** Libère le rang `rang` dans la fraterie en décalant les frères suivants (rangs uniques différés). */
@@ -181,6 +207,7 @@ export interface NouvelleActivite {
   debut_valide: string | null;
   fin_valide: string | null;
   duree_validee: number | null;
+  charge_vendue: number | null;
 }
 
 /** Sans transaction interne : l'appelant ouvre la transaction (plusieurs écritures). */
@@ -192,9 +219,9 @@ export async function creerActivite(
 ): Promise<Activite> {
   const id = await insererElement(db, projetId, 'activite', d.parent_id, d.nom, d.rang);
   await db.query(
-    `INSERT INTO activite (id, mode, priorite, debut_valide, fin_valide, duree_validee)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee],
+    `INSERT INTO activite (id, mode, priorite, debut_valide, fin_valide, duree_validee, charge_vendue)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue],
   );
   const activite = (await lireActivite(db, id))!;
   await enregistrer(db, {
@@ -213,6 +240,7 @@ export interface NouveauJalon {
   rang?: number | undefined;
   type: string;
   date_validee: string | null;
+  date_client: string | null;
 }
 
 /** Sans transaction interne : l'appelant ouvre la transaction (plusieurs écritures). */
@@ -223,11 +251,10 @@ export async function creerJalon(
   d: NouveauJalon,
 ): Promise<Jalon> {
   const id = await insererElement(db, projetId, 'jalon', d.parent_id, d.nom, d.rang);
-  await db.query('INSERT INTO jalon (id, type, date_validee) VALUES ($1, $2, $3)', [
-    id,
-    d.type,
-    d.date_validee,
-  ]);
+  await db.query(
+    'INSERT INTO jalon (id, type, date_validee, date_client) VALUES ($1, $2, $3, $4)',
+    [id, d.type, d.date_validee, d.date_client],
+  );
   const jalon = (await lireJalon(db, id))!;
   await enregistrer(db, {
     utilisateurId: par,
@@ -253,8 +280,8 @@ export async function modifierActivite(
   await db.query('UPDATE element SET nom = $2 WHERE id = $1', [id, d.nom]);
   await db.query(
     `UPDATE activite SET mode = $2, priorite = $3, debut_valide = $4, fin_valide = $5,
-            duree_validee = $6 WHERE id = $1`,
-    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee],
+            duree_validee = $6, charge_vendue = $7 WHERE id = $1`,
+    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue],
   );
   if (d.close !== undefined) {
     await db.query('UPDATE activite SET close = $2 WHERE id = $1', [id, d.close]);
@@ -282,10 +309,11 @@ export async function modifierJalon(
   await verrouiller(db, 'element', id);
   const avant = (await lireJalon(db, id))!;
   await db.query('UPDATE element SET nom = $2 WHERE id = $1', [id, d.nom]);
-  await db.query('UPDATE jalon SET type = $2, date_validee = $3 WHERE id = $1', [
+  await db.query('UPDATE jalon SET type = $2, date_validee = $3, date_client = $4 WHERE id = $1', [
     id,
     d.type,
     d.date_validee,
+    d.date_client,
   ]);
   const apres = (await lireJalon(db, id))!;
   await enregistrer(db, {

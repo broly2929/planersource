@@ -188,3 +188,18 @@ Arbitrage : D-132 ((a) ombre portée à gauche de la colonne Drapeaux, (b) pas u
   - (10) Titre de page seul : pas de sous-titre ni de compte de tâches.
   - (11) Aucune capture des états chargement et erreur de l'écran.
 - Reste ouvert : REX du porteur à l'écran.
+
+## Recette différée du lot 6 (D-164)
+- 6a : écran Équipes, champ Équipe des utilisateurs.
+- 6b : Mes tâches et menu de la ressource.
+- 6c : colonnes Vendu et Marge, région Totaux, losange et écart de la date client, badge Client ; noms tronqués à 144 px à 1440 px.
+- 6d : Plan de charge, filtres, surcharge, champ Mois en anglais dans Chromium.
+- 6e : liste « Planning de », lignes « Autre projet ».
+- 6f : boutons « Exporter CSV », ouverture des fichiers dans un tableur français (BOM, « ; », virgule) ; lien du Plan de charge sur deux lignes à 1024 px.
+
+## Recette différée (REX-5)
+- Onglets de l'écran Utilisateurs (Utilisateurs, Équipes, Calendriers) à 1440 px et à 1024 px.
+- Passage d'un onglet à l'autre et relecture des données (équipe ou calendrier créé, visible dans les listes du dialogue utilisateur, nombre de membres à jour).
+- Page de détail d'un calendrier et son lien « Retour aux calendriers » ; entrée « Utilisateurs » active.
+- Section « Mon calendrier » de Mes tâches, pour une ressource et pour un chef ressource (jours travaillés, fériés à venir, états vide et erreur).
+- Menus des trois rôles (administrateur, chef de projet, ressource).

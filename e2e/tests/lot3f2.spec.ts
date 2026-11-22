@@ -26,6 +26,7 @@ import {
   creerProjetParEcran,
   creerRessourceParEcran,
   dialogueCalcul,
+  ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
 
@@ -862,12 +863,12 @@ test('E2E-207 : copie « Enregistrer comme modèle » depuis le Gantt (administr
   await expect(page.getByRole('row', { name: /Copie de Projet E2E207/ })).toBeVisible();
 });
 
-test('E2E-208 : parcours complet à l’écran (chaîne d’E2E-192), puis création par le menu contextuel et copie depuis le Gantt', async ({
+test('E2E-208-r1 : parcours complet à l’écran (chaîne d’E2E-192), puis création par le menu contextuel et copie depuis le Gantt', async ({
   page,
 }) => {
   await loginAsAdmin(page);
 
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 3F-208');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

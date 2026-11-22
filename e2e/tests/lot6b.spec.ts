@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { MOT_DE_PASSE, connecterAvec, preparer } from './lot1-helpers.js';
 import { calculer } from './lot3b-helpers.js';
-import { allerA, creerRessourceParEcran, lireGantt } from './lot3c-helpers.js';
+import { allerA, creerRessourceParEcran, lireGantt, ouvrirCalendriers } from './lot3c-helpers.js';
 import {
   EMAIL_ALICE,
   H14,
@@ -48,17 +48,13 @@ async function monde(request: Parameters<typeof preparer>[0]) {
   return { api, chef, res, p1, a1 };
 }
 
-test('E2E-347 : menu du rôle ressource : « Mes tâches » en tête, puis Calendriers et Imputations ; ni Accueil, ni Projets, ni Modèles, ni Validation', async ({
+test('E2E-347-r1 : menu du rôle ressource : « Mes tâches » en tête, puis Imputations (sans Calendriers, D-165 (5)) ; ni Accueil, ni Projets, ni Modèles, ni Validation', async ({
   page,
   request,
 }) => {
   await monde(request);
   await connecterAvec(page, EMAIL_RES);
-  await expect(nav(page).getByRole('link')).toHaveText([
-    'Mes tâches',
-    'Calendriers',
-    'Imputations',
-  ]);
+  await expect(nav(page).getByRole('link')).toHaveText(['Mes tâches', 'Imputations']);
   for (const lien of ['Accueil', 'Projets', 'Modèles', 'Validation']) {
     await expect(nav(page).getByRole('link', { name: lien, exact: true }), lien).toHaveCount(0);
   }
@@ -198,13 +194,13 @@ test('E2E-352 : chef de projet ressource : « Mes tâches » en tête, Accueil, 
   await expect(nav(page).getByRole('link', { name: 'Mes tâches', exact: true })).toHaveCount(0);
 });
 
-test('E2E-353 : parcours complet à l’écran : l’administrateur crée ressource, chef et projet ; le chef affecte et assigne ; la ressource voit sa tâche dans Mes tâches', async ({
+test('E2E-353-r1 : parcours complet à l’écran : l’administrateur crée ressource, chef et projet ; le chef affecte et assigne ; la ressource voit sa tâche dans Mes tâches', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6B';
   const CHEF = 'Chef 6B';
   await loginAsAdmin(page);
-  await allerA(page, 'Calendriers');
+  await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
   await page.getByRole('dialog').getByLabel('Nom').fill('Cal 6B');
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();

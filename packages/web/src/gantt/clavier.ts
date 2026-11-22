@@ -1,5 +1,5 @@
 import { datesLigne, type LigneGantt } from './GanttSvg';
-import { nomBarre, nomJalon } from './libelles';
+import { infoClient, nomBarre, nomJalon } from './libelles';
 
 /**
  * Identifiants des éléments (activités feuilles ou parentes, jalons) ayant des dates planifiées,
@@ -30,11 +30,11 @@ export function barreSuivante(
 }
 
 /** Nom accessible de la barre d'une ligne (identique à l'aria-label de la barre), null sans dates. */
-export function nomAccessible(l: LigneGantt): string | null {
+export function nomAccessible(l: LigneGantt, client = false): string | null {
   const dates = datesLigne(l);
   if (!dates || l.genre !== 'element') return null;
   const e = l.element;
   return e.type === 'jalon'
-    ? nomJalon(e.nom, dates.debut, e.drapeaux)
+    ? nomJalon(e.nom, dates.debut, e.drapeaux, client ? infoClient(e) : undefined)
     : nomBarre(e.nom, dates.debut, dates.fin, e.drapeaux);
 }

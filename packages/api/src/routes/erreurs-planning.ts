@@ -6,6 +6,8 @@ import { RefusCloture } from '../planning/cloture.js';
 const CODES_CONTRAINTES: [string, string][] = [
   ['activite_dates_coherentes', 'dates_incoherentes'],
   ['element_parent_sans_assignation', 'parent_assigne'],
+  ['element_parent_sans_vendu', 'parent_vendu'],
+  ['activite_parente_sans_vendu', 'activite_parente'],
   ['dependance_hierarchie', 'dependance_hierarchie'],
 ];
 
