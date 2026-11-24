@@ -44,6 +44,14 @@ export const peutValider = (f: FeuilleValidation): boolean =>
 export const peutRejeter = (f: FeuilleValidation): boolean =>
   f.statut === 'soumise' && f.projets.some((p) => p.peut_valider);
 
+/** « Dévalider » : feuille soumise ou validée avec au moins un projet validé sur lequel l'utilisateur peut agir (D-176). */
+export const peutDevalider = (f: FeuilleValidation): boolean =>
+  (f.statut === 'soumise' || f.statut === 'validee') &&
+  f.projets.some((p) => p.valide && p.peut_valider);
+
+export const codesDevalidables = (f: FeuilleValidation): string[] =>
+  f.projets.filter((p) => p.valide && p.peut_valider).map((p) => p.projet_code);
+
 export const codesValidables = (f: FeuilleValidation): string[] =>
   f.projets.filter((p) => p.peut_valider && !p.valide).map((p) => p.projet_code);
 
@@ -60,13 +68,15 @@ export function analyserCommentaire(texte: string): {
 
 export function messageRefusValidation(status: number, code?: string): string {
   if (status === 422 && code === 'statut_invalide') return 'La feuille a changé de statut.';
+  if (status === 422 && code === 'rien_a_devalider')
+    return 'La feuille n’a plus de validation à retirer.';
   if (status === 403) return 'Vous n’avez pas le droit d’agir sur cette feuille.';
   if (status === 404) return 'Feuille introuvable.';
   if (status === 400) return 'Données invalides.';
   return 'Une erreur est survenue.';
 }
 
-export type ActionOrigine = 'valider' | 'rejeter';
+export type ActionOrigine = 'valider' | 'rejeter' | 'devalider';
 
 export type CibleFocus =
   { genre: 'bouton'; action: ActionOrigine } | { genre: 'voir' } | { genre: 'tableau' };
@@ -81,10 +91,15 @@ export function cibleFocus(
 ): CibleFocus {
   const f = feuilles.find((x) => x.feuille_id === origine.feuilleId);
   if (!f) return { genre: 'tableau' };
-  const present = origine.action === 'valider' ? peutValider(f) : peutRejeter(f);
+  const present =
+    origine.action === 'valider'
+      ? peutValider(f)
+      : origine.action === 'rejeter'
+        ? peutRejeter(f)
+        : peutDevalider(f);
   return present ? { genre: 'bouton', action: origine.action } : { genre: 'voir' };
 }
 
 /** La liste est relue après un refus qui prouve qu'elle est périmée. */
 export const relireListe = (status: number, code?: string): boolean =>
-  (status === 422 && code === 'statut_invalide') || status === 404;
+  (status === 422 && (code === 'statut_invalide' || code === 'rien_a_devalider')) || status === 404;

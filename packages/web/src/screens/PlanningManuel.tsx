@@ -4,6 +4,7 @@ import { api, ApiError } from '../api';
 import { useAnnuaire } from '../annuaire';
 import { Button } from '../components/Button';
 import { Chargement, Vide } from '../components/Etat';
+import { GardeSortie } from '../components/GardeSortie';
 import { Layout } from '../components/Layout';
 import { Notification } from '../components/Notification';
 import { Link, navigate, useSearch } from '../router';
@@ -236,22 +237,14 @@ function GrilleChargee({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Button
-            variante="secondaire"
-            disabled={modifie || mois <= MOIS_MIN}
-            onClick={() => allerAuMois(-1)}
-          >
+          <Button variante="secondaire" disabled={mois <= MOIS_MIN} onClick={() => allerAuMois(-1)}>
             <ChevronLeft aria-hidden className="size-4" />
             Mois précédent
           </Button>
           <h2 className="min-w-40 text-center text-titre font-semibold first-letter:uppercase">
             {libelleMois} {annee}
           </h2>
-          <Button
-            variante="secondaire"
-            disabled={modifie || mois >= MOIS_MAX}
-            onClick={() => allerAuMois(1)}
-          >
+          <Button variante="secondaire" disabled={mois >= MOIS_MAX} onClick={() => allerAuMois(1)}>
             Mois suivant
             <ChevronRight aria-hidden className="size-4" />
           </Button>
@@ -276,6 +269,8 @@ function GrilleChargee({
       </div>
 
       {retour && <Notification type={retour.type}>{retour.texte}</Notification>}
+
+      <GardeSortie modifie={modifie} />
 
       <div className="overflow-x-auto rounded-ui border border-gray-200 bg-white shadow-ui">
         <table className="w-full border-collapse text-left">

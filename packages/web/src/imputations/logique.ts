@@ -1,4 +1,5 @@
 // Logique pure de l'écran Feuille de temps (lot 4b, D-120, D-121). Aucune dépendance au DOM.
+import type { EntreeAnnuaire } from '../annuaire';
 
 export type Statut = 'brouillon' | 'soumise' | 'validee' | 'rejetee';
 
@@ -74,6 +75,63 @@ export function semaineAffichee(
 ): { semaine: string; corrigee: boolean } {
   if (param !== null && lundiValide(param)) return { semaine: param, corrigee: false };
   return { semaine: lundiDe(aujourdhui), corrigee: true };
+}
+
+/** Ressources que l'administrateur peut choisir : actives, triées par nom (ordre français, D-181 (5)). */
+export function ressourcesChoisissables(annuaire: EntreeAnnuaire[]): EntreeAnnuaire[] {
+  return annuaire
+    .filter((e) => e.actif && e.est_ressource)
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.id - b.id);
+}
+
+/**
+ * Ressource affichée : le paramètre `ressource` s'il désigne une entrée de `choix`, sinon le défaut (soi si
+ * ressource, sinon aucune). Paramètre présent mais invalide : corrigee = true (D-181 (5)).
+ */
+export function ressourceAffichee(
+  param: string | null,
+  choix: EntreeAnnuaire[],
+  utilisateur: { id: number; est_ressource: boolean },
+): { ressource: number | null; corrigee: boolean } {
+  const defaut = utilisateur.est_ressource ? utilisateur.id : null;
+  if (param === null) return { ressource: defaut, corrigee: false };
+  if (/^\d+$/.test(param)) {
+    const id = Number(param);
+    if (choix.some((e) => e.id === id)) return { ressource: id, corrigee: false };
+  }
+  return { ressource: defaut, corrigee: true };
+}
+
+export interface OptionListe {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+/**
+ * Options de la liste « Ressource » (D-186 (1), (2)) : « Chargement… » seule tant que l'annuaire n'est pas lu ;
+ * ensuite « Choisir… » (désactivée, toujours présente) puis une option par ressource. La ressource choisie
+ * ne change pas la liste.
+ */
+export function optionsListeRessource(
+  choix: EntreeAnnuaire[],
+  _ressource: number | null,
+  prete: boolean,
+): OptionListe[] {
+  if (!prete) return [{ value: '', label: 'Chargement…', disabled: true }];
+  return [
+    { value: '', label: 'Choisir…', disabled: true },
+    ...choix.map((e) => ({ value: String(e.id), label: e.nom })),
+  ];
+}
+
+export function adresseImputations(semaine: string, ressource: number | null): string {
+  const base = `/imputations?semaine=${semaine}`;
+  return ressource === null ? base : `${base}&ressource=${ressource}`;
+}
+
+export function titreFeuille(nomRessource: string, estSoi: boolean): string {
+  return estSoi ? 'Feuille de temps' : `Feuille de temps de ${nomRessource}`;
 }
 
 export function decalerSemaine(lundi: string, delta: number): string {

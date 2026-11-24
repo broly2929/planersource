@@ -8,6 +8,7 @@ export default tseslint.config(
       '**/coverage/**',
       'e2e/playwright-report/**',
       'e2e/test-results/**',
+      'e2e/.piles/**',
     ],
   },
   ...tseslint.configs.recommended,

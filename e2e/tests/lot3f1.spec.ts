@@ -730,7 +730,7 @@ test('E2E-190 : refus dans le dialogue « Déplacer » : texte affiché, dialogu
   await expect.poll(() => ordre(page)).toEqual(ORDRE_INITIAL);
 });
 
-test('E2E-191-r3 : poignées hors tabulation, ordre de tabulation de la fiche inchangé', async ({
+test('E2E-191-r5 : poignées hors tabulation, ordre de tabulation de la fiche inchangé', async ({
   page,
   request,
 }) => {
@@ -755,11 +755,32 @@ test('E2E-191-r3 : poignées hors tabulation, ordre de tabulation de la fiche in
   await page.keyboard.press('Tab');
   await expect(page.getByRole('checkbox', { name: 'Initiales', exact: true })).toBeFocused();
   // Révision -r1 (D-031, D-111 (6)) : le bouton « Copier » s'insère après « Initiales ».
+  // Révision -r5 (D-216 (3)) : le bouton « Colonnes » s'insère après « Initiales ».
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Colonnes', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Copier', exact: true })).toBeFocused();
   expect(await surPoignee()).toBe(false);
   await page.keyboard.press('Tab');
   await expect(region).toBeFocused();
+  // Révision -r5 (D-216 (3)) : poignées de largeur, dans l'ordre des en-têtes, avant le contenu des lignes.
+  for (const titre of [
+    'WBS',
+    'Nom',
+    'Planification',
+    'Début',
+    'Fin',
+    'Charge',
+    'Vendu',
+    'Marge',
+    'Avancement',
+    'Drapeaux',
+  ]) {
+    await page.keyboard.press('Tab');
+    await expect(
+      region.getByRole('separator', { name: `Largeur de la colonne ${titre}`, exact: true }),
+    ).toBeFocused();
+  }
   expect(await surPoignee()).toBe(false);
   // Révision -r3 (D-031, D-127 (6), (7)) : boutons-noms des éléments en ordre WBS, puis lien et crayon.
   for (const nom of ['Phase P', 'Sous P1', 'Sous P2', 'Tâche Q', 'Tâche R', 'Jalon J', 'Clos K']) {
@@ -776,6 +797,11 @@ test('E2E-191-r3 : poignées hors tabulation, ordre de tabulation de la fiche in
   await page.keyboard.press('Tab');
   await expect(
     region.getByRole('button', { name: 'Modifier le projet Sous-projet arbo', exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
+  await expect(
+    page.getByRole('separator', { name: 'Largeur du tableau', exact: true }),
   ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(calendrier).toBeFocused();

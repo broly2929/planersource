@@ -1,0 +1,15 @@
+#!/bin/sh
+# Hook commit-msg suivi par git (D-198 (2)), installé par `npm run setup-depot`.
+# Refuse un message dont la deuxième ligne n'est pas vide : sujet suivi directement du corps ou d'un
+# trailer. Ignore les lignes de commentaire, les lignes vides de tête et tout ce qui suit la ligne de
+# ciseaux de `git commit -v`.
+awk '
+  /^# -+ >8 -+$/ { exit }
+  /^#/ { next }
+  n == 0 && /^[[:space:]]*$/ { next }
+  { n++; if (n == 2) { if ($0 !~ /^[[:space:]]*$/) { bad = 1 }; exit } }
+  END { exit bad }
+' "$1" && exit 0
+echo "commit-msg : il faut une ligne vide entre le sujet et le corps ou le trailer (D-198 (2))." >&2
+echo "Sujet lu : $(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d' | head -1)" >&2
+exit 1

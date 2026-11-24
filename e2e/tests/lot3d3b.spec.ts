@@ -66,9 +66,12 @@ const laisserPasser = (page: Page) =>
 const boite = async (cible: Locator) => (await cible.boundingBox())!;
 const aLeFocus = (cible: Locator) => cible.evaluate((el) => el === document.activeElement);
 
-/** Tabulation depuis le début de la page jusqu'à la zone « Calendrier du Gantt ». */
+/**
+ * Tabulation depuis le début de la page jusqu'à la zone « Calendrier du Gantt ». Révision -r1 (D-216 (3)) :
+ * 60 appuis au plus, le bouton « Colonnes » et une poignée de largeur par colonne s'ajoutent aux arrêts.
+ */
 async function tabulerJusqua(page: Page): Promise<void> {
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 60; i++) {
     await page.keyboard.press('Tab');
     if (await aLeFocus(zone(page))) return;
   }
@@ -151,7 +154,7 @@ async function dialoguePlanning(page: Page, nom: string, titre: string) {
 const TITRE_ACTIVITE = 'Modifier l’activité';
 const TITRE_JALON = 'Modifier le jalon';
 
-test('E2E-143 : ↑ ↓ Échap : barre active, anneau, annonce, bornes, un seul arrêt de tabulation', async ({
+test('E2E-143-r1 : ↑ ↓ Échap : barre active, anneau, annonce, bornes, un seul arrêt de tabulation', async ({
   page,
   request,
 }) => {
@@ -186,7 +189,10 @@ test('E2E-143 : ↑ ↓ Échap : barre active, anneau, annonce, bornes, un seul 
   expect(await zone(page).evaluate((el) => el.contains(document.activeElement))).toBe(false);
 });
 
-test('E2E-144 : ← et → font défiler la zone, la barre active reste', async ({ page, request }) => {
+test('E2E-144-r1 : ← et → font défiler la zone, la barre active reste', async ({
+  page,
+  request,
+}) => {
   await page.setViewportSize({ width: 1024, height: 900 });
   const m = await mondeClavier(request, 'E2E144');
   await ouvrirGantt(page, m);
@@ -208,7 +214,7 @@ test('E2E-144 : ← et → font défiler la zone, la barre active reste', async 
   await activeEst(page, m.a.id);
 });
 
-test('E2E-145 : la barre active est amenée dans la zone visible', async ({ page, request }) => {
+test('E2E-145-r1 : la barre active est amenée dans la zone visible', async ({ page, request }) => {
   await page.setViewportSize({ width: 1024, height: 900 });
   const m = await mondeClavier(request, 'E2E145', { avecF: true });
   await ouvrirGantt(page, m);
@@ -230,7 +236,7 @@ test('E2E-145 : la barre active est amenée dans la zone visible', async ({ page
   await expect.poll(dedans).toBe(true);
 });
 
-test('E2E-146 : Entrée ouvre « Modifier l’activité » ; enregistrer recharge le Gantt, bandeau, focus rendu', async ({
+test('E2E-146-r1 : Entrée ouvre « Modifier l’activité » ; enregistrer recharge le Gantt, bandeau, focus rendu', async ({
   page,
   request,
 }) => {
@@ -289,7 +295,7 @@ test('E2E-147 : double-clic sur le losange d’un jalon ouvre « Modifier le jal
   await expect(planning.getByLabel('Date validée')).toHaveValue('2027-01-19');
 });
 
-test('E2E-148 : Entrée puis Annuler : focus rendu à la zone, barre active gardée, rien d’envoyé', async ({
+test('E2E-148-r1 : Entrée puis Annuler : focus rendu à la zone, barre active gardée, rien d’envoyé', async ({
   page,
   request,
 }) => {
@@ -312,7 +318,7 @@ test('E2E-148 : Entrée puis Annuler : focus rendu à la zone, barre active gard
   expect(patchs.length).toBe(0);
 });
 
-test('E2E-149 : le dialogue s’ouvre aussi sur un parent et sur une activité close', async ({
+test('E2E-149-r1 : le dialogue s’ouvre aussi sur un parent et sur une activité close', async ({
   page,
   request,
 }) => {
@@ -337,7 +343,7 @@ test('E2E-149 : le dialogue s’ouvre aussi sur un parent et sur une activité c
   await expect(dialogue).toHaveCount(0);
 });
 
-test('E2E-150-r1 : sans droit d’écriture, la barre est active et annoncée mais aucun dialogue ne s’ouvre', async ({
+test('E2E-150-r2 : sans droit d’écriture, la barre est active et annoncée mais aucun dialogue ne s’ouvre', async ({
   page,
   request,
 }) => {
@@ -358,7 +364,7 @@ test('E2E-150-r1 : sans droit d’écriture, la barre est active et annoncée ma
   await expect(dialogues(page)).toHaveCount(0);
 });
 
-test('E2E-151 : refus réel dans le dialogue : il reste ouvert, base inchangée', async ({
+test('E2E-151-r1 : refus réel dans le dialogue : il reste ouvert, base inchangée', async ({
   page,
   request,
 }) => {
@@ -492,13 +498,15 @@ test('E2E-154 : calendrier par défaut illisible : alerte générique, aucun PAT
   await expect.poll(() => patchs.length, 'témoin positif').toBe(1);
 });
 
-test('E2E-155 : l’Accueil ne change pas : ni barre active, ni annonce, ni dialogue ; témoin positif sur le projet', async ({
+test('E2E-155-r2 : l’Accueil ne change pas : ni barre active, ni annonce, ni dialogue ; témoin positif sur le projet', async ({
   page,
   request,
 }) => {
   const m = await mondeClavier(request, 'E2E155');
   await loginAsAdmin(page);
-  await page.getByRole('button', { name: `Déplier Projet E2E155`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Replier Projet E2E155`, exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   const zoneGlobale = page.getByRole('region', {
     name: 'Calendrier du Gantt global',
     exact: true,
@@ -523,7 +531,7 @@ test('E2E-155 : l’Accueil ne change pas : ni barre active, ni annonce, ni dial
   await activeEst(page, m.a.id);
 });
 
-test('E2E-156 : au zoom mois, le clavier et le double-clic ouvrent le dialogue, sans PATCH', async ({
+test('E2E-156-r1 : au zoom mois, le clavier et le double-clic ouvrent le dialogue, sans PATCH', async ({
   page,
   request,
 }) => {
@@ -552,7 +560,7 @@ test('E2E-156 : au zoom mois, le clavier et le double-clic ouvrent le dialogue, 
   expect(patchs.length).toBe(0);
 });
 
-test('E2E-157 : Gantt non calculé : ↑ et ↓ sans effet, pas de dialogue ; témoin positif après calcul', async ({
+test('E2E-157-r1 : Gantt non calculé : ↑ et ↓ sans effet, pas de dialogue ; témoin positif après calcul', async ({
   page,
   request,
 }) => {

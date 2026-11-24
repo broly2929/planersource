@@ -7,6 +7,7 @@ import { MOT_DE_PASSE, connecterAvec, preparer } from './lot1-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b } from './lot3b-helpers.js';
 import { allerA, creerRessourceParEcran, ouvrirCalendriers } from './lot3c-helpers.js';
 import { chefLecteur, remettreAdminSeul6b } from './lot6b-helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
 
 const FLAG = 'rgb(190, 18, 60)';
 const LARGEURS = [1440, 1024];
@@ -262,7 +263,7 @@ test('E2E-360 : dialogue de jalon : champ « Date client » (modification), enre
   );
 });
 
-test('E2E-361 : refus : sous-activité sous une activité vendue (écran) et 422 activite_parente (intercepté) : texte exact, dialogue ouvert, rien créé', async ({
+test('E2E-361-r1 : refus : sous-activité sous une activité vendue (écran) et 422 activite_parente (intercepté) : texte exact, dialogue ouvert, rien créé', async ({
   page,
   request,
 }) => {
@@ -284,7 +285,7 @@ test('E2E-361 : refus : sous-activité sous une activité vendue (écran) et 422
   ).toBeVisible();
   await expect(dialogue).toBeVisible();
   expect((await lireElements(page, m.projet.id)).elements).toHaveLength(avant);
-  await dialogue.getByRole('button', { name: 'Annuler' }).click();
+  await fermerEnAbandonnant(page, dialogue);
 
   await page.route(`**/api/activites/${libre.id}`, (route) =>
     route.request().method() === 'PATCH'
@@ -470,8 +471,20 @@ test('E2E-365 : témoin, chef de projet en lecture seule : ni colonnes, ni régi
   }
 });
 
+/** Révision D-212 (7) : séparateur porté au maximum (80 % de la vue) par un glisser à la souris. */
+async function separateurAuMaximum(page: Page) {
+  const sep = page.getByRole('separator', { name: 'Largeur du tableau', exact: true });
+  const max = Number(await sep.getAttribute('aria-valuemax'));
+  const b = (await sep.boundingBox())!;
+  await page.mouse.move(b.x + b.width / 2, b.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2 + 3000, b.y + 20, { steps: 10 });
+  await page.mouse.up();
+  await expect(sep).toHaveAttribute('aria-valuenow', String(max));
+}
+
 for (const largeur of LARGEURS) {
-  test(`E2E-366 (${largeur} px) : critères D-069 (a) à (d) avec « Vendu », « Marge » et le badge « Client »`, async ({
+  test(`E2E-366-r2 (${largeur} px) : critères D-069 (a) à (d) avec « Vendu », « Marge » et le badge « Client »`, async ({
     page,
     request,
   }) => {
@@ -489,6 +502,7 @@ for (const largeur of LARGEURS) {
     await calculer(request, [m.projet.id]);
     await loginAsAdmin(page);
     await ouvrirGantt(page, m.projet.id, largeur);
+    if (largeur === 1440) await separateurAuMaximum(page);
 
     const tableau = page.getByRole('table').first();
     const zone = tableau.locator('xpath=ancestor::div[@tabindex][1]');
@@ -527,7 +541,7 @@ for (const largeur of LARGEURS) {
   });
 }
 
-test('E2E-367 : témoin, Accueil inchangé : ni « Vendu » ni « Marge », ni « Totaux du projet », ni marqueur client', async ({
+test('E2E-367-r1 : témoin, Accueil inchangé : ni « Vendu » ni « Marge », ni « Totaux du projet », ni marqueur client', async ({
   page,
   request,
 }) => {
@@ -540,7 +554,9 @@ test('E2E-367 : témoin, Accueil inchangé : ni « Vendu » ni « Marge », ni �
   await calculer(request, [m.projet.id]);
   await loginAsAdmin(page);
   await page.goto('/');
-  await page.getByRole('button', { name: `Déplier ${'Projet E2E367'}`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Replier ${'Projet E2E367'}`, exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   await expect(page.getByRole('button', { name: 'Jalon 367', exact: true })).toBeVisible();
   const entetes = (await page.getByRole('columnheader').allTextContents()).map((t) => t.trim());
   expect(entetes).not.toContain('Vendu');

@@ -49,7 +49,7 @@ test('E2E-26 : le chef saisit une journée d’Alice en janvier 2027 et l’enre
   expect(await lireSaisies(request, m.man.id, '2027-01')).toHaveLength(2);
 });
 
-test('E2E-27 : changement de mois, boutons inactifs tant qu’il reste des modifications, Annuler', async ({
+test('E2E-27-r1 : changement de mois : boutons actifs avec une saisie en attente, confirmation, Annuler', async ({
   page,
   request,
 }) => {
@@ -85,11 +85,20 @@ test('E2E-27 : changement de mois, boutons inactifs tant qu’il reste des modif
   const autre = page.getByRole('checkbox', {
     name: libelleCase(m.nomAlice, 6, 'janvier', 'matin'),
   });
+  // Révision D-172 (6) : les boutons de mois restent actifs ; le changement de mois avec une saisie
+  // en attente est confirmé, « Annuler » garde le mois et la saisie.
   await autre.check();
-  await expect(page.getByRole('button', { name: 'Mois précédent' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Mois suivant' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Mois précédent' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Mois suivant' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Mois précédent' }).click();
+  const dialogue = page.getByRole('dialog', { name: 'Abandonner les modifications ?' });
+  await expect(dialogue).toBeVisible();
+  await dialogue.getByRole('button', { name: 'Annuler', exact: true }).click();
+  await expect(dialogue).toHaveCount(0);
+  await expect(page).toHaveURL(/mois=2027-01/);
+  await expect(autre).toBeChecked();
 
-  await page.getByRole('button', { name: 'Annuler' }).click();
+  await page.getByRole('button', { name: 'Annuler', exact: true }).click();
   await expect(autre).not.toBeChecked();
   await expect(caseJanvier).toBeChecked();
   await expect(page.getByRole('button', { name: 'Mois précédent' })).toBeEnabled();

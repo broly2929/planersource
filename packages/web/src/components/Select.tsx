@@ -9,7 +9,7 @@ export function Select({
   ...rest
 }: {
   label: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
 } & SelectHTMLAttributes<HTMLSelectElement>) {
   const id = useId();
   return (
@@ -24,7 +24,7 @@ export function Select({
           {...rest}
         >
           {options.map((o) => (
-            <option key={o.value} value={o.value}>
+            <option key={o.value} value={o.value} disabled={o.disabled}>
               {o.label}
             </option>
           ))}

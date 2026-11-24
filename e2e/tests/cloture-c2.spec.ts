@@ -16,6 +16,7 @@ import {
   ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
 
 test.beforeEach(async ({ page }) => {
   await remettreAdminSeul();
@@ -53,12 +54,18 @@ async function ouvrir(page: Page, bouton: string): Promise<Locator> {
   return dialog;
 }
 
-/** Refus attendu : texte exact en alerte, dialogue resté ouvert ; puis « Annuler ». */
-async function refuse(dialog: Locator, texte: string): Promise<void> {
+/** Attend que l'annuaire soit lu (liste « Chef de projet » garnie) : les gestes faits avant sont ignorés par la garde (D-188 (10) b). */
+async function attendreAnnuaire(dialog: Locator): Promise<void> {
+  await expect(
+    dialog.getByLabel('Chef de projet').getByRole('option', { name: 'Admin E2E' }),
+  ).toHaveCount(1);
+}
+
+/** Refus attendu, formulaire modifié par saisie : « Annuler » ouvre la confirmation, « Abandonner » ferme (D-188). */
+async function refuseEtAbandonne(dialog: Locator, texte: string): Promise<void> {
   await expect(dialog.getByRole('alert')).toHaveText(texte);
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Annuler' }).click();
-  await expect(dialog).toBeHidden();
+  await fermerEnAbandonnant(dialog.page(), dialog);
 }
 
 const caseCochee = (dialog: Locator, nom: string) =>
@@ -82,7 +89,7 @@ async function nomsPlanning(page: Page): Promise<string[]> {
   return noms;
 }
 
-test('E2E-111 « Modifier le projet », Clos coché avec une activité ouverte : texte, dialogue ouvert, Clos relu non coché', async ({
+test('E2E-111-r1 « Modifier le projet », Clos coché avec une activité ouverte : texte, dialogue ouvert, Clos relu non coché', async ({
   page,
   request,
 }) => {
@@ -95,14 +102,14 @@ test('E2E-111 « Modifier le projet », Clos coché avec une activité ouverte :
   const dialog = await ouvrir(page, 'Modifier Projet 111');
   await caseCochee(dialog, 'Clos').check();
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(dialog, ENFANTS_PROJET);
+  await refuseEtAbandonne(dialog, ENFANTS_PROJET);
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier Projet 111');
   await expect(caseCochee(relu, 'Clos')).not.toBeChecked();
 });
 
-test('E2E-112 parent changé et Clos coché, activité ouverte : texte de enfants_ouverts, pas celui du parent', async ({
+test('E2E-112-r1 parent changé et Clos coché, activité ouverte : texte de enfants_ouverts, pas celui du parent', async ({
   page,
   request,
 }) => {
@@ -119,7 +126,7 @@ test('E2E-112 parent changé et Clos coché, activité ouverte : texte de enfant
   await caseCochee(dialog, 'Clos').check();
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(dialog.getByRole('alert')).not.toHaveText(PARENT_IMPOSSIBLE);
-  await refuse(dialog, ENFANTS_PROJET);
+  await refuseEtAbandonne(dialog, ENFANTS_PROJET);
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier Projet 112');
@@ -127,7 +134,7 @@ test('E2E-112 parent changé et Clos coché, activité ouverte : texte de enfant
   await expect(caseCochee(relu, 'Clos')).not.toBeChecked();
 });
 
-test('E2E-113 cycle réel de parent, sans interception : « Ce projet parent n’est pas possible. »', async ({
+test('E2E-113-r1 cycle réel de parent, sans interception : « Ce projet parent n’est pas possible. »', async ({
   page,
   request,
 }) => {
@@ -141,16 +148,19 @@ test('E2E-113 cycle réel de parent, sans interception : « Ce projet parent n�
   const dialog = await ouvrir(page, 'Modifier Alpha 113');
   // B rattaché à A après l'ouverture : la liste du dialogue propose encore B.
   await patcher(request, `/api/projets/${b.id}`, { parent_id: a.id });
+  await attendreAnnuaire(dialog);
+  // Geste réel (clic sur la liste) avant le choix : sans geste, la garde ne prend aucune référence.
+  await dialog.getByLabel('Projet parent').click();
   await dialog.getByLabel('Projet parent').selectOption({ label: 'B113 — Beta 113' });
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(dialog, PARENT_IMPOSSIBLE);
+  await refuseEtAbandonne(dialog, PARENT_IMPOSSIBLE);
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier Alpha 113');
   await expect(relu.getByLabel('Projet parent').locator('option:checked')).toHaveText(AUCUN);
 });
 
-test('E2E-114 rouvrir un sous-projet sous un parent clos : « Le projet parent est clos. »', async ({
+test('E2E-114-r1 rouvrir un sous-projet sous un parent clos : « Le projet parent est clos. »', async ({
   page,
   request,
 }) => {
@@ -166,14 +176,14 @@ test('E2E-114 rouvrir un sous-projet sous un parent clos : « Le projet parent e
   const dialog = await ouvrir(page, 'Modifier le projet');
   await caseCochee(dialog, 'Clos').uncheck();
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(dialog, PARENT_CLOS_PROJET);
+  await refuseEtAbandonne(dialog, PARENT_CLOS_PROJET);
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier le projet');
   await expect(caseCochee(relu, 'Clos')).toBeChecked();
 });
 
-test('E2E-115 « Nouveau projet » sous un parent clos : « Le projet parent est clos. », rien de créé', async ({
+test('E2E-115-r1 « Nouveau projet » sous un parent clos : « Le projet parent est clos. », rien de créé', async ({
   page,
   request,
 }) => {
@@ -184,11 +194,13 @@ test('E2E-115 « Nouveau projet » sous un parent clos : « Le projet parent est
   await loginAsAdmin(page);
   await allerA(page, 'Projets');
   const dialog = await ouvrir(page, 'Nouveau projet');
+  await attendreAnnuaire(dialog);
   await dialog.getByLabel('Code').fill('N115');
   await dialog.getByLabel('Nom').fill('Nouveau 115');
+  await dialog.getByLabel('Projet parent').click();
   await dialog.getByLabel('Projet parent').selectOption({ label: 'P115 — Parent 115' });
   await dialog.getByRole('button', { name: 'Créer' }).click();
-  await refuse(dialog, PARENT_CLOS_PROJET);
+  await refuseEtAbandonne(dialog, PARENT_CLOS_PROJET);
 
   await page.reload();
   await page.getByRole('button', { name: 'Déplier Parent 115', exact: true }).click();
@@ -196,7 +208,7 @@ test('E2E-115 « Nouveau projet » sous un parent clos : « Le projet parent est
   await expect(page.getByRole('row').filter({ hasText: 'Nouveau 115' })).toHaveCount(0);
 });
 
-test('E2E-116 clore une activité parente avec une sous-activité ouverte : texte, Close relue non cochée', async ({
+test('E2E-116-r1 clore une activité parente avec une sous-activité ouverte : texte, Close relue non cochée', async ({
   page,
   request,
 }) => {
@@ -210,14 +222,14 @@ test('E2E-116 clore une activité parente avec une sous-activité ouverte : text
   const dialog = await ouvrir(page, 'Modifier Activité A116');
   await caseCochee(dialog, 'Close').check();
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(dialog, ENFANTS_ACTIVITE);
+  await refuseEtAbandonne(dialog, ENFANTS_ACTIVITE);
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier Activité A116');
   await expect(caseCochee(relu, 'Close')).not.toBeChecked();
 });
 
-test('E2E-117 rouvrir une activité sous une activité close : texte, Close relue cochée', async ({
+test('E2E-117-r1 rouvrir une activité sous une activité close : texte, Close relue cochée', async ({
   page,
   request,
 }) => {
@@ -233,7 +245,7 @@ test('E2E-117 rouvrir une activité sous une activité close : texte, Close relu
   const dialog = await ouvrir(page, 'Modifier Activité B117');
   await caseCochee(dialog, 'Close').uncheck();
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(dialog, PARENT_CLOS_ELEMENT);
+  await refuseEtAbandonne(dialog, PARENT_CLOS_ELEMENT);
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier Activité B117');
@@ -250,7 +262,7 @@ async function projetClosAvecTemoin(request: APIRequestContext, code: string, no
   return p;
 }
 
-test('E2E-118 « Nouvelle activité » dans un projet clos : texte, aucune ligne créée', async ({
+test('E2E-118-r1 « Nouvelle activité » dans un projet clos : texte, aucune ligne créée', async ({
   page,
   request,
 }) => {
@@ -261,13 +273,13 @@ test('E2E-118 « Nouvelle activité » dans un projet clos : texte, aucune ligne
   const dialog = await ouvrir(page, 'Nouvelle activité');
   await dialog.getByLabel('Nom').fill('Activité 118');
   await dialog.getByRole('button', { name: 'Créer' }).click();
-  await refuse(dialog, PARENT_CLOS_ELEMENT);
+  await refuseEtAbandonne(dialog, PARENT_CLOS_ELEMENT);
 
   await page.reload();
   expect(await nomsPlanning(page)).toEqual(['Témoin']);
 });
 
-test('E2E-119 « Nouveau jalon » dans un projet clos : texte, aucune ligne créée', async ({
+test('E2E-119-r1 « Nouveau jalon » dans un projet clos : texte, aucune ligne créée', async ({
   page,
   request,
 }) => {
@@ -278,13 +290,13 @@ test('E2E-119 « Nouveau jalon » dans un projet clos : texte, aucune ligne cré
   const dialog = await ouvrir(page, 'Nouveau jalon');
   await dialog.getByLabel('Nom').fill('Jalon 119');
   await dialog.getByRole('button', { name: 'Créer' }).click();
-  await refuse(dialog, PARENT_CLOS_ELEMENT);
+  await refuseEtAbandonne(dialog, PARENT_CLOS_ELEMENT);
 
   await page.reload();
   expect(await nomsPlanning(page)).toEqual(['Témoin']);
 });
 
-test('E2E-120 sous-activité sous une activité close : texte, aucune ligne créée', async ({
+test('E2E-120-r1 sous-activité sous une activité close : texte, aucune ligne créée', async ({
   page,
   request,
 }) => {
@@ -298,13 +310,13 @@ test('E2E-120 sous-activité sous une activité close : texte, aucune ligne cré
   const dialog = await ouvrir(page, 'Ajouter une sous-activité à Activité A120');
   await dialog.getByLabel('Nom').fill('Sous-activité 120');
   await dialog.getByRole('button', { name: 'Créer' }).click();
-  await refuse(dialog, PARENT_CLOS_ELEMENT);
+  await refuseEtAbandonne(dialog, PARENT_CLOS_ELEMENT);
 
   await page.reload();
   expect(await nomsPlanning(page)).toEqual(['Activité A120']);
 });
 
-test('E2E-121 modèle avec une activité ouverte, Clos coché depuis Modèles : texte, Clos relu non coché', async ({
+test('E2E-121-r1 modèle avec une activité ouverte, Clos coché depuis Modèles : texte, Clos relu non coché', async ({
   page,
   request,
 }) => {
@@ -317,7 +329,7 @@ test('E2E-121 modèle avec une activité ouverte, Clos coché depuis Modèles : 
   const dialog = await ouvrir(page, 'Modifier Modèle 121');
   await caseCochee(dialog, 'Clos').check();
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(dialog, ENFANTS_PROJET);
+  await refuseEtAbandonne(dialog, ENFANTS_PROJET);
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier Modèle 121');
@@ -346,7 +358,7 @@ test('E2E-122 « Monter » un jalon sous une activité close : alerte, ordre inc
   expect(await nomsPlanning(page)).toEqual(['Activité A122', 'Activité B122', 'Jalon J122']);
 });
 
-test('E2E-123-r1 parcours complet à l’écran : calcul depuis l’Accueil, clôture des activités puis du projet, projet absent de l’Accueil', async ({
+test('E2E-123-r2 parcours complet à l’écran : calcul depuis l’Accueil, clôture des activités puis du projet, projet absent de l’Accueil', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -408,7 +420,7 @@ test('E2E-123-r1 parcours complet à l’écran : calcul depuis l’Accueil, cl�
   const tentative = await ouvrir(page, 'Modifier le projet');
   await caseCochee(tentative, 'Clos').check();
   await tentative.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(tentative, ENFANTS_PROJET);
+  await refuseEtAbandonne(tentative, ENFANTS_PROJET);
 
   for (const nom of ['Tâche C2-123', 'Phase C2-123']) {
     const dialog = await ouvrir(page, `Modifier ${nom}`);
@@ -426,7 +438,7 @@ test('E2E-123-r1 parcours complet à l’écran : calcul depuis l’Accueil, cl�
   await expect(page.locator('[data-projet-id]')).toHaveCount(0);
 });
 
-test('E2E-124 parent changé, 422 intercepté sans code : message générique, dialogue ouvert, rien modifié (D-083 (14))', async ({
+test('E2E-124-r1 parent changé, 422 intercepté sans code : message générique, dialogue ouvert, rien modifié (D-083 (14))', async ({
   page,
   request,
 }) => {
@@ -449,9 +461,11 @@ test('E2E-124 parent changé, 422 intercepté sans code : message générique, d
   await loginAsAdmin(page);
   await allerA(page, 'Projets');
   const dialog = await ouvrir(page, 'Modifier Projet 124');
+  await attendreAnnuaire(dialog);
+  await dialog.getByLabel('Projet parent').click();
   await dialog.getByLabel('Projet parent').selectOption({ label: 'Q124 — Parent 124' });
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
-  await refuse(dialog, 'Cette opération enfreint une règle du planning.');
+  await refuseEtAbandonne(dialog, 'Cette opération enfreint une règle du planning.');
 
   await page.reload();
   const relu = await ouvrir(page, 'Modifier Projet 124');

@@ -29,6 +29,7 @@ import {
   ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
 
 const J06 = '2027-01-06T10:00:00';
 const TITRE_ACTIVITE = 'Modifier l’activité';
@@ -294,7 +295,7 @@ test('E2E-194-r1 : menu au clic droit sur une ligne d’activité ou de jalon (t
   expect(await etatBase(request, m.projet.id)).toBeTruthy();
 });
 
-test('E2E-195-r1 : aucun menu pour un chef en lecture seule, un modèle ni l’Accueil ; témoin positif : le chef l’a', async ({
+test('E2E-195-r2 : aucun menu pour un chef en lecture seule, un modèle ni l’Accueil ; témoin positif : le chef l’a', async ({
   page,
   request,
 }) => {
@@ -330,7 +331,9 @@ test('E2E-195-r1 : aucun menu pour un chef en lecture seule, un modèle ni l’A
   // Accueil : Gantt global déplié, ligne d'activité affichée, aucun menu.
   await page.goto('/');
   const global = page.getByRole('region', { name: 'Tableau du Gantt global', exact: true });
-  await page.getByRole('button', { name: 'Déplier Projet E2E195', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Replier Projet E2E195', exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   const ligneQ = global.getByRole('row').filter({ hasText: 'Tâche Q' });
   await expect(ligneQ).toHaveCount(1);
   expect(await clicDroit(page, ligneQ)).toBe(false);
@@ -654,7 +657,7 @@ test('E2E-202 : « Recalcul automatique » cochée : une création par le menu, 
   expect(r.ordre.length).toBe(2);
 });
 
-test('E2E-203-r1 : refus réels dans le dialogue laissé ouvert (parent assigné, parent clos), base inchangée ; témoin positif', async ({
+test('E2E-203-r2 : refus réels dans le dialogue laissé ouvert (parent assigné, parent clos), base inchangée ; témoin positif', async ({
   page,
   request,
 }) => {
@@ -674,8 +677,7 @@ test('E2E-203-r1 : refus réels dans le dialogue laissé ouvert (parent assigné
   });
   await expect(d.getByText(T_PARENT_ASSIGNE)).toBeVisible();
   await expect(d).toBeVisible();
-  await d.getByRole('button', { name: 'Annuler' }).click();
-  await expect(d).toHaveCount(0);
+  await fermerEnAbandonnant(page, d);
   await expect(tableau(page)).toBeFocused();
 
   // K close.
@@ -689,8 +691,7 @@ test('E2E-203-r1 : refus réels dans le dialogue laissé ouvert (parent assigné
   await expect(d2.getByText(T_PARENT_CLOS)).toBeVisible();
   await expect(d2.getByText(T_PARENT_ASSIGNE)).toHaveCount(0);
   await expect(d2).toBeVisible();
-  await d2.getByRole('button', { name: 'Annuler' }).click();
-  await expect(d2).toHaveCount(0);
+  await fermerEnAbandonnant(page, d2);
   // Révision -r1 (D-031, D-113 (3)) : K close n'a pas de barre ; menu ouvert depuis le tableau.
   await expect(tableau(page)).toBeFocused();
 
@@ -706,7 +707,7 @@ test('E2E-203-r1 : refus réels dans le dialogue laissé ouvert (parent assigné
   await expect.poll(() => ordre(page)).toContain('3.1 Fille R');
 });
 
-test('E2E-204-r1 : bouton « Copier » après « Initiales » pour le chef et l’administrateur ; absent pour un chef en lecture seule et un modèle', async ({
+test('E2E-204-r2 : bouton « Copier » après « Initiales » pour le chef et l’administrateur ; absent pour un chef en lecture seule et un modèle', async ({
   page,
   request,
 }) => {
@@ -722,8 +723,11 @@ test('E2E-204-r1 : bouton « Copier » après « Initiales » pour le chef et l�
     await expect(boutonCopier(page).locator('svg.lucide-copy'), zoom).toHaveCount(1);
   }
   // Ordre de tabulation : Initiales, Copier, tableau.
+  // Révision -r2 (D-216 (3)) : le bouton « Colonnes » s'insère entre « Initiales » et « Copier ».
   const initiales = page.getByRole('checkbox', { name: 'Initiales', exact: true });
   await initiales.focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Colonnes', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(boutonCopier(page)).toBeFocused();
   await page.keyboard.press('Tab');

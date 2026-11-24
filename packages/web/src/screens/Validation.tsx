@@ -1,4 +1,4 @@
-import { Check, Download, Eye, X } from 'lucide-react';
+import { Check, Download, Eye, Undo2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
@@ -6,7 +6,7 @@ import { Badge } from '../components/Badge';
 import { BoutonIcone } from '../components/BoutonIcone';
 import { Button } from '../components/Button';
 import { Confirmation } from '../components/Confirmation';
-import { Dialog } from '../components/Dialog';
+import { Dialog, useEnvoiEnCours, useFermeture } from '../components/Dialog';
 import { Chargement, Vide } from '../components/Etat';
 import { Layout } from '../components/Layout';
 import { NavigationSemaine } from '../components/NavigationSemaine';
@@ -33,9 +33,11 @@ import {
   AUCUNE_IMPUTATION,
   badgesProjets,
   cibleFocus,
+  codesDevalidables,
   codesValidables,
   COMMENTAIRE_MAX,
   messageRefusValidation,
+  peutDevalider,
   peutRejeter,
   peutValider,
   relireListe,
@@ -77,6 +79,7 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
   const [voir, setVoir] = useState<FeuilleValidation | null>(null);
   const [valider, setValider] = useState<FeuilleValidation | null>(null);
   const [rejeter, setRejeter] = useState<FeuilleValidation | null>(null);
+  const [devalider, setDevalider] = useState<FeuilleValidation | null>(null);
   const [exporter, setExporter] = useState(false);
   // Refus 422 ou 404 (D-145 (2)) : message au-dessus du tableau, dialogue fermé.
   const [alerteRefus, setAlerteRefus] = useState<string | null>(null);
@@ -132,7 +135,13 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
       tableau.current?.focus();
     } else {
       const verbe =
-        cible.genre === 'voir' ? 'Voir' : cible.action === 'valider' ? 'Valider' : 'Rejeter';
+        cible.genre === 'voir'
+          ? 'Voir'
+          : cible.action === 'valider'
+            ? 'Valider'
+            : cible.action === 'rejeter'
+              ? 'Rejeter'
+              : 'Dévalider';
       const nom = `${verbe} la feuille de ${f.ressource_nom}`;
       [...(tableau.current?.querySelectorAll('button') ?? [])]
         .find((b) => b.getAttribute('aria-label') === nom)
@@ -152,6 +161,7 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
         // Liste périmée : dialogue fermé, message au-dessus du tableau (D-145 (2)).
         setValider(null);
         setRejeter(null);
+        setDevalider(null);
         setRetour(null);
         setAlerteRefus(messageDe(err));
         void recharger(action);
@@ -163,6 +173,7 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
   const succes = (texte: string) => {
     setValider(null);
     setRejeter(null);
+    setDevalider(null);
     setRetour(texte);
     void recharger(derniere.current);
   };
@@ -242,6 +253,13 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
                       onClick={ouvrir(() => setRejeter(f))}
                     />
                   )}
+                  {peutDevalider(f) && (
+                    <BoutonIcone
+                      libelle={`Dévalider la feuille de ${f.ressource_nom}`}
+                      icone={Undo2}
+                      onClick={ouvrir(() => setDevalider(f))}
+                    />
+                  )}
                 </span>
               ),
             },
@@ -270,6 +288,18 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
           messageErreur={messageDe}
           onSucces={() => succes('Feuille validée.')}
           onAnnuler={fermer(() => setValider(null))}
+        />
+      )}
+      {devalider && (
+        <Confirmation
+          titre={`Dévalider la feuille de ${devalider.ressource_nom} pour ${codesDevalidables(devalider).join(', ')} ?`}
+          description="La feuille repassera au statut Soumise."
+          libelleConfirmer="Dévalider"
+          variante="primaire"
+          action={ecrire(devalider, 'devalider')}
+          messageErreur={messageDe}
+          onSucces={() => succes('Feuille dévalidée.')}
+          onAnnuler={fermer(() => setDevalider(null))}
         />
       )}
       {rejeter && (
@@ -323,6 +353,7 @@ function DialogueVoir({
 
   return (
     <Dialog
+      sansGarde
       large
       ouvert
       onOuvertChange={(o) => !o && onFermer()}
@@ -359,6 +390,32 @@ function DialogueVoir({
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** Boutons du dialogue : composant enfant de `Dialog`, pour passer par sa garde (D-188 (6)). */
+function ActionsRejet({
+  onAnnuler,
+  onRejeter,
+  rejeter,
+  enCours,
+}: {
+  onAnnuler: () => void;
+  onRejeter: () => void;
+  rejeter: boolean;
+  enCours: boolean;
+}) {
+  useEnvoiEnCours(enCours);
+  const fermer = useFermeture(onAnnuler);
+  return (
+    <div className="flex justify-end gap-2">
+      <Button variante="secondaire" onClick={fermer}>
+        Annuler
+      </Button>
+      <Button variante="danger" onClick={onRejeter} disabled={!rejeter} enCours={enCours}>
+        Rejeter
+      </Button>
+    </div>
   );
 }
 
@@ -414,14 +471,12 @@ function DialogueRejet({
             {analyse.longueur} / {COMMENTAIRE_MAX}
           </p>
         </div>
-        <div className="flex justify-end gap-2">
-          <Button variante="secondaire" onClick={onAnnuler}>
-            Annuler
-          </Button>
-          <Button variante="danger" onClick={rejeter} disabled={!analyse.ok} enCours={enCours}>
-            Rejeter
-          </Button>
-        </div>
+        <ActionsRejet
+          onAnnuler={onAnnuler}
+          onRejeter={rejeter}
+          rejeter={analyse.ok}
+          enCours={enCours}
+        />
       </div>
     </Dialog>
   );

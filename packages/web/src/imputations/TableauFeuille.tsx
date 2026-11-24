@@ -50,20 +50,20 @@ export function TableauFeuille({
         <colgroup>
           <col className="w-28" />
           <col />
-          <col className="w-14" />
+          <col className="w-16" />
           <col className="w-16" />
           {vue.jours.map((j) => (
-            <col key={j.jour} className="w-14" />
+            <col key={j.jour} className="w-12" />
           ))}
-          <col className="w-[4.5rem]" />
+          <col className="w-[3.75rem]" />
         </colgroup>
-        <thead className="bg-gray-100 text-gray-700">
+        <thead className="bg-gray-100 text-petit text-gray-700">
           <tr>
             {['Projet', 'Activité', 'Assigné', 'Réel cumulé'].map((t, i) => (
               <th
                 key={t}
                 scope="col"
-                className={`border-b border-gray-200 px-2 py-2 font-semibold ${i >= 2 ? 'text-right' : ''}`}
+                className={`border-b border-gray-200 py-2 font-semibold ${i >= 2 ? 'px-1 text-right' : 'px-2'}`}
               >
                 {t}
               </th>
@@ -79,7 +79,7 @@ export function TableauFeuille({
                 {libelleJour(j.jour)}
               </th>
             ))}
-            <th scope="col" className="border-b border-gray-200 px-2 py-2 text-right font-semibold">
+            <th scope="col" className="border-b border-gray-200 px-1 py-2 text-right font-semibold">
               Reste à faire
             </th>
           </tr>

@@ -1,0 +1,8 @@
+# Fins de ligne LF forcées pour les fichiers exécutés ou lus dans les conteneurs, quel que soit le poste de travail.
+*.sh text eol=lf
+.githooks/* text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+.env.example text eol=lf
+.env.production.example text eol=lf
+packages/api/migrations/*.sql text eol=lf

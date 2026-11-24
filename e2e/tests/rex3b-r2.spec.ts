@@ -177,12 +177,14 @@ async function accueilDeplie(page: Page, request: APIRequestContext, suffixe: st
   await calculer(request, [m.projet.id]);
   await connecterAvec(page, m.emailChef);
   await page.goto('/');
-  await page.getByRole('button', { name: `Déplier Projet ${suffixe}`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Replier Projet ${suffixe}`, exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   await expect(page.getByRole('button', { name: 'Tâche C', exact: true })).toBeVisible();
   return { ...m, a, b };
 }
 
-test('E2E-281 : Accueil, erreur de chargement d’un élément effacée dès qu’un rechargement réussit', async ({
+test('E2E-281-r1 : Accueil, erreur de chargement d’un élément effacée dès qu’un rechargement réussit', async ({
   page,
   request,
 }) => {
@@ -199,7 +201,7 @@ test('E2E-281 : Accueil, erreur de chargement d’un élément effacée dès qu�
   await expect(page.getByText('Impossible de charger l’élément à modifier.')).toHaveCount(0);
 });
 
-test('E2E-282 : Accueil, élément absent de la liste : « Élément introuvable. », aucun dialogue', async ({
+test('E2E-282-r1 : Accueil, élément absent de la liste : « Élément introuvable. », aucun dialogue', async ({
   page,
   request,
 }) => {
@@ -217,7 +219,7 @@ test('E2E-282 : Accueil, élément absent de la liste : « Élément introuvable
   await expect(page.getByText('Élément introuvable.')).toHaveCount(0);
 });
 
-test('E2E-283 : Accueil, bouton-nom désactivé pendant l’attente, un seul appel sur un double clic', async ({
+test('E2E-283-r1 : Accueil, bouton-nom désactivé pendant l’attente, un seul appel sur un double clic', async ({
   page,
   request,
 }) => {

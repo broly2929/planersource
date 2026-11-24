@@ -2,6 +2,7 @@ import argon2 from 'argon2';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'vitest';
+import { exigerBaseTest } from '../../../scripts/lib/garde-base-test.mjs';
 import { buildApp } from '../src/app.js';
 import type { Config } from '../src/config.js';
 import { migrate } from '../src/db/migrate.js';
@@ -9,11 +10,7 @@ import { migrate } from '../src/db/migrate.js';
 export const MOT_DE_PASSE = 'motdepasse-de-test';
 
 export function testDbUrl(): string {
-  const url = process.env.TEST_DATABASE_URL;
-  if (!url || !new URL(url).pathname.slice(1).endsWith('_test')) {
-    throw new Error('TEST_DATABASE_URL doit désigner une base dont le nom finit par _test');
-  }
-  return url;
+  return exigerBaseTest(process.env);
 }
 
 export function testConfig(nodeEnv = 'development'): Config {

@@ -151,6 +151,7 @@ Arbitrage : D-132 ((a) ombre portée à gauche de la colonne Drapeaux, (b) pas u
 - Semaine `lundi − 14` : Bob « Validée » ; Alice « Rejetée », commentaire « Imputations du jeudi à revoir » (bouton Voir, ou Feuille de temps d'Alice).
 - Semaine `lundi` : Alice brouillon (lundi seulement).
 - Comptes : chefa, chefb, admin (mot de passe = identifiant).
+- Badges de lundi − 7 inversés par la précision de D-136 (S validé par chefb, R à valider pour chefa) : docs/recette.md fait foi.
 
 ## Captures de 5d
 - Relecture à l'image de `e2e/captures/validation-alerte-{1440,1024}.png` (alerte de refus 422/404 au-dessus du tableau Validation) et `e2e/captures/feuille-codes-{1440,1024}.png` (colonne Projet `w-28`, codes de 11 et 30 caractères), selon docs/ui.md ; aucune nouvelle tranche (D-133 (3)).
@@ -203,3 +204,73 @@ Arbitrage : D-132 ((a) ombre portée à gauche de la colonne Drapeaux, (b) pas u
 - Page de détail d'un calendrier et son lien « Retour aux calendriers » ; entrée « Utilisateurs » active.
 - Section « Mon calendrier » de Mes tâches, pour une ressource et pour un chef ressource (jours travaillés, fériés à venir, états vide et erreur).
 - Menus des trois rôles (administrateur, chef de projet, ressource).
+
+## Recette différée (D-172)
+- Feuille de temps, avec une case modifiée : entrée de menu, logo, retour du navigateur, « Se déconnecter », changement de semaine. Une seule confirmation à chaque fois ; « Annuler » garde la saisie et l'adresse ; « Abandonner » part sans rien enregistrer.
+- Planning manuel, avec une case cochée : « Mois précédent », « Mois suivant », « Retour au projet », entrée de menu.
+- Sans modification, ou après « Enregistrer » : aucune confirmation.
+- Rechargement et fermeture de l'onglet avec une modification : message du navigateur.
+
+## Recette du 2026-11-23
+Parcours et verdicts : docs/recette.md.
+
+## Recette différée (dévalidation, D-180)
+Dévalider la feuille validée de Bob (confirmation, annulation, succès, revalidation) : lignes 156 à 160 de docs/recette.md.
+
+## Captures de DEV-E
+Relecture @ui-designer des captures `validation-devalider-*` (D-133 (3)) : aucun défaut bloquant.
+- Titre de la confirmation sur deux lignes, description collée dessous ; même rendu que les autres `Confirmation`. Titre très long possible avec beaucoup de projets : non vérifié.
+- Le message « Feuille dévalidée. » ne cite pas le statut « Soumise », visible dans le tableau.
+- En-têtes de la colonne Actions alignés à gauche, boutons à droite à 1440 px : rendu existant de l'écran.
+- Focus visible non évaluable sur les captures.
+
+## Recette différée (saisie pour autrui, D-184)
+Choix de la ressource, saisie pour Alice, garde au changement de ressource, `ressource=` d'autrui ouvert par Alice : lignes 161 à 164 de docs/recette.md.
+
+## Captures d'AUT-E
+Relecture @ui-designer des captures `imputations-autrui-*` (D-133 (3)) : aucun défaut bloquant.
+- La liste « Ressource » est absente de l'en-tête pendant le chargement de l'annuaire, puis apparaît : léger décalage. Piste : liste désactivée à une option « Chargement… ».
+- L'option « Choisir… » disparaît après le choix : impossible de revenir à l'état sans sélection. Cohérent avec D-181.
+- Préexistant (4b, 1024 px) : colonne Activité tronquée (« 1 T… »), en-tête « Activité » qui chevauche « Assigné » (recette, ligne 133).
+- Focus et contraste non évaluables sur les captures.
+
+## Retouche de la Feuille de temps (D-186)
+Captures avant/après (E2E-436) : `e2e/captures/retouche-feuille-{choix,feuille}-{1440,1024}-{avant,apres}.png` (ignorées par git ; « avant » prises avant le code, `CAPTURE_PHASE=avant`). Relecture @ui-designer : aucun défaut bloquant.
+- Avant : liste « Ressource » absente pendant le chargement (en-tête plus bas après) ; « Choisir… » retirée après le choix ; à 1024 px, Activité réduite à « 1 T… », en-tête « Assigné » débordant sur « Activité ».
+- Après : liste toujours présente (désactivée pendant le chargement) ; « Choisir… » désactivée et toujours présente ; Activité 112 px à 1024 px, « 1 Tâche A » entier ; en-têtes en `text-petit`.
+- Non bloquant : « Reste à / faire », « Réel / cumulé » et les jours sur deux lignes d'en-tête ; colonne Activité très large à 1440 px (D-134, « Activité libre »).
+- Écart assumé : en-têtes de `TableauFeuille` en `text-petit` alors que `Table` et le Plan de charge utilisent `text-normal` (densité à 1024 px) ; consigné dans docs/ui.md.
+- Option « Choisir… » désactivée : non vérifiable sur capture (liste fermée) ; recette lignes 170 et 171.
+- Recette différée : lignes 169 à 171 de docs/recette.md.
+
+### Dialogue « Voir » de Validation (D-186, à la suite)
+Captures avant/après (E2E-438) : `e2e/captures/retouche-voir-{1440,1024}-{avant,apres}.png` (ignorées par git ; « avant » prises avec la version de `TableauFeuille` d'avant la retouche). Relecture @ui-designer : aucun défaut bloquant.
+- Le dialogue hérite des en-têtes `text-petit` et des colonnes resserrées de `TableauFeuille` : tableau plus dense (4 px de moins), « Reste à / faire » plus propre ; « Assigné » ne touche plus « Réel cumulé ».
+- Alignement des colonnes numériques, des cases, des totaux et de « Dépassement » inchangé ; week-ends toujours grisés ; aucun débordement horizontal à 1440 et 1024 px.
+- Écart assumé : en-têtes à 12 px, plus petits que ceux du tableau Validation derrière le dialogue (14 px) ; voir docs/non-bloquants.md (dette d'harmonisation).
+- Noms longs tronqués à 1024 px : `title` posé sur la cellule Activité (`TableauFeuille`), conforme à la charte.
+- E2E-323 (c) couvrait déjà l'absence de défilement ; E2E-437 ajoute le contrôle des en-têtes (garde, vert par construction ; rouge prouvé par modification locale : jours `w-9`, en-têtes qui débordent).
+
+## Captures de la confirmation à la fermeture des dialogues (D-188)
+Relecture @ui-designer des captures `garde-dialogue-{1440,1024}.png` (E2E-456) : aucun défaut bloquant ; empilement correct, rien ne déborde à 1024 px, contraste AA.
+- Le focus initial de la confirmation est sur la croix « Fermer », pas sur « Annuler » (comportement de `Dialog`, commun à toutes les confirmations).
+- La description passe à la ligne tôt (« seront / perdues. ») : zone réduite par la croix.
+- Titre et croix presque jointifs (croix collée à « ? »).
+- Recette différée : lignes en fin de table de docs/recette.md.
+
+
+## REX-6 (2026-11-24, usage libre du porteur)
+1. Modèle : la date de début est obligatoire, jugée inutile. (retouches-rex6) Fait (D-219).
+2. Modèle : une activité créée ne peut pas devenir sous-activité ; seul le bouton « Ajouter une sous-activité » en crée une (présent aussi dans un projet ordinaire). (saisie-activites)
+3. Création ou modification d'une activité : pas de saisie des dépendances dans le dialogue, il faut passer par la section Dépendances en bas de page. (saisie-activites)
+4. Dépendances : libellés FD, DD, FF peu parlants. (retouches-rex6) Fait (D-219).
+5. Question : à quoi sert le code d'un projet ? Réponse en D-211 (3). (guide)
+6. Charge : les jours saisis en assignant une ressource ne se voient pas dans l'activité ; « Durée validée » et « Charge vendue » prêtent à confusion (mode REGUL). (charge-lisible)
+7. Question : usage du taux d'affectation au projet et du taux d'assignation, utilité des deux. Réponse en D-211 (3). (charge-lisible, guide)
+8. Après « Calculer », le dialogue d'une activité ne montre aucun changement (il n'affiche que les dates validées). (retouches-rex6) Fait (D-219).
+9. Gantt : largeur et choix des colonnes non réglables ; le diagramme est tassé à droite. Priorité haute. (gantt-colonnes) Fait (D-217).
+10. Accueil : projets dépliés et initiales affichées par défaut. (retouches-rex6) Fait (D-219).
+11. Ressource : le bloc Calendrier de « Mes tâches » est inutile, à supprimer. (retouches-rex6) Fait (D-219).
+12. Ressource : « Mes tâches » groupé par projet, avec repli et dépli. Basse priorité. (backlog)
+13. Question : effet de la validation des feuilles, rien de visible dans le Plan de charge. Réponse en D-211 (3). (guide)
+14. Gantt : la barre de défilement horizontale est en bas du tableau ; elle doit rester visible à l'écran. (gantt-colonnes) Fait (D-214).

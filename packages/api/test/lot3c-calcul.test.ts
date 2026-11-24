@@ -42,8 +42,15 @@ describe('Calcul : verrou à attente bornée et identifiants (lot 3c-I, D-074)',
   const verrous = async (): Promise<number> =>
     Number(
       (
-        (await ctx.pool.query("SELECT count(*) AS n FROM pg_locks WHERE locktype = 'advisory'"))
-          .rows[0] as { n: string }
+        (
+          await ctx.pool.query(
+            // Révision D-031 (D-196) : verrous de la base courante seulement ; pg_locks couvre
+            // tout le serveur, donc aussi les bases des autres workers de vitest.
+            `SELECT count(*) AS n FROM pg_locks
+              WHERE locktype = 'advisory'
+                AND database = (SELECT oid FROM pg_database WHERE datname = current_database())`,
+          )
+        ).rows[0] as { n: string }
       ).n,
     );
 
@@ -59,7 +66,7 @@ describe('Calcul : verrou à attente bornée et identifiants (lot 3c-I, D-074)',
     };
   }
 
-  it('TRX-4 : verrou tenu au-delà du délai → 409 { erreur }, base inchangée, aucun verrou restant', async () => {
+  it('TRX-4-r1 : verrou tenu au-delà du délai → 409 { erreur }, base inchangée, aucun verrou restant', async () => {
     await avecDelai(300);
     const m = await creerMonde(ctx);
     const { activite, assignation } = await tache(ctx, m.admin, m.projet.id, m.alice.id, 3);
@@ -98,7 +105,7 @@ describe('Calcul : verrou à attente bornée et identifiants (lot 3c-I, D-074)',
     expect(await verrous()).toBe(0);
   });
 
-  it('TRX-5 : verrou libéré avant le délai → 200, projet calculé à D0, aucun verrou restant', async () => {
+  it('TRX-5-r1 : verrou libéré avant le délai → 200, projet calculé à D0, aucun verrou restant', async () => {
     await avecDelai(5000);
     const m = await creerMonde(ctx);
     const { activite, assignation } = await tache(ctx, m.admin, m.projet.id, m.alice.id, 2);

@@ -11,7 +11,7 @@ Manuel d'installation de l'application en production (D-138, D-139). Deux voies 
 ## 2. Installation en 4 commandes (Docker)
 
 ```sh
-git clone <adresse du dépôt> planersource && cd planersource
+git clone https://github.com/broly2929/planersource planersource && cd planersource
 cp .env.production.example .env
 nano .env
 docker compose up -d --build
@@ -33,9 +33,12 @@ Les deux services `db` et `app` doivent être `Up`, `db` avec la mention `health
 
 ## 3. Premier accès
 
-1. Ouvrir `http://<serveur>:8080` dans un navigateur.
+1. Ouvrir `http://<serveur>:<PORT>` dans un navigateur.
 2. Se connecter avec l'identifiant `admin` et le mot de passe `admin`. Ce compte est créé au premier démarrage, seulement si la base ne contient aucun utilisateur.
 3. Un bandeau rappelle que le mot de passe est celui d'origine. Aller dans **Utilisateurs**, cliquer sur l'icône crayon (« Modifier Administrateur ») de la ligne « Administrateur », saisir un **Nouveau mot de passe**, puis **Enregistrer**. Le bandeau disparaît à la connexion suivante.
+
+- `<serveur>` : `localhost` sur le serveur lui-même ; depuis un autre poste, son adresse IP ou son nom sur le réseau ; derrière Caddy (section 4), l'adresse HTTPS du domaine, sans port.
+- `<PORT>` : la valeur de `PORT` dans `.env` (8080 par défaut).
 
 Pour ne jamais créer ce compte, mettre `INITIAL_ADMIN=0` dans `.env` avant le premier démarrage, puis créer l'administrateur à la main :
 
@@ -50,7 +53,7 @@ L'application parle HTTP. Pour un accès depuis Internet, la placer derrière un
 
 ```
 planning.example.com {
-    reverse_proxy localhost:8080
+    reverse_proxy localhost:<PORT>
 }
 ```
 
@@ -58,11 +61,11 @@ Puis, dans `.env` :
 
 - `COOKIE_SECURE=1` : le cookie de session n'est plus envoyé qu'en HTTPS.
 - `TRUST_PROXY=1` : l'application lit l'adresse du client dans `X-Forwarded-For` (Caddy la renseigne) pour limiter les tentatives de connexion (5 échecs par identifiant et par adresse en 15 minutes, 50 par adresse). Sans cette ligne derrière un proxy, tous les clients partagent l'adresse du proxy. Ne pas l'activer sans reverse proxy : l'en-tête serait alors falsifiable.
-- `PORT=127.0.0.1:8080` : l'application n'est plus joignable directement depuis le réseau, seulement par Caddy.
+- `PORT=127.0.0.1:<PORT>` (par exemple `PORT=127.0.0.1:8080`) : l'application n'est plus joignable directement depuis le réseau, seulement par Caddy.
 
 Appliquer : `docker compose up -d`.
 
-Avec `COOKIE_SECURE=1`, la connexion par `http://<serveur>:8080` depuis un autre poste ne fonctionne plus : passer par l'adresse HTTPS.
+Avec `COOKIE_SECURE=1`, la connexion par `http://<serveur>:<PORT>` depuis un autre poste ne fonctionne plus : passer par l'adresse HTTPS.
 
 ## 5. Sauvegarde et restauration
 
@@ -79,6 +82,14 @@ docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" --format=custom "$P
 ```
 
 Le fichier produit est au même format que celui de `scripts/backup.sh`. Le copier hors du serveur.
+
+Sauvegarde quotidienne automatique : ajouter cette ligne à la crontab de l'utilisateur qui a installé l'application (`crontab -e`). Elle sauvegarde à 2 h, depuis le dossier `planersource` (adapter le chemin) :
+
+```
+0 2 * * * cd /chemin/vers/planersource && mkdir -p backups && docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" --format=custom "$POSTGRES_DB"' > backups/planersource-$(date +\%Y\%m\%d-\%H\%M\%S).dump
+```
+
+Supprimer les anciennes sauvegardes et en copier une hors du serveur restent à la charge de l'exploitant.
 
 ### Restauration (Docker)
 
@@ -108,18 +119,45 @@ DATABASE_URL=postgres://<utilisateur>:<mot de passe>@localhost:5432/<base vide> 
 
 ## 6. Mise à jour
 
-```sh
-cd planersource
-```
+La mise à jour récupère la dernière version publiée sur GitHub (branche main) et garde la base : avec Docker, les données sont dans le volume `donnees`, que ni `git pull` ni la reconstruction de l'image ne touchent ; `.env` et `backups/` ne sont pas suivis par git et restent en place.
 
-Faire d'abord une sauvegarde (section 5), puis :
+**Ne jamais lancer `docker compose down -v` : cette commande efface la base.**
 
-```sh
-git pull
-docker compose up -d --build
-```
+1. Se placer dans le dossier de l'application :
 
-Les migrations de la nouvelle version sont appliquées au démarrage. Les images des versions précédentes restent sur le disque : `docker image prune` les supprime. Une version plus ancienne que la base refuse de démarrer : dans ce cas, restaurer la sauvegarde avec l'ancienne version.
+   ```sh
+   cd planersource
+   ```
+
+2. Sauvegarder la base :
+
+   ```sh
+   mkdir -p backups
+   docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" --format=custom "$POSTGRES_DB"' \
+     > backups/planersource-$(date +%Y%m%d-%H%M%S).dump
+   ```
+
+3. Récupérer la nouvelle version :
+
+   ```sh
+   git pull
+   ```
+
+4. Reconstruire et redémarrer :
+
+   ```sh
+   docker compose up -d --build
+   ```
+
+5. Vérifier :
+
+   ```sh
+   docker compose ps
+   ```
+
+   `db` et `app` doivent être `Up`, `db` avec la mention `healthy`. Les migrations de la nouvelle version sont appliquées au démarrage de `app`, sans effacer les données.
+
+En cas d'échec : restaurer la sauvegarde avec la version précédente (`git checkout <commit précédent>`, puis section 5, « Restauration »). Une version plus ancienne que la base refuse de démarrer : dans ce cas, restaurer la sauvegarde avec l'ancienne version. Les images des versions précédentes restent sur le disque : `docker image prune` les supprime.
 
 ## 7. Commandes utiles (Docker)
 
@@ -143,7 +181,7 @@ Prérequis : Node.js 22, PostgreSQL 18, Git. Les commandes `sudo` supposent un c
 
    ```sh
    sudo useradd --system --create-home --home-dir /opt/planersource planersource
-   sudo -u planersource git clone <adresse du dépôt> /opt/planersource/app
+   sudo -u planersource git clone https://github.com/broly2929/planersource /opt/planersource/app
    cd /opt/planersource/app
    sudo -u planersource npm ci
    sudo -u planersource npm run build
@@ -191,7 +229,7 @@ Prérequis : Node.js 22, PostgreSQL 18, Git. Les commandes `sudo` supposent un c
 
    Premier accès : section 3. Journal : `journalctl -u planersource -f`.
 
-Mise à jour sans Docker : sauvegarde, puis dans `/opt/planersource/app` : `sudo -u planersource git pull && sudo -u planersource npm ci && sudo -u planersource npm run build && sudo systemctl restart planersource`.
+Mise à jour sans Docker : sauvegarde préalable (section 6 pour le principe, `scripts/backup.sh` pour la commande, section 5), puis dans `/opt/planersource/app` : `sudo -u planersource git pull && sudo -u planersource npm ci && sudo -u planersource npm run build && sudo systemctl restart planersource`.
 
 ## 9. Dépannage
 

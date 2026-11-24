@@ -1,0 +1,32 @@
+{"evenement":"debut","date":"2026-11-23T19:07:10.998Z","commit":"0b465aa","arbre_propre":true,"lot":"optimisation-tests-2a"}
+{"evenement":"fin","date":"2026-11-23T19:28:27.086Z","commit":"0b465aa","lot":"optimisation-tests-2a","vitest":{"statut":"vert","duree_s":434.7},"e2e":{"statut":"vert","duree_s":841.4},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-23T19:52:11.292Z","commit":"6d8af92","arbre_propre":true,"lot":"optimisation-tests-2b"}
+{"evenement":"fin","date":"2026-11-23T20:13:05.942Z","commit":"6d8af92","lot":"optimisation-tests-2b","vitest":{"statut":"vert","duree_s":430.9},"e2e":{"statut":"rouge","duree_s":823.7},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-23T21:09:56.977Z","commit":"d3c202c","arbre_propre":false,"lot":"correctif-457"}
+{"evenement":"fin","date":"2026-11-23T21:31:17.004Z","commit":"d3c202c","lot":"correctif-457","vitest":{"statut":"vert","duree_s":443.1},"e2e":{"statut":"vert","duree_s":836.9},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-23T22:27:06.819Z","commit":"d135095","arbre_propre":true,"lot":"vitest-parallele"}
+{"evenement":"fin","date":"2026-11-23T22:27:07.356Z","commit":"d135095","lot":"vitest-parallele","vitest":{"statut":"rouge","duree_s":0.5},"e2e":{"statut":"non lancé","duree_s":0},"resultat":"échec vitest"}
+{"evenement":"debut","date":"2026-11-23T22:28:00.201Z","commit":"d6b5915","arbre_propre":true,"lot":"vitest-parallele","justification":"Première suite en échec en 0,5 s avant tout test : maxWorkers propre au projet api refusé par vitest (fix 56859fd, réglage à la racine)"}
+{"evenement":"fin","date":"2026-11-23T22:45:14.651Z","commit":"d6b5915","lot":"vitest-parallele","vitest":{"statut":"vert","duree_s":220.6},"e2e":{"statut":"vert","duree_s":813.9},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-23T23:39:27.743Z","commit":"1a12d9d","arbre_propre":true,"lot":"robustesse-tests"}
+{"evenement":"fin","date":"2026-11-23T23:43:06.974Z","commit":"1a12d9d","lot":"robustesse-tests","vitest":{"statut":"rouge","duree_s":219.2},"e2e":{"statut":"non lancé","duree_s":0},"resultat":"échec vitest"}
+{"evenement":"debut","date":"2026-11-23T23:43:27.646Z","commit":"e0bdd0e","arbre_propre":true,"lot":"robustesse-tests","justification":"Première suite en échec en 219 s avant tout e2e : spec stabilite-helpers.spec.ts absente de e2e/domaines.json (TC-5), corrigé en 45c1b53"}
+{"evenement":"fin","date":"2026-11-24T00:00:56.206Z","commit":"e0bdd0e","lot":"robustesse-tests","vitest":{"statut":"vert","duree_s":219.7},"e2e":{"statut":"vert","duree_s":828.8},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T08:10:52.314Z","commit":"eb29e80","arbre_propre":true,"lot":"e2e-parallele"}
+{"evenement":"fin","date":"2026-11-24T08:23:12.069Z","commit":"eb29e80","lot":"e2e-parallele","vitest":{"statut":"vert","duree_s":239.7},"e2e":{"statut":"vert","duree_s":500.1},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T08:54:58.837Z","commit":"3933dea","arbre_propre":true,"lot":"correctif-244"}
+{"evenement":"fin","date":"2026-11-24T09:06:59.285Z","commit":"3933dea","lot":"correctif-244","vitest":{"statut":"vert","duree_s":225.8},"e2e":{"statut":"vert","duree_s":494.7},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T09:52:13.053Z","commit":"888b389","arbre_propre":true,"lot":"recette-auto"}
+{"evenement":"fin","date":"2026-11-24T10:05:24.447Z","commit":"888b389","lot":"recette-auto","vitest":{"statut":"vert","duree_s":226},"e2e":{"statut":"rouge","duree_s":565.4},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-24T11:30:27.282Z","commit":"a9a5bd1","arbre_propre":true,"lot":"correctif-rex3b"}
+{"evenement":"fin","date":"2026-11-24T11:43:15.404Z","commit":"a9a5bd1","lot":"correctif-rex3b","vitest":{"statut":"vert","duree_s":225.6},"e2e":{"statut":"rouge","duree_s":542.5},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-24T12:08:45.909Z","commit":"3f23690","arbre_propre":false,"lot":"correctif-rex3b","justification":"E2E-470 et E2E-472 : dépendance cachée entre fichiers corrigée (D-208)"}
+{"evenement":"fin","date":"2026-11-24T12:21:29.201Z","commit":"3f23690","lot":"correctif-rex3b","vitest":{"statut":"vert","duree_s":226.8},"e2e":{"statut":"vert","duree_s":536.5},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T13:28:43.390Z","commit":"64bf694","arbre_propre":true,"lot":"correctif-inverse"}
+{"evenement":"fin","date":"2026-11-24T13:41:43.283Z","commit":"64bf694","lot":"correctif-inverse","vitest":{"statut":"vert","duree_s":225.6},"e2e":{"statut":"vert","duree_s":554.3},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T15:39:06.327Z","commit":"0716f94","arbre_propre":true,"lot":"gantt-colonnes-1"}
+{"evenement":"fin","date":"2026-11-24T15:52:57.790Z","commit":"0716f94","lot":"gantt-colonnes-1","vitest":{"statut":"vert","duree_s":228.5},"e2e":{"statut":"vert","duree_s":603},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T17:39:43.026Z","commit":"e2df76a","arbre_propre":true,"lot":"gantt-colonnes-2"}
+{"evenement":"fin","date":"2026-11-24T17:54:24.393Z","commit":"e2df76a","lot":"gantt-colonnes-2","vitest":{"statut":"vert","duree_s":219},"e2e":{"statut":"vert","duree_s":662.3},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T19:12:45.992Z","commit":"9960eed","arbre_propre":true,"lot":"retouches-rex6"}
+{"evenement":"fin","date":"2026-11-24T19:27:57.559Z","commit":"9960eed","lot":"retouches-rex6","vitest":{"statut":"vert","duree_s":225.6},"e2e":{"statut":"vert","duree_s":685.9},"resultat":"vert"}

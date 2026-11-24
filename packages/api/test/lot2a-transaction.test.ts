@@ -10,8 +10,15 @@ describe('Transaction sérialisée (lot 2a-I, D-044 4)', () => {
   const verrous = async (): Promise<number> =>
     Number(
       (
-        (await ctx.pool.query("SELECT count(*) AS n FROM pg_locks WHERE locktype = 'advisory'"))
-          .rows[0] as { n: string }
+        (
+          await ctx.pool.query(
+            // Révision D-031 (D-196) : verrous de la base courante seulement ; pg_locks couvre
+            // tout le serveur, donc aussi les bases des autres workers de vitest.
+            `SELECT count(*) AS n FROM pg_locks
+              WHERE locktype = 'advisory'
+                AND database = (SELECT oid FROM pg_database WHERE datname = current_database())`,
+          )
+        ).rows[0] as { n: string }
       ).n,
     );
 
@@ -29,7 +36,7 @@ describe('Transaction sérialisée (lot 2a-I, D-044 4)', () => {
     expect(journal).toEqual(['a:debut', 'a:fin', 'b:debut', 'b:fin']);
   });
 
-  it('TRX-2 : REPEATABLE READ ; aucun verrou ne reste après un succès ni après un échec ; l’échec annule', async () => {
+  it('TRX-2-r1 : REPEATABLE READ ; aucun verrou ne reste après un succès ni après un échec ; l’échec annule', async () => {
     await ctx.pool.query('CREATE TABLE essai (x integer)');
     const niveau = await transactionSerialisee(ctx.pool, 'calcul', async (db) => {
       await db.query('INSERT INTO essai VALUES (1)');

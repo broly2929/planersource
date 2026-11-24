@@ -105,6 +105,42 @@ const patchsDe = (e: Ecriture[], id: number) =>
   e.filter((x) => x.methode === 'PATCH' && x.chemin === `/api/activites/${id}`);
 const calculs = (e: Ecriture[]) => e.filter((x) => x.chemin === '/api/calcul');
 
+/** Journal des PATCH d'une activité, pour les messages d'échec (D-207 (3)). */
+const journalPatchs = (e: Ecriture[], id: number) =>
+  patchsDe(e, id)
+    .map((x, i) => `#${i + 1} ${JSON.stringify(x.corps)}`)
+    .join(' ; ') || 'aucun PATCH';
+
+/**
+ * D-207 (3) : relit `debut_valide` en base par `expect.poll` jusqu'à `attendu` ; l'échec porte la dernière
+ * valeur lue et le journal des PATCH.
+ */
+async function debutEnBase(
+  request: APIRequestContext,
+  projetId: number,
+  id: number,
+  e: Ecriture[],
+  attendu: string,
+): Promise<void> {
+  let lu: string | null | undefined;
+  try {
+    await expect
+      .poll(async () => (lu = (await activiteBase(request, projetId, id)).debut_valide))
+      .toBe(attendu);
+  } catch (err) {
+    throw new Error(
+      `debut_valide attendu ${attendu}, dernière valeur lue ${String(lu)} ; PATCH : ${journalPatchs(e, id)}\n${(err as Error).message}`,
+    );
+  }
+}
+
+/** D-207 (3) : le PATCH `n` (à partir de 1) de l'activité porte exactement `corps` ; journal dans le message. */
+function corpsDuPatch(e: Ecriture[], id: number, n: number, corps: unknown): void {
+  expect(patchsDe(e, id)[n - 1]?.corps, `PATCH #${n} ; PATCH : ${journalPatchs(e, id)}`).toEqual(
+    corps,
+  );
+}
+
 /** Activité lue par l'API (dates et durée validées). */
 async function activiteBase(request: APIRequestContext, projetId: number, id: number) {
   const r = await request.get(`/api/projets/${projetId}/activites`);
@@ -503,7 +539,7 @@ test('E2E-263 : ligne déplacée au clavier par « Déplacer » (onglet Planning
   await expect(boutonAnnuler(page)).toBeDisabled();
 });
 
-test('E2E-264-r2 : Ctrl+Z puis Meta+Z (focus sur le calendrier) annulent chacun un geste de barre', async ({
+test('E2E-264-r3 : Ctrl+Z puis Meta+Z (focus sur le calendrier) annulent chacun un geste de barre', async ({
   page,
   request,
 }) => {
@@ -512,7 +548,7 @@ test('E2E-264-r2 : Ctrl+Z puis Meta+Z (focus sur le calendrier) annulent chacun 
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
 
-  // Révision E2E-264-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus la réponse réseau.
+  // Révision E2E-264-r3 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus la réponse réseau.
   await glisserApplique(page, m.a.id, PX_JOUR);
   await glisserApplique(page, m.a.id, 2 * PX_JOUR);
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(2);
@@ -520,19 +556,15 @@ test('E2E-264-r2 : Ctrl+Z puis Meta+Z (focus sur le calendrier) annulent chacun 
   await calendrier(page).focus();
   await page.keyboard.press('Control+z');
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(3);
-  expect(patchsDe(e, m.a.id)[2]!.corps).toEqual({ debut_valide: '2027-01-12' });
+  corpsDuPatch(e, m.a.id, 3, { debut_valide: '2027-01-12' });
   await expect(annonce(page)).toBeVisible();
-  await expect
-    .poll(async () => (await activiteBase(request, m.projet.id, m.a.id)).debut_valide)
-    .toBe('2027-01-12');
+  await debutEnBase(request, m.projet.id, m.a.id, e, '2027-01-12');
 
   await calendrier(page).focus();
   await page.keyboard.press('Meta+z');
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(4);
-  expect(patchsDe(e, m.a.id)[3]!.corps).toEqual({ debut_valide: '2027-01-11' });
-  await expect
-    .poll(async () => (await activiteBase(request, m.projet.id, m.a.id)).debut_valide)
-    .toBe('2027-01-11');
+  corpsDuPatch(e, m.a.id, 4, { debut_valide: '2027-01-11' });
+  await debutEnBase(request, m.projet.id, m.a.id, e, '2027-01-11');
   await expect(boutonAnnuler(page)).toBeDisabled();
 });
 
@@ -630,14 +662,14 @@ test('E2E-266-r1 : bouton « Annuler » : title, icône, place après « Copier 
   await expect(boutonAnnuler(page)).toBeDisabled();
 });
 
-test('E2E-267-r2 : 21 gestes puis 20 annulations : base à la valeur du 1er geste, bouton désactivé, Ctrl+Z sans requête', async ({
+test('E2E-267-r3 : 21 gestes puis 20 annulations : base à la valeur du 1er geste, bouton désactivé, Ctrl+Z sans requête', async ({
   page,
   request,
 }) => {
   test.setTimeout(180_000);
   const m = await mondeStart(request, 'E2E267');
   const e = suivreEcritures(page);
-  // Révision E2E-267-r2 (D-031, D-146 (2)) : retards injectés (E2E_RETARD_PATCH, E2E_RETARD_CORPS, ms, 0 par
+  // Révision E2E-267-r3 (D-031, D-146 (2)) : retards injectés (E2E_RETARD_PATCH, E2E_RETARD_CORPS, ms, 0 par
   // défaut), assistant partagé ; la barre est « retenue » (D-094 (10)) : écran attendu après chaque glisser.
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
@@ -649,14 +681,16 @@ test('E2E-267-r2 : 21 gestes puis 20 annulations : base à la valeur du 1er gest
   expect(patchsDe(e, m.a.id)[0]!.corps).toEqual({ debut_valide: '2027-01-12' });
   expect(patchsDe(e, m.a.id)[20]!.corps).toEqual({ debut_valide: '2027-02-01' });
 
+  // Révision E2E-267-r3 (D-207 (3)) : corps de chaque inverse (valeur d'avant le geste 22 - k : 11/01 + 21 - k jours).
+  const jourDepuis11 = (n: number) =>
+    new Date(Date.UTC(2027, 0, 11 + n)).toISOString().slice(0, 10);
   for (let k = 1; k <= 20; k++) {
     await boutonAnnuler(page).click();
     await expect.poll(() => patchsDe(e, m.a.id).length).toBe(21 + k);
+    corpsDuPatch(e, m.a.id, 21 + k, { debut_valide: jourDepuis11(21 - k) });
   }
   await expect(boutonAnnuler(page)).toBeDisabled();
-  await expect
-    .poll(async () => (await activiteBase(request, m.projet.id, m.a.id)).debut_valide)
-    .toBe('2027-01-12');
+  await debutEnBase(request, m.projet.id, m.a.id, e, '2027-01-12');
 
   await calendrier(page).focus();
   await page.keyboard.press('Control+z');
@@ -807,7 +841,7 @@ test('E2E-271 : création par le menu, modification par un dialogue (activité, 
   expect((await dependancesBase(request, m.projet.id))[0]!.delai).toBe(2);
 });
 
-test('E2E-272-r2 : une annulation à la fois : inverse retenu, Ctrl+Z deux fois et un clic : une seule requête', async ({
+test('E2E-272-r3 : une annulation à la fois : inverse retenu, Ctrl+Z deux fois et un clic : une seule requête', async ({
   page,
   request,
 }) => {
@@ -815,7 +849,7 @@ test('E2E-272-r2 : une annulation à la fois : inverse retenu, Ctrl+Z deux fois 
   const e = suivreEcritures(page);
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
-  // Révision E2E-272-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus la réponse réseau.
+  // Révision E2E-272-r3 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour et barre libérée), plus la réponse réseau.
   await glisserApplique(page, m.a.id, PX_JOUR);
   await glisserApplique(page, m.a.id, 2 * PX_JOUR);
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(2);
@@ -829,19 +863,20 @@ test('E2E-272-r2 : une annulation à la fois : inverse retenu, Ctrl+Z deux fois 
   await calendrier(page).focus();
   await page.keyboard.press('Control+z');
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(3);
+  corpsDuPatch(e, m.a.id, 3, { debut_valide: '2027-01-12' });
   await page.keyboard.press('Control+z');
   await boutonAnnuler(page).click({ force: true });
   await laisserPasser(page);
   await page.waitForTimeout(300);
-  expect(patchsDe(e, m.a.id).length).toBe(3);
+  expect(patchsDe(e, m.a.id).length, `PATCH : ${journalPatchs(e, m.a.id)}`).toBe(3);
 
   liberer();
   await expect(annonce(page)).toBeVisible();
   await expect(boutonAnnuler(page)).toBeEnabled();
-  expect((await activiteBase(request, m.projet.id, m.a.id)).debut_valide).toBe('2027-01-12');
+  await debutEnBase(request, m.projet.id, m.a.id, e, '2027-01-12');
 });
 
-test('E2E-277-r2 : deux gestes sur la même barre : la première annulation garde le contour du premier geste, la seconde le retire', async ({
+test('E2E-277-r3 : deux gestes sur la même barre : la première annulation garde le contour du premier geste, la seconde le retire', async ({
   page,
   request,
 }) => {
@@ -850,7 +885,7 @@ test('E2E-277-r2 : deux gestes sur la même barre : la première annulation gard
   await retarderPatchs(page, m.a.id);
   await ouvrir(page, m);
 
-  // Révision E2E-277-r2 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour relu, barre libérée), plus la réponse réseau.
+  // Révision E2E-277-r3 (D-031, D-146 (2)) : écran attendu après chaque glisser (contour relu, barre libérée), plus la réponse réseau.
   await glisserApplique(page, m.a.id, PX_JOUR);
   await expect(contours(page, m.a.id)).toHaveCount(1);
   const x1 = (await contours(page, m.a.id).boundingBox())!.x;
@@ -860,18 +895,16 @@ test('E2E-277-r2 : deux gestes sur la même barre : la première annulation gard
 
   await boutonAnnuler(page).click();
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(3);
+  corpsDuPatch(e, m.a.id, 3, { debut_valide: '2027-01-12' });
   await expect(annonce(page)).toBeVisible();
-  await expect
-    .poll(async () => (await activiteBase(request, m.projet.id, m.a.id)).debut_valide)
-    .toBe('2027-01-12');
+  await debutEnBase(request, m.projet.id, m.a.id, e, '2027-01-12');
   await expect(contours(page, m.a.id)).toHaveCount(1);
   await expect.poll(async () => (await contours(page, m.a.id).boundingBox())!.x).toBe(x1);
 
   await boutonAnnuler(page).click();
   await expect.poll(() => patchsDe(e, m.a.id).length).toBe(4);
-  await expect
-    .poll(async () => (await activiteBase(request, m.projet.id, m.a.id)).debut_valide)
-    .toBe('2027-01-11');
+  corpsDuPatch(e, m.a.id, 4, { debut_valide: '2027-01-11' });
+  await debutEnBase(request, m.projet.id, m.a.id, e, '2027-01-11');
   await expect(contours(page, m.a.id)).toHaveCount(0);
   await expect(boutonAnnuler(page)).toBeDisabled();
 });

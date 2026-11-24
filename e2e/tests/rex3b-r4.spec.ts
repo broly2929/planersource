@@ -58,7 +58,9 @@ async function ouvrirAccueil(page: Page, m: { emailChef: string }, nomProjet: st
   }
   await page.setViewportSize({ width: l, height: 700 });
   await page.goto('/');
-  await page.getByRole('button', { name: `Déplier ${nomProjet}`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Replier ${nomProjet}`, exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   await expect(page.getByRole('button', { name: 'Retard FDUR', exact: true })).toBeVisible();
   return page
     .getByRole('region', { name: 'Tableau du Gantt global', exact: true })
@@ -78,7 +80,7 @@ async function verifierOmbre(tableau: Locator, quoi: string) {
   );
 }
 
-test('E2E-288 : 1024 px, ombre portée sur l’en-tête et la cellule Drapeaux (Gantt du projet, Accueil), largeur inchangée', async ({
+test('E2E-288-r1 : 1024 px, ombre portée sur l’en-tête et la cellule Drapeaux (Gantt du projet, Accueil), largeur inchangée', async ({
   page,
   request,
 }) => {
@@ -87,7 +89,19 @@ test('E2E-288 : 1024 px, ombre portée sur l’en-tête et la cellule Drapeaux (
   await verifierOmbre(await ouvrirAccueil(page, m, 'Projet E2E288', 1024), 'Accueil');
 });
 
-test('E2E-289 : 1440 px, aucun en-tête de WBS à Avancement recouvert par Drapeaux ; la zone du tableau ne défile pas', async ({
+/** Révision D-212 (7) : séparateur porté au maximum (80 % de la vue) par un glisser à la souris. */
+async function separateurAuMaximum(page: Page) {
+  const sep = page.getByRole('separator', { name: 'Largeur du tableau', exact: true });
+  const max = Number(await sep.getAttribute('aria-valuemax'));
+  const b = (await sep.boundingBox())!;
+  await page.mouse.move(b.x + b.width / 2, b.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2 + 3000, b.y + 20, { steps: 10 });
+  await page.mouse.up();
+  await expect(sep).toHaveAttribute('aria-valuenow', String(max));
+}
+
+test('E2E-289-r1 : 1440 px, aucun en-tête de WBS à Avancement recouvert par Drapeaux ; la zone du tableau ne défile pas', async ({
   page,
   request,
 }) => {
@@ -100,6 +114,7 @@ test('E2E-289 : 1440 px, aucun en-tête de WBS à Avancement recouvert par Drape
   await calculer(request, [m.projet.id]);
   const tableau = await ouvrirGantt(page, m, 1440);
   await expect(tableau.getByText('Pas avant une date').first()).toBeVisible();
+  await separateurAuMaximum(page);
   const zone = tableau.locator('xpath=ancestor::div[@tabindex][1]');
   expect(await zone.evaluate((e) => e.scrollLeft)).toBe(0);
   const mesure = await zone.evaluate((e) => ({ s: e.scrollWidth, c: e.clientWidth }));
@@ -113,7 +128,7 @@ test('E2E-289 : 1440 px, aucun en-tête de WBS à Avancement recouvert par Drape
   }
 });
 
-test('E2E-290 : captures de REX-3b-r4 (sans assertion fonctionnelle)', async ({
+test('E2E-290-r1 : captures de REX-3b-r4 (sans assertion fonctionnelle)', async ({
   page,
   request,
 }) => {

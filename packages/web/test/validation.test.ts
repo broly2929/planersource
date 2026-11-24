@@ -5,8 +5,10 @@ import {
   badgeProjet,
   badgesProjets,
   cibleFocus,
+  codesDevalidables,
   codesValidables,
   messageRefusValidation,
+  peutDevalider,
   peutRejeter,
   peutValider,
   relireListe,
@@ -223,5 +225,85 @@ describe('VFT règle de focus après la relecture de la liste (D-145 (2))', () =
   it('VFT-13 : sinon le tableau (feuille absente de la liste relue, liste vide)', () => {
     expect(cibleFocus({ feuilleId: 7, action: 'valider' }, [autre])).toEqual({ genre: 'tableau' });
     expect(cibleFocus({ feuilleId: 7, action: 'rejeter' }, [])).toEqual({ genre: 'tableau' });
+  });
+});
+
+describe('VFT Dévalider (D-176, SPEC §7 « Dévalidation » point 2)', () => {
+  it('VFT-14 : peutDevalider vrai pour une feuille validée et pour une soumise partiellement validée', () => {
+    expect(peutDevalider(feuille('validee', [projet('P', true, true)]))).toBe(true);
+    expect(
+      peutDevalider(feuille('validee', [projet('P', true, true), projet('Q', true, false)])),
+    ).toBe(true);
+    expect(
+      peutDevalider(feuille('soumise', [projet('P', true, true), projet('Q', false, true)])),
+    ).toBe(true);
+    expect(
+      peutDevalider(feuille('soumise', [projet('P', false, false), projet('Q', true, true)])),
+    ).toBe(true);
+  });
+
+  it('VFT-15 : peutDevalider faux sans validation dévalidable', () => {
+    expect(peutDevalider(feuille('soumise', [projet('P', false, true)]))).toBe(false);
+    expect(
+      peutDevalider(feuille('soumise', [projet('P', false, true), projet('Q', false, false)])),
+    ).toBe(false);
+    for (const s of ['brouillon', 'rejetee'] as const) {
+      expect(peutDevalider(feuille(s, [projet('P', false, true)])), s).toBe(false);
+      expect(peutDevalider(feuille(s, [projet('P', true, true)])), s).toBe(false);
+    }
+    // Seuls projets validés non `peut_valider`.
+    expect(
+      peutDevalider(feuille('soumise', [projet('P', false, true), projet('Q', true, false)])),
+    ).toBe(false);
+    expect(peutDevalider(feuille('validee', [projet('Q', true, false)]))).toBe(false);
+    expect(peutDevalider(feuille('validee', []))).toBe(false);
+    expect(peutDevalider(feuille('soumise', []))).toBe(false);
+  });
+
+  it('VFT-16 : codesDevalidables = projets valide et peut_valider, ordre de l’API', () => {
+    expect(
+      codesDevalidables(
+        feuille('validee', [
+          projet('Z', true, true),
+          projet('Y', true, false),
+          projet('X', false, true),
+          projet('A', true, true),
+        ]),
+      ),
+    ).toEqual(['Z', 'A']);
+    expect(codesDevalidables(feuille('soumise', [projet('P', false, true)]))).toEqual([]);
+  });
+
+  it('VFT-17 : refus rien_a_devalider : message et relecture de la liste', () => {
+    expect(messageRefusValidation(422, 'rien_a_devalider')).toBe(
+      'La feuille n’a plus de validation à retirer.',
+    );
+    expect(relireListe(422, 'rien_a_devalider')).toBe(true);
+    // Les autres textes ne changent pas.
+    expect(messageRefusValidation(422, 'statut_invalide')).toBe('La feuille a changé de statut.');
+    expect(messageRefusValidation(422, 'autre_code')).toBe('Une erreur est survenue.');
+    expect(relireListe(422, 'autre_code')).toBe(false);
+  });
+
+  it('VFT-18 : focus après Dévalider : bouton d’origine, sinon « Voir », sinon le tableau (D-145 (2))', () => {
+    const autre = { ...feuille('soumise', [projet('Q4B', false, true)]), feuille_id: 9 };
+    // Un autre projet de l'utilisateur reste validé : le bouton existe encore.
+    const encore = feuille('validee', [projet('P4B', true, true), projet('Q4B', true, true)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'devalider' }, [autre, encore])).toEqual({
+      genre: 'bouton',
+      action: 'devalider',
+    });
+    // Plus aucune validation dévalidable : « Voir ».
+    const soumise = feuille('soumise', [projet('P4B', false, true), projet('Q4B', true, false)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'devalider' }, [autre, soumise])).toEqual({
+      genre: 'voir',
+    });
+    const rejetee = feuille('rejetee', [projet('P4B', false, true)]);
+    expect(cibleFocus({ feuilleId: 7, action: 'devalider' }, [rejetee])).toEqual({ genre: 'voir' });
+    // Feuille absente de la liste relue.
+    expect(cibleFocus({ feuilleId: 7, action: 'devalider' }, [autre])).toEqual({
+      genre: 'tableau',
+    });
+    expect(cibleFocus({ feuilleId: 7, action: 'devalider' }, [])).toEqual({ genre: 'tableau' });
   });
 });

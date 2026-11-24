@@ -30,6 +30,11 @@ export function lireInitiales(valeur: string | null): boolean {
   return valeur === '1';
 }
 
+/** Accueil (D-218 (4)) : initiales affichées sauf `initiales=0`. */
+export function lireInitialesAccueil(valeur: string | null): boolean {
+  return valeur !== '0';
+}
+
 /** Jour calendaire (nombre de jours depuis 1970-01-01, UTC) d'une date AAAA-MM-JJ. */
 export function numeroJour(date: string): number {
   const [a, m, j] = date.split('-').map(Number) as [number, number, number];

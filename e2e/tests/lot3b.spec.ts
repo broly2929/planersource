@@ -202,7 +202,7 @@ test('E2E-37 : avant tout calcul, bandeau et tableau sans barre ; projet sans é
   await expect(page.locator('svg [data-element-id]')).toHaveCount(0);
 });
 
-test('E2E-38-r2 : parent, sous-projet en synthèse avec lien ; un chef affecté à P seul voit P sans P1 et sans bouton d’écriture', async ({
+test('E2E-38-r3 : parent, sous-projet en synthèse avec lien ; un chef affecté à P seul voit P sans P1 et sans bouton d’écriture', async ({
   page,
   request,
 }) => {
@@ -239,7 +239,9 @@ test('E2E-38-r2 : parent, sous-projet en synthèse avec lien ; un chef affecté 
   await expect(page.getByRole('link', { name: 'Sous-projet E2E38' })).toHaveCount(0);
   await expect(page.locator(`svg [data-projet-id="${p1.id}"]`)).toHaveCount(0);
   // Révision -r1 (D-031, D-127 (4)) : le bouton « Annuler », désactivé, s'ajoute aux trois boutons de zoom.
-  await expect(page.getByRole('tabpanel').getByRole('button')).toHaveCount(4);
+  // Révision -r3 (D-031, décision du porteur, D-212 (4)) : le bouton « Colonnes », sans écriture, s'y ajoute.
+  await expect(page.getByRole('tabpanel').getByRole('button')).toHaveCount(5);
+  await expect(page.getByRole('button', { name: 'Colonnes', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Annuler', exact: true })).toBeDisabled();
 });
 

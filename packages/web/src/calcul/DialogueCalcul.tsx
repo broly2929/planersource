@@ -126,6 +126,7 @@ export function DialogueCalcul({
 
   return (
     <Dialog
+      sansGarde
       ouvert
       onOuvertChange={(o) => !o && onFermer()}
       titre="Calculer le planning"

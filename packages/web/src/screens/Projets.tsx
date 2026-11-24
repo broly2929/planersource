@@ -8,7 +8,7 @@ import { BoutonIcone } from '../components/BoutonIcone';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Confirmation } from '../components/Confirmation';
-import { Dialog } from '../components/Dialog';
+import { Dialog, useDialoguePret, useEnvoiEnCours, useFermeture } from '../components/Dialog';
 import { Chargement, Vide } from '../components/Etat';
 import { Field } from '../components/Field';
 import { Layout } from '../components/Layout';
@@ -75,9 +75,11 @@ function Actions({
   enCours: boolean;
   libelle: string;
 }) {
+  useEnvoiEnCours(enCours);
+  const fermer = useFermeture(onAnnuler);
   return (
     <div className="flex justify-end gap-2">
-      <Button variante="secondaire" onClick={onAnnuler}>
+      <Button variante="secondaire" onClick={fermer}>
         Annuler
       </Button>
       <Button type="submit" enCours={enCours}>
@@ -105,6 +107,7 @@ function FormulaireProjet({
   const { etat } = useAuth();
   const user = etat.statut === 'connecte' ? etat.user : null;
   const admin = user?.role === 'administrateur';
+  useDialoguePret(annuaire !== null);
   const [code, setCode] = useState('');
   const [nom, setNom] = useState('');
   const [chef, setChef] = useState(admin ? '' : String(user?.id ?? ''));

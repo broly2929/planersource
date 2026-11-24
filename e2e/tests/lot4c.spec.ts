@@ -44,6 +44,8 @@ import {
   statutOk,
   tableauValidation,
 } from './lot4c-helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
+import { saisirParGeste } from './stabilite-helpers.js';
 
 test.beforeEach(async ({ page }) => {
   await remettreAdminSeul4b();
@@ -404,7 +406,7 @@ test('E2E-310 : validation partielle (chef de P) : la feuille reste soumise', as
   expect(etat.validations).toEqual([{ projet: 'P4B', validateur: 'Chef P 4B' }]);
 });
 
-test('E2E-311 : « Rejeter » : commentaire obligatoire, compteur, rejet, validations effacées', async ({
+test('E2E-311-r2 : « Rejeter » : commentaire obligatoire, compteur, rejet, validations effacées', async ({
   page,
   request,
   playwright,
@@ -424,7 +426,7 @@ test('E2E-311 : « Rejeter » : commentaire obligatoire, compteur, rejet, valida
   const rejeter = boutonDe(dialogue, 'Rejeter');
   await expect(champ).toBeVisible();
   await expect(rejeter).toBeDisabled();
-  await champ.fill('   ');
+  await saisirParGeste(champ, '   ');
   await expect(rejeter).toBeDisabled();
   await champ.fill('a'.repeat(501));
   await expect(dialogue.getByText('501 / 500', { exact: true })).toBeVisible();
@@ -436,8 +438,7 @@ test('E2E-311 : « Rejeter » : commentaire obligatoire, compteur, rejet, valida
   await expect(dialogue.getByText('15 / 500', { exact: true })).toBeVisible();
   await expect(rejeter).toBeEnabled();
 
-  await boutonDe(dialogue, 'Fermer').click();
-  await expect(dialogue).toHaveCount(0);
+  await fermerEnAbandonnant(page, dialogue, 'croix');
   expect(ecritures.ecritures).toBe(0);
   expect((await etatFeuille(id)).statut).toBe('soumise');
 

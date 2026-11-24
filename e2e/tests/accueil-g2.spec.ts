@@ -6,6 +6,7 @@ import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, sousProjet } from './lot3b-helpers.js';
+import { replierTout } from './retouches-rex6-helpers.js';
 
 const NOM_ADMIN_E2E = 'Admin E2E';
 const J06 = '2027-01-06T10:00:00';
@@ -91,7 +92,7 @@ interface ProjetApi {
   fin_planifiee: string | null;
 }
 
-test('E2E-86 racines triées par code ; sous-projets, projet clos, sa descendance et modèle absents ; lien vers la fiche', async ({
+test('E2E-86-r1 racines triées par code ; sous-projets, projet clos, sa descendance et modèle absents ; lien vers la fiche', async ({
   page,
   request,
 }) => {
@@ -111,6 +112,7 @@ test('E2E-86 racines triées par code ; sous-projets, projet clos, sa descendanc
   await loginAsAdmin(page);
   await expect(page.getByText('Connecté en tant que')).toBeVisible();
   await expect(zoneTableau(page)).toBeVisible();
+  await replierTout(page); // D-218 (4), (9)
   expect(await codesAffiches(page)).toEqual(['R-A', 'R-b', 'R-c']);
   for (const absent of ['Sous alpha86', 'Projet clos86', 'Sous clos86', 'Modèle86']) {
     await expect(page.getByText(absent)).toHaveCount(0);
@@ -193,7 +195,7 @@ test('E2E-89 base « administrateur seul » : état vide', async ({ page }) => {
   await expect(page.locator('svg[data-zoom]')).toHaveCount(0);
 });
 
-test('E2E-90 projets non calculés : bandeau, lignes visibles, aucune barre', async ({
+test('E2E-90-r1 projets non calculés : bandeau, lignes visibles, aucune barre', async ({
   page,
   request,
 }) => {
@@ -204,6 +206,7 @@ test('E2E-90 projets non calculés : bandeau, lignes visibles, aucune barre', as
   await loginAsAdmin(page);
   const bandeau = page.getByRole('status').filter({ hasText: 'Planning non calculé' });
   await expect(bandeau).toBeVisible();
+  await replierTout(page); // D-218 (4), (9)
   expect(await codesAffiches(page)).toEqual(['P90-1', 'P90-2']);
   const ligne = zoneTableau(page).getByRole('row').filter({ hasText: 'P90-1' });
   await expect(ligne.getByRole('cell').nth(2)).toHaveText('—');
@@ -211,7 +214,7 @@ test('E2E-90 projets non calculés : bandeau, lignes visibles, aucune barre', as
   await expect(zoneCalendrier(page).getByRole('img')).toHaveCount(0);
 });
 
-test('E2E-91-r1 chef affecté à un sous-projet seulement (lecture seule) : il est affiché comme racine, sans bouton', async ({
+test('E2E-91-r2 chef affecté à un sous-projet seulement (lecture seule) : il est affiché comme racine, sans bouton', async ({
   page,
   request,
 }) => {
@@ -224,6 +227,7 @@ test('E2E-91-r1 chef affecté à un sous-projet seulement (lecture seule) : il e
 
   // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
   await connecterAvec(page, await chefLecteur(request, sous.id, 'E91'));
+  await replierTout(page); // D-218 (4), (9)
   expect(await codesAffiches(page)).toEqual(['S91']);
   await expect(page.getByText('Parent91')).toHaveCount(0);
   // Révision G3 (D-031) : « Déplier » arrive en G3 ; « Calculer » reste absent (ressource, et G4).
@@ -235,10 +239,11 @@ test('E2E-91-r1 chef affecté à un sous-projet seulement (lecture seule) : il e
   );
 });
 
-test('E2E-92-r5 zones focalisables nommées et ordre de tabulation', async ({ page, request }) => {
+test('E2E-92-r8 zones focalisables nommées et ordre de tabulation', async ({ page, request }) => {
   const api = await preparer(request);
   await api.projet('P92', 'Projet92', await adminId(request));
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await expect(zoneTableau(page)).toHaveAttribute('tabindex', '0');
   await expect(zoneCalendrier(page)).toHaveAttribute('tabindex', '0');
 
@@ -258,7 +263,10 @@ test('E2E-92-r5 zones focalisables nommées et ordre de tabulation', async ({ pa
   // Révision G3 (D-031) : « Tout déplier » et le bouton « Déplier » s'insèrent dans l'ordre.
   // Révision G4 (D-031, -r3) : « Calculer » s'insère entre le zoom et « Tout déplier ».
   // Révision -r5 (D-031, D-127 (6), (7)) : le crayon « Modifier le projet <nom> » suit le lien du projet.
-  for (let i = 0; i < 10; i++) {
+  // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
+  // Révision -r7 (D-216 (3)) : « Colonnes » après « Initiales » ; poignées de largeur des colonnes après la zone
+  // du tableau, dans l'ordre des en-têtes, avant le contenu des lignes.
+  for (let i = 0; i < 17; i++) {
     await page.keyboard.press('Tab');
     ordre.push(await libelle());
   }
@@ -267,12 +275,19 @@ test('E2E-92-r5 zones focalisables nommées et ordre de tabulation', async ({ pa
     'Semaine',
     'Mois',
     'Initiales',
+    'Colonnes',
     'Calculer',
     'Tout déplier',
     'Tableau du Gantt global',
+    'Largeur de la colonne Code',
+    'Largeur de la colonne Nom',
+    'Largeur de la colonne Début',
+    'Largeur de la colonne Fin',
+    'Largeur de la colonne Drapeaux',
     'Déplier Projet92',
     'Projet92',
     'Modifier le projet Projet92',
+    'Largeur du tableau',
     'Calendrier du Gantt global',
   ]);
 });

@@ -67,14 +67,32 @@ async function ouvrir(page: Page, semaine = S): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Feuille de temps', level: 1 })).toBeVisible();
 }
 
-test('E2E-221 : entrée « Imputations » pour une ressource seulement ; semaine courante du navigateur, statut Brouillon', async ({
+test('E2E-221-r1 : entrée « Imputations » pour une ressource et pour un administrateur, absente pour un chef non ressource ; semaine courante du navigateur, statut Brouillon', async ({
   page,
   request,
 }) => {
-  await monde4b(request);
+  // Révision D-031 (D-181 (7)) : l'entrée est aussi présente pour l'administrateur, ressource ou non.
+  const m = await monde4b(request);
+  await m.api.utilisateur(
+    'Admin Ressource 4B',
+    'admin-ressource-4b@lot4b.test',
+    'administrateur',
+    true,
+  );
   await loginAsAdmin(page);
   const nav = page.getByRole('navigation', { name: 'Navigation principale' });
   await expect(nav.getByRole('link', { name: 'Projets', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Imputations', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Se déconnecter' }).click();
+  await expect(page).toHaveURL('/connexion');
+
+  await connecterAvec(page, 'admin-ressource-4b@lot4b.test');
+  await expect(nav.getByRole('link', { name: 'Imputations', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Se déconnecter' }).click();
+  await expect(page).toHaveURL('/connexion');
+
+  await connecterAvec(page, EMAIL_CHEF_P);
+  await expect(nav.getByRole('link', { name: 'Validation', exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Imputations', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page).toHaveURL('/connexion');
@@ -654,7 +672,7 @@ test('E2E-243 : changement de semaine avec des modifications : confirmation ; «
   expect(f.feuille.id).toBeNull();
 });
 
-test('E2E-244-r2 : parcours complet à l’écran : saisie, soumission, validation par le chef, lecture seule ; avancement dans le Gantt du projet', async ({
+test('E2E-244-r4 : parcours complet à l’écran : saisie, soumission, validation par le chef, dévalidation puis nouvelle validation, lecture seule ; avancement dans le Gantt du projet', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -743,6 +761,22 @@ test('E2E-244-r2 : parcours complet à l’écran : saisie, soumission, validati
   await boutonDe(page.getByRole('dialog'), 'Valider').click();
   await expect(statutOk(page, 'Feuille validée.')).toBeVisible();
   await expect(ligneVal.getByText('Validée', { exact: true })).toBeVisible();
+
+  // Le chef dévalide la feuille (« Soumise »), puis la valide de nouveau.
+  await boutonDe(ligneVal, 'Dévalider la feuille de Ressource 4B-244').click();
+  await expect(
+    page.getByRole('dialog', {
+      name: 'Dévalider la feuille de Ressource 4B-244 pour 4B-244 ?',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await boutonDe(page.getByRole('dialog'), 'Dévalider').click();
+  await expect(statutOk(page, 'Feuille dévalidée.')).toBeVisible();
+  await expect(ligneVal.getByText('Soumise', { exact: true })).toBeVisible();
+  await boutonDe(ligneVal, 'Valider la feuille de Ressource 4B-244').click();
+  await boutonDe(page.getByRole('dialog'), 'Valider').click();
+  await expect(statutOk(page, 'Feuille validée.')).toBeVisible();
+  await expect(ligneVal.getByText('Validée', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
 
   // La ressource voit « Validée » et la feuille en lecture seule.
@@ -758,8 +792,23 @@ test('E2E-244-r2 : parcours complet à l’écran : saisie, soumission, validati
   await expect(bouton(page, 'Soumettre')).toHaveCount(0);
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
 
-  // Effet dans le Gantt du projet : avancement 0,5 ÷ (0,5 + 1,5) = 25 %.
+  // L'administrateur (non ressource) retrouve la feuille de la ressource par la liste « Ressource » (D-181).
   await loginAsAdmin(page);
+  await page
+    .getByRole('navigation', { name: 'Navigation principale' })
+    .getByRole('link', { name: 'Imputations', exact: true })
+    .click();
+  await page.getByRole('combobox', { name: 'Ressource', exact: true }).selectOption({
+    label: 'Ressource 4B-244',
+  });
+  await expect(
+    page.getByRole('heading', { name: 'Feuille de temps de Ressource 4B-244', level: 1 }),
+  ).toBeVisible();
+  await expect(statutFeuille(page)).toHaveText('Validée');
+  await expect(caseCharge(page, '1 Tâche 4B-244', LUN)).toHaveValue('0,5');
+  await expect(caseCharge(page, '1 Tâche 4B-244', LUN)).toBeDisabled();
+
+  // Effet dans le Gantt du projet : avancement 0,5 ÷ (0,5 + 1,5) = 25 %.
   await page.goto(`${adresseProjet}?onglet=gantt&zoom=jour`);
   const ligne = page
     .getByRole('region', { name: 'Tableau du Gantt', exact: true })

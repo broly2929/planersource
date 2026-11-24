@@ -5,6 +5,8 @@ import { loginAsAdmin } from './helpers.js';
 import { cheminCapture } from './captures.js';
 import { allerA, ouvrirEquipes } from './lot3c-helpers.js';
 import { equipeApi, remettreAdminSeul6a, utilisateurApi } from './lot6a-helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
+import { cliquerDansConfirmation } from './stabilite-helpers.js';
 
 const LARGEURS = [1440, 1024];
 
@@ -18,7 +20,7 @@ async function photographier(page: Page, nom: string) {
   }
 }
 
-test('E2E-346-r1 : captures des écrans Équipes et Utilisateurs (sans assertion fonctionnelle)', async ({
+test('E2E-346-r3 : captures des écrans Équipes et Utilisateurs (sans assertion fonctionnelle)', async ({
   page,
   request,
 }) => {
@@ -37,10 +39,13 @@ test('E2E-346-r1 : captures des écrans Équipes et Utilisateurs (sans assertion
   await page.getByRole('dialog').getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
   await photographier(page, 'nouvelle');
-  await page.keyboard.press('Escape');
+  await fermerEnAbandonnant(page, page.getByRole('dialog'), 'echap');
 
   await page.getByRole('button', { name: 'Supprimer Atelier' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await cliquerDansConfirmation(
+    page.getByRole('dialog'),
+    page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }),
+  );
   await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
   await photographier(page, 'suppression');
   await page.keyboard.press('Escape');

@@ -81,14 +81,13 @@ describe('Cycle de la feuille de temps (lot 4a)', () => {
     expect(await statutFeuille(ctx, id)).toBe('brouillon');
   });
 
-  it('FDT-3 : soumettre : sans session 401 ; feuille inconnue, mal formée ou non visible 404 ; visible sans droit (chef, administrateur) 403 ; base inchangée', async () => {
+  it('FDT-3-r1 : soumettre : sans session 401 ; feuille inconnue, mal formée ou non visible 404 ; visible sans droit (chef) 403 ; base inchangée (D-181, D-182)', async () => {
     const { m, id } = await base(ctx);
     await refuse(ctx, undefined, id, 'soumettre', 401);
     await refuse(ctx, m.alice, 999999, 'soumettre', 404);
     await refuse(ctx, m.alice, 'abc', 'soumettre', 404);
     await refuse(ctx, m.bob, id, 'soumettre', 404);
     await refuse(ctx, m.chef, id, 'soumettre', 403);
-    await refuse(ctx, m.admin, id, 'soumettre', 403);
   });
 
   it('FDT-4 : soumettre une feuille soumise ou validée : 422 statut_invalide, base inchangée', async () => {

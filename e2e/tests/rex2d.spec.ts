@@ -3,6 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import pg from 'pg';
 import { loginAsAdmin } from './helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
 
 const NOM_ADMIN_E2E = 'Admin E2E';
 
@@ -126,14 +127,14 @@ test('E2E-72-r1 « Modifier <nom> » : identifiant et initiales changés, email 
   expect(await seConnecter(page, 'nouveau72', 'a'), 'connexion avec « nouveau72 »').toBe(true);
 });
 
-test('E2E-73 refus : identifiant et email vides, puis identifiant déjà utilisé ; dialogue ouvert, rien de créé', async ({
+test('E2E-73-r1 refus : identifiant et email vides, puis identifiant déjà utilisé ; dialogue ouvert, rien de créé', async ({
   page,
 }) => {
   await loginAsAdmin(page);
   await remplirCreation(page, { nom: 'Vide R2-73', identifiant: '', email: '', motDePasse: 'a' });
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('alert')).toHaveText('Renseignez un identifiant ou un email.');
-  await dialog.getByRole('button', { name: 'Annuler' }).click();
+  await fermerEnAbandonnant(page, dialog);
   await expect(page.getByRole('row', { name: /Vide R2-73/ })).toHaveCount(0);
 
   await remplirCreation(page, { nom: 'Un R2-73', identifiant: 'bob73', motDePasse: 'a' });
@@ -142,7 +143,7 @@ test('E2E-73 refus : identifiant et email vides, puis identifiant déjà utilis�
   await remplirCreation(page, { nom: 'Deux R2-73', identifiant: 'bob73', motDePasse: 'a' });
   await expect(dialog.getByRole('alert')).toHaveText('Cet identifiant est déjà utilisé.');
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Annuler' }).click();
+  await fermerEnAbandonnant(page, dialog);
   await page.reload();
   await expect(page.getByRole('row', { name: /Deux R2-73/ })).toHaveCount(0);
 });

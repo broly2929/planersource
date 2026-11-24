@@ -47,6 +47,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run licenses
+      - run: npm run sbom -- --check
       - run: npx playwright install --with-deps chromium
       - name: Polices
         run: |

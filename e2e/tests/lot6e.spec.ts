@@ -69,7 +69,7 @@ async function monde(request: APIRequestContext): Promise<Monde> {
   return { api, chef, autreChef, alice, p1, p2 };
 }
 
-test('E2E-377-r1 : liste « Planning de » avant le zoom : « Tous les projets » par défaut, ressources actives triées sans casse ; absente de la ressource', async ({
+test('E2E-377-r2 : liste « Planning de » avant le zoom : « Tous les projets » par défaut, ressources actives triées sans casse ; absente de la ressource', async ({
   page,
   request,
 }) => {
@@ -103,7 +103,7 @@ test('E2E-377-r1 : liste « Planning de » avant le zoom : « Tous les projets �
     const yZoom = (await bouton(page, 'Jour').boundingBox())!;
     expect(yListe.x < yZoom.x || yListe.y < yZoom.y, role).toBe(true);
     await expect(page.getByRole('region', { name: 'Tableau du Gantt global' })).toBeVisible();
-    await expect(bouton(page, 'Tout déplier')).toBeVisible();
+    await expect(bouton(page, 'Tout replier')).toBeVisible();
     if (role === 'administrateur') {
       await page.context().clearCookies();
       await connecterAvec(page, 'chef-377@lot6e.test');
@@ -248,7 +248,7 @@ test('E2E-380 : états : « Aucune tâche pour cette ressource. », bandeau « P
   await expect(lignes(page)).toHaveCount(0);
 });
 
-test('E2E-381 : adresse (zoom conservé, valeurs invalides corrigées sans rechargement, retour à « Tous les projets ») et ordre de focus', async ({
+test('E2E-381-r2 : adresse (zoom conservé, valeurs invalides corrigées sans rechargement, retour à « Tous les projets ») et ordre de focus', async ({
   page,
   request,
 }) => {
@@ -297,7 +297,9 @@ test('E2E-381 : adresse (zoom conservé, valeurs invalides corrigées sans recha
       return e?.getAttribute('aria-label') ?? e?.textContent?.trim() ?? '';
     });
   const ordre: string[] = [];
-  for (let i = 0; i < 6; i++) {
+  // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
+  // Révision -r2 (D-216 (3)) : « Colonnes » après « Mois » ; poignées de largeur après la zone du tableau.
+  for (let i = 0; i < 16; i++) {
     await page.keyboard.press('Tab');
     ordre.push(await libelle());
   }
@@ -305,8 +307,18 @@ test('E2E-381 : adresse (zoom conservé, valeurs invalides corrigées sans recha
     'Jour',
     'Semaine',
     'Mois',
+    'Colonnes',
     'Tableau du planning de la ressource',
+    'Largeur de la colonne Projet',
+    'Largeur de la colonne Activité',
+    'Largeur de la colonne Début',
+    'Largeur de la colonne Fin',
+    'Largeur de la colonne Assigné',
+    'Largeur de la colonne Réel',
+    'Largeur de la colonne Reste',
+    'Largeur de la colonne Drapeaux',
     '6E1',
+    'Largeur du tableau',
     'Calendrier du planning de la ressource',
   ]);
 });

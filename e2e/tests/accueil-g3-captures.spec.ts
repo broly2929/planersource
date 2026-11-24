@@ -6,6 +6,7 @@ import { preparer } from './lot1-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, sousProjet } from './lot3b-helpers.js';
 import { remettreAdminSeul } from './lot3c-helpers.js';
 import { cheminCapture } from './captures.js';
+import { replierTout } from './retouches-rex6-helpers.js';
 
 test.beforeEach(async ({ page }) => {
   await remettreAdminSeul();
@@ -13,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(remettreAdminSeul);
 
-test('E2E-101 captures de l’Accueil replié puis déplié, projets calculés', async ({
+test('E2E-101-r1 captures de l’Accueil replié puis déplié, projets calculés', async ({
   page,
   request,
 }) => {
@@ -40,6 +41,7 @@ test('E2E-101 captures de l’Accueil replié puis déplié, projets calculés',
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await expect(page.getByRole('button', { name: 'Déplier Projet cartographie' })).toBeVisible();
   await page.screenshot({ path: cheminCapture('accueil-replie.png') });
   await page.getByRole('button', { name: 'Déplier Projet cartographie' }).click();

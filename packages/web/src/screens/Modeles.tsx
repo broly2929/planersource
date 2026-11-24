@@ -1,5 +1,5 @@
 import { FilePlus, Pencil, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { BoutonIcone } from '../components/BoutonIcone';
@@ -10,6 +10,7 @@ import { Field } from '../components/Field';
 import { Layout } from '../components/Layout';
 import { Notification } from '../components/Notification';
 import { Table, type Colonne } from '../components/Table';
+import { dateLocale } from '../gantt/echelle';
 import { Link } from '../router';
 import { CODE_UTILISE, FormulaireDialogue, useListe } from './projet/commun';
 import { DialogueCopie } from './projet/DialogueCopie';
@@ -71,7 +72,9 @@ function colonnes(
 function FormulaireModele({ onCree, onAnnuler }: { onCree: () => void; onAnnuler: () => void }) {
   const [code, setCode] = useState('');
   const [nom, setNom] = useState('');
-  const [debut, setDebut] = useState('');
+  // D-218 (1) : préremplie à la date du jour du navigateur ; référence du décalage à la copie.
+  const [debut, setDebut] = useState(() => dateLocale(new Date()));
+  const idAide = useId();
   return (
     <FormulaireDialogue
       libelle="Créer"
@@ -84,13 +87,20 @@ function FormulaireModele({ onCree, onAnnuler }: { onCree: () => void; onAnnuler
     >
       <Field label="Code" required value={code} onChange={(e) => setCode(e.target.value)} />
       <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
-      <Field
-        label="Date de début"
-        type="date"
-        required
-        value={debut}
-        onChange={(e) => setDebut(e.target.value)}
-      />
+      <div className="flex flex-col gap-1">
+        <Field
+          label="Date de début"
+          type="date"
+          required
+          value={debut}
+          onChange={(e) => setDebut(e.target.value)}
+          aria-describedby={idAide}
+        />
+        <p id={idAide} className="text-petit text-gray-600">
+          Date de référence : à la copie, les dates du modèle sont décalées de l’écart entre cette
+          date et la date de début du nouveau projet.
+        </p>
+      </div>
     </FormulaireDialogue>
   );
 }

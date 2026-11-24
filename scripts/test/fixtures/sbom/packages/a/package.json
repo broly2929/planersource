@@ -1,0 +1,9 @@
+{
+  "name": "@planersource/a",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "ms": "2.1.3"
+  }
+}

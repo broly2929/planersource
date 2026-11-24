@@ -3,6 +3,8 @@ import { loginAsAdmin } from './helpers.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
 import { ouvrirCalendriers } from './lot3c-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
+import { cliquerDansConfirmation } from './stabilite-helpers.js';
 
 /*
  * Contrat d'interface du lot 1b-C (libellés accessibles exacts) :
@@ -192,7 +194,7 @@ test('E2E-17 : un chef modifie puis supprime une activité', async ({ page, requ
   await expect(page.getByRole('row', { name: /Étude révisée E2E17/ })).toHaveCount(0);
 });
 
-test('E2E-18 : un chef modifie puis supprime un jalon et une dépendance', async ({
+test('E2E-18-r1 : un chef modifie puis supprime un jalon et une dépendance', async ({
   page,
   request,
 }) => {
@@ -240,11 +242,14 @@ test('E2E-18 : un chef modifie puis supprime un jalon et une dépendance', async
       exact: true,
     })
     .click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await cliquerDansConfirmation(
+    page.getByRole('dialog'),
+    page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }),
+  );
   await expect(dependances.getByText('Aucune dépendance définie.')).toBeVisible();
 });
 
-test('E2E-19 : un chef modifie une affectation et une assignation, retire l’assignation, supprime l’affectation', async ({
+test('E2E-19-r1 : un chef modifie une affectation et une assignation, retire l’assignation, supprime l’affectation', async ({
   page,
   request,
 }) => {
@@ -284,14 +289,20 @@ test('E2E-19 : un chef modifie une affectation et une assignation, retire l’as
   await page.getByRole('dialog').getByRole('button', { name: 'Annuler' }).click();
 
   await page.getByRole('button', { name: 'Retirer Alice E2E19 de Étude E2E19' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await cliquerDansConfirmation(
+    page.getByRole('dialog'),
+    page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }),
+  );
   await expect(
     page.getByRole('button', { name: 'Retirer Alice E2E19 de Étude E2E19' }),
   ).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Affectations' }).click();
   await page.getByRole('button', { name: "Supprimer l'affectation de Alice E2E19" }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await cliquerDansConfirmation(
+    page.getByRole('dialog'),
+    page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }),
+  );
   await expect(page.getByRole('row', { name: /Alice E2E19/ })).toHaveCount(0);
 });
 
@@ -325,7 +336,7 @@ test('E2E-20 : Monter et Descendre réordonnent les frères, boutons désactivé
   await expect(page.getByRole('button', { name: 'Monter Alpha E2E20' })).toBeEnabled();
 });
 
-test('E2E-21-r1 : l’administrateur modifie un calendrier, supprime un jour férié puis le calendrier', async ({
+test('E2E-21-r2 : l’administrateur modifie un calendrier, supprime un jour férié puis le calendrier', async ({
   page,
   request,
 }) => {
@@ -347,11 +358,17 @@ test('E2E-21-r1 : l’administrateur modifie un calendrier, supprime un jour fé
 
   await expect(page.getByRole('row', { name: /2027-05-01.*Fête E2E21/ })).toBeVisible();
   await page.getByRole('button', { name: 'Supprimer le jour férié 2027-05-01' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await cliquerDansConfirmation(
+    page.getByRole('dialog'),
+    page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }),
+  );
   await expect(page.getByRole('row', { name: /2027-05-01/ })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Supprimer le calendrier' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await cliquerDansConfirmation(
+    page.getByRole('dialog'),
+    page.getByRole('dialog').getByRole('button', { name: 'Supprimer', exact: true }),
+  );
   await expect(page).toHaveURL('/utilisateurs?onglet=calendriers');
   await expect(page.getByRole('tab', { name: 'Calendriers', exact: true })).toHaveAttribute(
     'aria-selected',
@@ -435,7 +452,7 @@ test('E2E-23-r1 : lecture seule — un chef affecté au projet d’un autre chef
   await contexte.close();
 });
 
-test('E2E-24 : code déjà utilisé dans la copie et dans « Nouveau modèle »', async ({
+test('E2E-24-r1 : code déjà utilisé dans la copie et dans « Nouveau modèle »', async ({
   page,
   request,
 }) => {
@@ -454,7 +471,7 @@ test('E2E-24 : code déjà utilisé dans la copie et dans « Nouveau modèle »'
   await expect(dialog).toBeVisible();
   const projets = (await (await request.get('/api/projets')).json()) as { nom: string }[];
   expect(projets.filter((p) => p.nom === 'Copie de Projet E2E24')).toHaveLength(0);
-  await dialog.getByRole('button', { name: 'Annuler' }).click();
+  await fermerEnAbandonnant(page, dialog);
 
   await page.getByRole('link', { name: 'Modèles' }).click();
   await page.getByRole('button', { name: 'Nouveau modèle' }).click();

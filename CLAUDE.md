@@ -29,15 +29,19 @@
 - Code et tests dans le même commit ; documentation dans un commit séparé.
 - `git add` ciblé, fichier par fichier. Jamais `git add .` ni `-A`.
 - Preuve après chaque commit : `git log -3 --oneline && git status -sb`.
+- Tout commit qui touche la documentation exécute `npx vitest run scripts/test/aucune-reference-externe.test.ts` (PUB-1, PUB-2) avant le push (D-179).
 
 ## Fin de lot
 
-1. Tests, lint et contrôle des licences au vert, sorties affichées.
+1. Passes ciblées, lint et contrôle des licences au vert, sorties affichées.
 2. Relecture par `@reviewer`. Corriger les points bloquants.
-3. Mettre à jour `docs/state.md`.
-4. Commit docs, puis `git push`.
+3. Suite complète unique, après la relecture : `npm run suite-complete -- --lot <nom>` (D-193).
+4. Mettre à jour `docs/state.md`, qui cite les lignes du journal du lot.
+5. Commit docs (journal compris), puis `git push`.
 
 Vérifications proportionnées (D-128) : phase rouge = vitest et e2e des seuls fichiers touchés, plus lint et typecheck ; suite complète une seule fois, en fin de phase verte ; 3 exécutions ciblées réservées aux nouveaux e2e en phase verte ; la CI exécute la suite complète à chaque push.
+
+Suite complète et base de test (D-193) : une seule suite complète par lot, après les corrections du reviewer, lancée par `npm run suite-complete -- --lot <nom>` (point d'entrée unique, journal `docs/journal-suites.jsonl`) ; une suite de plus pour le même lot exige `--justification`. Pendant le développement : passes ciblées seulement, par `npm run tests-cibles -- --depuis <commit d'ouverture> [--domaine <nom>…]` (le prompt d'ouverture du lot déclare ses domaines, `e2e/domaines.json` ; `--lister` pour voir la sélection) ou `npx vitest run <fichier>`, `cd e2e && npx playwright test -g <ID>`. Le rapport de clôture cite les lignes du journal du lot (`npm run suite-complete -- --lister <lot>`). Tout lancement ad hoc qui touche une base passe par `npm run avec-base-test -- <commande>` ; une base de test a un nom qui finit par `_test`. Règle complète : docs/tests.md. Commande longue (suite complète, passes multiples, au-delà du délai d'une commande) : lancée en arrière-plan, sortie dans un fichier ; ne jamais terminer le tour en l'attendant : boucle de `sleep 240` suivi de la lecture de la fin du fichier, jusqu'à la fin de la commande, puis enchaîner l'étape suivante.
 
 ## Fin de session (même si le lot n'est pas fini)
 
@@ -50,9 +54,10 @@ Vérifications proportionnées (D-128) : phase rouge = vitest et e2e des seuls f
 
 ## Agents
 
-- reviewer : une fois par lot, avant le commit final.
+- reviewer : une fois par lot, avant le commit final. Il ne lance jamais la suite complète (D-193).
 - debugger : après deux corrections échouées, ou un /goal arrêté sans succès.
 - ui-designer : tout écran ou composant visuel (lots 0, 1, 1b, 2e, 3, 4).
+- Le reviewer ne lance aucun test pendant qu'une suite tourne sur la même base `_test` (D-179).
 
 ## Architecture
 
@@ -73,13 +78,15 @@ Commandes (racine) :
 - `npm run lint` : eslint + prettier --check (le Markdown n'est pas formaté par prettier)
 - `npm run typecheck` : tsc --noEmit dans chaque workspace
 - `npm test` : vitest (engine, api, scripts) ; exige `TEST_DATABASE_URL`
-- `npm run test:e2e` : Playwright
+- `npm run test:e2e` : Playwright, une pile par worker (base `<préfixe>_e2e_w<N>_test` clonée du modèle de vitest, API 3300+N, front 5300+N) ; les ports 3000 et 5173 restent au dev (D-199)
+- `npm run setup-depot` : pose le hook commit-msg suivi par git (`.githooks`), une fois après le clone (D-198)
 - e2e ciblé : `cd e2e && npx playwright test -g <ID>` (`npm run test:e2e -- --grep` ne filtre pas)
 - `npm run licenses` : contrôle des licences
+- `npm run sbom` : régénère `sbom.cdx.json` (CycloneDX, dépendances d'exécution) après tout changement de `package-lock.json` ; `npm run sbom -- --check` : contrôle sans écriture, exécuté par la CI (D-169)
 - `npm run dev` : API (3000) + web (5173)
 - `npm run demo` : recrée la base `planersource_demo` (DROP, CREATE, migrations, jeu de démonstration, D-117) ; `npm run dev:demo` : comme `npm run dev` sur cette base
 - `npm run create-admin -- --login <id> [--email <e>] --nom <n>` avec `ADMIN_PASSWORD` dans l'environnement (login ou email requis ; login absent = email, D-077)
 
 Un contrôle d'accès ne renvoie jamais `reply` depuis une fonction async (reply est thenable) : il renvoie un verdict, la route répond.
 
-Configuration : copier `.env.example` vers `.env`. Les tests n'utilisent que `TEST_DATABASE_URL`, dont le nom de base doit finir par `_test` (refus sinon, jamais de repli sur `DATABASE_URL`). Tests API en série, base remise à zéro avant chaque test. Mot de passe de test haché une fois par processus (`helpers.ts`) ; base modèle essayée, plus lente, abandonnée (D-037). Migrations : fichiers `NNN_nom.sql` dans `packages/api/migrations/`, table `schema_version`.
+Configuration : copier `.env.example` vers `.env`. Les tests n'utilisent que `TEST_DATABASE_URL`, dont le nom de base doit finir par `_test` (refus sinon, jamais de repli sur `DATABASE_URL`). Tests API en parallèle (4 workers), une base par worker (`<préfixe>_vitest_w<N>_test`) clonée une fois d'une base modèle migrée, reconstruite seulement si les migrations changent ; la base de `TEST_DATABASE_URL` sert de base de maintenance (D-196). Base du worker remise à zéro avant chaque test. Mot de passe de test haché une fois par processus (`helpers.ts`) ; base modèle pour la remise à zéro de chaque test essayée, plus lente, abandonnée (D-037). Migrations : fichiers `NNN_nom.sql` dans `packages/api/migrations/`, table `schema_version`.

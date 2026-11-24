@@ -3,7 +3,7 @@ import { api } from '../../api';
 import { useAnnuaire, type EntreeAnnuaire } from '../../annuaire';
 import { useAuth } from '../../auth';
 import { Case } from '../../components/Case';
-import { Dialog } from '../../components/Dialog';
+import { Dialog, useDialoguePret } from '../../components/Dialog';
 import { Chargement } from '../../components/Etat';
 import { Field } from '../../components/Field';
 import { Notification } from '../../components/Notification';
@@ -38,6 +38,7 @@ function Formulaire({
   onSucces: () => void;
   onAnnuler: () => void;
 }) {
+  useDialoguePret(annuaire !== null);
   const [code, setCode] = useState(p.code);
   const [nom, setNom] = useState(p.nom);
   const [debut, setDebut] = useState(p.date_debut);

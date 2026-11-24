@@ -15,3 +15,6 @@ e2e/test-results/
 *.tsbuildinfo
 e2e/captures/
 test-results/
+e2e/.auth/
+e2e/.tmp-*
+e2e/.piles/

@@ -21,7 +21,9 @@ export async function remettreAdminSeul(): Promise<void> {
   try {
     await client.query('BEGIN');
     await client.query('TRUNCATE projet, historique RESTART IDENTITY CASCADE');
-    await client.query('DELETE FROM utilisateur WHERE email <> $1', [E2E_ADMIN.email]);
+    await client.query('DELETE FROM utilisateur WHERE email IS DISTINCT FROM $1', [
+      E2E_ADMIN.email,
+    ]);
     await client.query('DELETE FROM calendrier WHERE NOT est_defaut');
     await client.query('COMMIT');
   } catch (err) {

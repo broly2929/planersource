@@ -23,6 +23,7 @@ import { Notification } from '../../components/Notification';
 import { Select } from '../../components/Select';
 import { Table } from '../../components/Table';
 import { navigate } from '../../router';
+import { libelleType, SelectTypeDependance } from '../../typesDependance';
 import { FormulaireDialogue, texteRefusCode, useListe, type Affectation } from './commun';
 import { messagePosition, wbsDe } from './deplacement';
 import { FormulaireDeplacement } from './FormulaireDeplacement';
@@ -233,12 +234,7 @@ function FormulaireDependance({
         onChange={(e) => setSucc(e.target.value)}
         options={options}
       />
-      <Select
-        label="Type"
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        options={['FD', 'DD', 'FF'].map((t) => ({ value: t, label: t }))}
-      />
+      <SelectTypeDependance valeur={type} onChange={setType} />
       <Field
         label="Délai (jours ouvrés)"
         type="number"
@@ -566,7 +562,7 @@ export function PlanningProjet({
             colonnes={[
               { titre: 'Prédécesseur', cellule: (d) => nomElement(d.predecesseur_id) },
               { titre: 'Successeur', cellule: (d) => nomElement(d.successeur_id) },
-              { titre: 'Type', cellule: (d) => d.type },
+              { titre: 'Type', cellule: (d) => libelleType(d.type) },
               { titre: 'Délai', cellule: (d) => d.delai },
               ...(peutEcrire
                 ? [
@@ -634,6 +630,7 @@ export function PlanningProjet({
       </Dialog>
       {dialogue?.kind === 'deplacer' && (
         <Dialog
+          sansGarde
           ouvert
           onOuvertChange={(o) => !o && fermer()}
           titre={`Déplacer ${dialogue.ligne.nom}`}

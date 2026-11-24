@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError } from '../../api';
 import { Button } from '../../components/Button';
+import { useEnvoiEnCours, useFermeture } from '../../components/Dialog';
 import { Notification } from '../../components/Notification';
 
 export type Etat<T> =
@@ -9,17 +10,31 @@ export type Etat<T> =
 /** Chargement d'une ressource API avec les états chargement / erreur / ok. */
 export function useListe<T>(chemin: string) {
   const [etat, setEtat] = useState<Etat<T>>({ statut: 'chargement' });
+  // D-209 : la réponse d'un chargement lancé avant une mise à jour locale (`modifier`) est périmée : elle est
+  // ignorée, et le chargement est relancé pour relire l'état du serveur après cette mise à jour.
+  const version = useRef(0);
+  const enCours = useRef(0);
   const charger = useCallback(() => {
+    const v = version.current;
+    enCours.current++;
+    const appliquer = (e: Etat<T>) => {
+      enCours.current--;
+      if (v === version.current) setEtat(e);
+    };
     api<T>(chemin)
-      .then((donnees) => setEtat({ statut: 'ok', donnees }))
-      .catch(() => setEtat({ statut: 'erreur' }));
+      .then((donnees) => appliquer({ statut: 'ok', donnees }))
+      .catch(() => appliquer({ statut: 'erreur' }));
   }, [chemin]);
   useEffect(charger, [charger]);
   /** Remplace les données chargées (mise à jour locale sans rechargement). */
   const modifier = useCallback(
-    (f: (donnees: T) => T) =>
-      setEtat((e) => (e.statut === 'ok' ? { statut: 'ok', donnees: f(e.donnees) } : e)),
-    [],
+    (f: (donnees: T) => T) => {
+      setEtat((e) => (e.statut === 'ok' ? { statut: 'ok', donnees: f(e.donnees) } : e));
+      if (enCours.current === 0) return;
+      version.current++;
+      charger();
+    },
+    [charger],
   );
   return [etat, charger, modifier] as const;
 }
@@ -147,6 +162,8 @@ export function FormulaireDialogue<T = unknown>({
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  useEnvoiEnCours(enCours);
+  const fermer = useFermeture(onAnnuler);
   const soumettre = async (event: FormEvent) => {
     event.preventDefault();
     const refus = valider?.() ?? null;
@@ -165,7 +182,7 @@ export function FormulaireDialogue<T = unknown>({
       {erreur && <Notification type="erreur">{erreur}</Notification>}
       {children}
       <div className="flex justify-end gap-2">
-        <Button variante="secondaire" onClick={onAnnuler}>
+        <Button variante="secondaire" onClick={fermer}>
           Annuler
         </Button>
         <Button type="submit" enCours={enCours} disabled={inactif}>

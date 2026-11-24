@@ -23,6 +23,7 @@ import {
   tableauEquipes,
   utilisateurApi,
 } from './lot6a-helpers.js';
+import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
 
 test.beforeEach(async ({ page }) => {
   await remettreAdminSeul6a();
@@ -116,7 +117,7 @@ test('E2E-339-r1 : supprimer une équipe par l’écran, avec confirmation', asy
   expect(await equipesEnBase()).toEqual([]);
 });
 
-test('E2E-340-r1 : refus doublon à la création et au renommage, dialogue ouvert, base inchangée', async ({
+test('E2E-340-r2 : refus doublon à la création et au renommage, dialogue ouvert, base inchangée', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -131,8 +132,7 @@ test('E2E-340-r1 : refus doublon à la création et au renommage, dialogue ouver
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await expect(dialog.getByText(DOUBLON)).toBeVisible();
   expect(await releve6a()).toEqual(avant);
-  await dialog.getByRole('button', { name: 'Annuler' }).click();
-  await expect(dialog).toHaveCount(0);
+  await fermerEnAbandonnant(page, dialog);
 
   await page.getByRole('button', { name: 'Renommer Bureau 6a' }).click();
   await dialog.getByLabel('Nom').fill('ATELIER 6A');

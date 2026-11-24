@@ -525,7 +525,7 @@ Les ids ASAP, DEP et JAL de la spec ne figurent pas ici.
 | COPIE-14 | COPIE-5, partie saisie : P avec une activité MAN assignée et des saisies d'Alice : la copie n'a aucune ligne saisie_manuelle ; les saisies de P sont inchangées | 11.2, 11.4, D-058 (7) | 2e-I | packages/api/test/lot2e-copie.test.ts |
 | COPIE-15 | Copie dont le décalage porte une date validée d'activité, puis de jalon, au-delà du 31/12/2099 : 422, rien de créé (empreinte inchangée) ; décalage aboutissant à 2099-12-31 : 201 | 3, 11.2, D-058 (7) | 2e-I | packages/api/test/lot2e-copie.test.ts |
 | E2E-26 | Le chef ouvre « Planning manuel » depuis la ligne de l'activité MAN (adresse vérifiée), en janvier 2027 coche matin puis après-midi du 05/01 pour Alice, total de la ligne « 0,5 » après la première case, « 1 » après la seconde, Enregistrer, notification de succès ; après rechargement les deux cases sont cochées ; GET de l'API : 2 saisies | 5.6, D-060 (3) (4) (5) | 2e-E | e2e/tests/lot2e.spec.ts |
-| E2E-27 | Saisie enregistrée en janvier ; « Mois suivant » : février 2027, 28 jours, aucune case cochée ; « Mois précédent » : la saisie est là ; une case modifiée rend les boutons de mois inactifs ; « Annuler » rétablit la grille et les réactive | 5.6, D-060 (3) (5) | 2e-E | e2e/tests/lot2e.spec.ts |
+| E2E-27 (révisé en E2E-27-r1, D-172 (6) : boutons de mois actifs, confirmation) | Saisie enregistrée en janvier ; « Mois suivant » : février 2027, 28 jours, aucune case cochée ; « Mois précédent » : la saisie est là ; une case modifiée rend les boutons de mois inactifs ; « Annuler » rétablit la grille et les réactive | 5.6, D-060 (3) (5) | 2e-E | e2e/tests/lot2e.spec.ts |
 | E2E-28 | Le chef décoche une saisie enregistrée, Enregistrer : GET de l'API, liste vide | 5.6, D-060 (5) | 2e-E | e2e/tests/lot2e.spec.ts |
 | E2E-29 | Lecture seule : Alice voit la grille, cases désactivées, pas de bouton Enregistrer ; activité MAN close : idem pour le chef ; une activité ASAP n'a pas le bouton « Planning manuel » | 5.6, D-060 (3) (6) | 2e-E | e2e/tests/lot2e.spec.ts |
 | E2E-30 | (a) Page d'une activité ASAP ouverte par l'adresse (?mois=2027-01) : message visible, aucune case à cocher, pas de bouton Enregistrer ; (b) activité MAN sans assignation : état vide visible, aucune case à cocher ; (c) depuis la page de l'activité MAN, le lien « Retour au projet » mène à /projets/:id | 5.6, D-060 (3) (6) | 2e-E | e2e/tests/lot2e.spec.ts |
@@ -1321,7 +1321,8 @@ Rouges attendus : les 52 (routes /api/feuilles et /api/validations, tables de la
 | IMP-25 | Copie de projet : assignation copiée à réel 0, reste 5 ; aucune imputation copiée | §11.2, D-118 (11) | 4a | lot4a-imputations.test.ts |
 | FDT-1 | Soumettre : brouillon → soumise, GET le montre | §7 4a (7) | 4a | lot4a-feuilles.test.ts |
 | FDT-2 | Soumettre sans imputation > 0 (feuille existante vidée) : 422 `feuille_vide`, base inchangée | §7 4a (7) | 4a | lot4a-feuilles.test.ts |
-| FDT-3 | Soumettre : 401 ; 404 feuille inconnue, id mal formé, Bob ; 403 chef et administrateur ; base inchangée | §7 4a (7) | 4a | lot4a-feuilles.test.ts |
+| FDT-3 | (révisé en FDT-3-r1, D-181, D-182) Soumettre : 401 ; 404 feuille inconnue, id mal formé, Bob ; 403 chef et administrateur ; base inchangée | §7 4a (7) | 4a | lot4a-feuilles.test.ts |
+| FDT-3-r1 | Révision de FDT-3 (D-031, D-181 (7), D-182 (2)) : soumettre : 401 ; 404 feuille inconnue, id mal formé, Bob ; 403 chef ; base inchangée ; le cas « administrateur 403 » est retiré, couvert par AUT-I | §7 4a (7), D-181 (4) | AUT-I | lot4a-feuilles.test.ts |
 | FDT-4 | Soumettre une feuille soumise ou validée : 422 `statut_invalide` | §7 4a (7) | 4a | lot4a-feuilles.test.ts |
 | FDT-5 | Rappeler : soumise → brouillon, PUT de nouveau permis | §7 4a (7) | 4a | lot4a-feuilles.test.ts |
 | FDT-6 | Rappeler : brouillon 422 `statut_invalide` ; chef 403 ; après validation de P : 422 `deja_validee` | §7 4a (7) | 4a | lot4a-feuilles.test.ts |
@@ -2544,3 +2545,953 @@ Aucun champ d'API nouveau ni modifié (API inchangée). Champs déplacés d'écr
 | AUTH-16 | Utilisateur avec une équipe (`equipe_id` non nul) et un calendrier non défaut : après `POST /api/auth/login`, la réponse de `GET /api/auth/me` (sans `mot_de_passe_origine`) est égale champ par champ à l'utilisateur de la réponse de login, `calendrier_id` et `equipe_id` compris | D-167 (1), D-147 (4) | REX-5 | packages/api/test/rex5-auth.test.ts |
 - AUTH-16 : rouge prouvé avant la correction (sortie de session) : `calendrier_id` absent de la réponse de GET /api/auth/me (« Expected … "calendrier_id": 2 » manquant) ; vert après `loadUser` sur `USER_COLUMNS`. Test et correctif dans un seul commit `fix:` (D-167 (2)).
 - Phase verte : E2E-388 à E2E-399 verts sur 3 passes ; suite complète 1030 vitest, 420 e2e.
+
+## Tests du SBOM (D-169)
+
+Fichier : scripts/test/sbom.test.ts. Fixture : scripts/test/fixtures/sbom/ (X = `ms`, Y = `is-number`, Z = `isarray`).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| SBOM-1 | Fixture, deux écritures successives → fichiers identiques octet pour octet | D-169 (3) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-2 | Fichier écrit sans `serialNumber`, `metadata.timestamp` ni `metadata.tools` ; `specVersion` et `metadata.component` présents ; lifecycles phase `pre-build` | D-169 (2), (3) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-3 | `components` triés par `bom-ref` ; `dependencies` triées par `ref` ; chaque `dependsOn` trié | D-169 (3) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-4 | X figure, avec sa licence (non-régression : X est aussi devDependency de e2e) ; `packages/a` figure ; Y, Z et `@planersource/e2e` sont absents (composant, ref, `dependsOn`) ; aucun composant ne porte `development=true` | D-169 (2), (7) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-5 | Intégrité : chaque ref de `dependencies` et chaque élément de `dependsOn` désigne un composant présent ou `metadata.component` | D-169 (2) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-6 | `--check` sur un fichier à jour → code 0, fichier inchangé (contenu et date de modification) | D-169 (4) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-7 | `--check` sur un fichier périmé (un composant retiré) → code 1, stderr nomme le composant et `npm run sbom`, fichier inchangé ; fichier absent → code 1, fichier toujours absent | D-169 (4) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-8 | ci.yml a l'étape `npm run sbom -- --check`, après `npm run licenses` et avant l'installation de Playwright | D-169 (5) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-9 | package.json racine a le script `sbom` = `node scripts/sbom.mjs` ; `.prettierignore` contient `sbom.cdx.json` | D-169 (4), (6) | SBOM | scripts/test/sbom.test.ts |
+| SBOM-10 | La fixture est copiée dans deux dossiers de noms différents (`nom-a`, `nom-b`), puis écrite dans chacun : les deux fichiers sont identiques octet pour octet et `metadata.component.name` vaut le `name` du package.json de la fixture ; `--check` lancé dans `nom-b` sur le fichier écrit dans `nom-a` renvoie 0 | D-170 (1) | SBOM | scripts/test/sbom.test.ts |
+
+### Preuves de la phase rouge du SBOM (D-169)
+
+- Fixture : lock généré par `npm install --package-lock-only` ; `npm sbom --package-lock-only` fonctionne sans node_modules ; `--omit dev` perd X (`ms`) et ses liens, alors que l'arbre complet le garde.
+- Lancés (D-128) : vitest sur scripts/test/sbom.test.ts seul ; lint et typecheck verts.
+- SBOM-1 à SBOM-7 : 7 rouges sur 7, `scripts/sbom.mjs` absent (`Cannot find module`, code 1 au lieu de 0). SBOM-8 : étape `npm run sbom -- --check` absente de ci.yml. SBOM-9 : script `sbom` absent de package.json.
+
+### Preuves de la phase verte du SBOM (D-169)
+
+- SBOM-1 à SBOM-9 : 9 verts sur 9 ; ci.test.ts vert (10 tests sur les deux fichiers).
+- Suite complète une fois (D-128) : lint, typecheck, licences verts ; 1039 vitest ; 420 e2e (12,6 min). Aucun aléa connu observé.
+- `npm run sbom` puis `npm run sbom -- --check` : code 0. sbom.cdx.json : 137 composants, aucun `development=true`, aucune référence pendante, `@planersource/e2e` absent, `pg` et sa pile présents. Écart avec check-licenses : seulement les workspaces api, engine, web et `@types/react`, `@types/react-dom`, `csstype`.
+- Versions locales : node v22.23.5, npm 10.9.9.
+- Relecture @reviewer : aucun bloquant ; non-bloquants dans docs/non-bloquants.md.
+
+### Preuves de SBOM-10 (D-170)
+
+- Rouge prouvé (vitest sur sbom.test.ts seul) : SBOM-10 seul rouge, 9 verts sur 10. Les deux fichiers écrits dans `nom-a` et `nom-b` diffèrent (`metadata.component.name` suit le nom du dossier).
+- Vert après correction de scripts/sbom.mjs : 10 tests sur 10. Test et correctif dans un seul commit `fix:`.
+- Contrôles : vitest sur scripts/test/ en entier (23 tests), lint, typecheck, licences verts. Worktree `/tmp/autre-nom` sans node_modules : `node scripts/sbom.mjs --check` → 0. Seul changement de sbom.cdx.json : `metadata.component.name` devient `planersource`.
+
+
+## Révisions D-031 de la confirmation en quittant (D-172 (6))
+
+Inventaire vérifié par recherche dans e2e/tests (tous les fichiers touchant la Feuille de temps ou le Planning manuel : `lot2e`, `lot2e-bouton`, `lot3g`, `rex3a`, `lot4b`, `lot4b-corr`, `lot4b-captures`, `lot4c`, `lot5d`, `lot6b`, `lot6f`) et par un script qui repère, dans chaque test, une saisie suivie d'une sortie (`goto`, `reload`, lien, bouton de semaine ou de mois, déconnexion) sans enregistrement ni annulation entre les deux. Résultat :
+
+- Touché : E2E-27 seul (`lot2e.spec.ts`). Il affirme que les boutons de mois sont inactifs tant qu'il reste une modification ; D-172 (6) les rend actifs.
+- Non touchés : E2E-217 (`lot3g.spec.ts`) et E2E-254 (`rex3a.spec.ts`) : ils changent de mois sans modification en attente, ou ne quittent pas l'écran après une saisie ; leurs « Mois suivant » restent actifs, sans confirmation. E2E-253 (`rex3a.spec.ts`) finit sur une saisie refusée et gardée, sans sortie. `lot4b` (hors E2E-243), `lot4b-corr`, `lot4c`, `lot6b`, `lot6f` : ils enregistrent avant de quitter, ou finissent sur la saisie. E2E-245 (captures) imprime des données posées par l'API.
+- E2E-243 (`lot4b.spec.ts`) : inchangé, doit rester vert (une seule confirmation, par la garde).
+- Limite : le script ne voit que les gestes écrits dans le test ; un geste caché dans un helper n'est pas détecté. Les helpers de saisie (`caseCharge`, `libelleCase`) sont des localisateurs, sans navigation.
+
+| ID | Raison de la révision | Spec | Fichier |
+|---|---|---|---|
+| E2E-27-r1 | Même intention : le changement de mois ne perd pas une saisie sans l'accord de l'utilisateur. Ancien comportement : « Mois précédent » et « Mois suivant » inactifs tant qu'une case est cochée. Nouveau : ils restent actifs ; « Mois précédent » avec une saisie ouvre la confirmation ; « Annuler » garde le mois et la saisie ; « Annuler » du formulaire rétablit l'état chargé. Le reste du test (navigation sans saisie, mois de février vide, retour sur janvier) est inchangé | D-172 (6) | e2e/tests/lot2e.spec.ts |
+
+## Tests de la confirmation en quittant (D-172)
+
+E2E (e2e/tests/sortie.spec.ts ; base « administrateur seul » avant et après chaque test ; date du jour fixée par `page.clock.setFixedTime(H14)` ; données préparées par l'API ; Feuille de temps : Alice, `monde4b` ; Planning manuel : `monde` de lot2e-helpers, janvier 2027). Dans tous les tests de refus, l'état en base est relu par l'API (feuille inexistante, aucune saisie) ; aucune écriture n'est envoyée.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-400 | Feuille de temps : une case remplie, clic sur l'entrée de menu « Mes tâches » : confirmation « Abandonner les modifications ? » ; « Annuler » : même adresse, saisie gardée ; second clic puis « Abandonner » : écran « Mes tâches » ; feuille inexistante en base, aucune écriture envoyée | D-172 (2) ; §7 4b (8) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-401 | Feuille de temps : case remplie, retour du navigateur : confirmation, adresse de la feuille rétablie ; « Annuler » : saisie gardée ; second retour puis « Abandonner » : page précédente (« Mes tâches ») ; feuille inexistante en base | D-172 (3) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-402 | Feuille de temps : case remplie, « Se déconnecter » : confirmation ; « Annuler » : toujours connecté (menu visible), saisie gardée ; second clic puis « Abandonner » : `/connexion` ; feuille inexistante en base | D-172 (5) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-403 | Feuille de temps : case remplie, « Semaine suivante » : un seul dialogue de confirmation (nombre de dialogues = 1) ; « Annuler » : même semaine ; « Abandonner » : semaine suivante, un seul dialogue encore | D-172 (2) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-404 | Feuille de temps : sans modification, l'entrée de menu ne demande rien ; après un enregistrement réussi (case remplie, « Enregistrer »), l'entrée de menu ne demande rien non plus ; aucun dialogue | D-172 (2) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-405 | Planning manuel : case cochée, « Retour au projet » : confirmation ; « Annuler » : même adresse, case cochée ; second clic puis « Abandonner » : fiche du projet ; aucune saisie en base | D-172 (2) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-406 | Planning manuel : case cochée, « Mois suivant » actif ; confirmation ; « Annuler » : même mois, case cochée ; « Abandonner » : mois suivant, grille vide ; aucune saisie en base | D-172 (2), (6) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-407 | Planning manuel : sans modification, « Mois suivant » et « Retour au projet » ne demandent rien ; après « Enregistrer » réussi, « Retour au projet » ne demande rien ; aucun dialogue | D-172 (2) | Sortie | e2e/tests/sortie.spec.ts |
+| E2E-408 | Rechargement : avec une modification (Feuille de temps, puis Planning manuel), un dialogue du navigateur de type `beforeunload` s'ouvre au rechargement ; sans modification, ou après un enregistrement, aucun | D-172 (4) | Sortie | e2e/tests/sortie.spec.ts |
+
+### Couverture des champs, confirmation en quittant (règle « Couverture des champs »)
+
+Aucun champ d'API ajouté ni modifié : l'API est inchangée.
+
+### Preuves de la phase rouge de la confirmation en quittant (D-172)
+
+- Lancés (D-128) : e2e de sortie.spec.ts et E2E-27-r1 seuls ; E2E-243 seul ; lint et typecheck verts.
+- Rouges (7 sur 10) : E2E-27-r1 (« Mois précédent » inactif avec une saisie), E2E-400 à E2E-402 et E2E-405 (aucune confirmation à la sortie, `dialog` introuvable), E2E-406 (« Mois suivant » inactif), E2E-408 (aucun `beforeunload`).
+- Verts dès la phase rouge, par construction (gardes de non-régression, ils protègent la phase verte) : E2E-403 (le changement de semaine est déjà confirmé : une seule confirmation, à conserver après le passage par la garde), E2E-404 et E2E-407 (sans modification ou après enregistrement : aucune confirmation, à conserver).
+- E2E-243 : vert.
+
+### Preuves de la phase verte de la confirmation en quittant (D-172)
+
+- Code : router.tsx (garde unique, position d'historique `idx`, adresse tenue par le routeur), components/GardeSortie.tsx (confirmation et `beforeunload`), Layout (déconnexion), FeuilleTemps (confirmation propre à la semaine supprimée), PlanningManuel (boutons de mois actifs). Aucune dépendance ajoutée, aucun test modifié après le tag `tests-sortie`.
+- E2E-27-r1, E2E-400 à E2E-408, E2E-243 : 11 verts ; E2E-400 à E2E-408 : 27 verts sur 3 passes.
+- Historique du retour du navigateur (test jetable, non commité) : après « Annuler », `history.length` inchangé et adresse de la feuille rétablie ; après un second retour et « Abandonner », page précédente, `history.length` inchangé, l'avance ramène sur la feuille, saisie perdue.
+- Suite complète une fois (D-128) : lint, typecheck verts ; 1040 vitest ; licences conformes (131 / 176) ; `sbom --check` à jour ; 429 e2e verts (12,2 min). Aucun aléa observé.
+- Relecture @reviewer : aucun bloquant ; 5 non-bloquants dans docs/non-bloquants.md.
+
+
+## Tests de la dévalidation, API (DEV-I, D-176)
+
+Fichier : packages/api/test/devalidation.test.ts (nouveau ; aides de lot4a-helpers.ts). Date du jour du serveur : mercredi 13/01/2027. Monde du lot 4a : P (chef `chef`), Q (chef `autreChef`), Alice avec imputations sur P et Q ; valeurs attendues de SPEC §7 « Dévalidation (D-176) ». Les identifiants DEV-1 à DEV-11 étant pris (compte de développement), la série continue à DEV-12. Tout test de refus relit l'état en base (empreinte complète, dont `feuille_temps` et `validation_feuille`).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| DEV-12 | Administrateur, feuille validée sur P et Q : 200, statut « soumise », aucune validation en base ; réponse égale au GET de la feuille | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-13 | Chef de P, même feuille : 200, validation de P supprimée, celle de Q (chef de Q, date) conservée, statut « soumise » | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-14 | Soumise partiellement validée, dévalidée par son validateur : 200, aucune validation ; la ressource rappelle : 200, brouillon | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-15 | Après DEV-13 : rappeler par la ressource 422 `deja_validee`, base inchangée ; rejeter par le chef de P 200, statut rejetée | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-16 | Sans session 401 ; identifiant mal formé, inconnu ou feuille non visible : 404 corps `{ erreur: 'Feuille introuvable' }` ; base inchangée | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-17 | Visible sans écrire sur un projet concerné (chef de Q, feuille sans imputation sur Q) : 403 `{ erreur: 'Interdit' }` ; la ressource sur sa feuille validée : 403 ; base inchangée | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-18 | Brouillon et feuille rejetée, par le chef et par l'administrateur : 422 `statut_invalide`, base inchangée | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-19 | Soumise sans validation (chef, administrateur) et soumise dont la seule validation porte sur P, par le chef de Q : 422 `rien_a_devalider`, base inchangée | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+| DEV-20 | Ordre des refus : 401 avant 404 ; 404 avant 403 (ressource tierce sur un brouillon) ; 403 avant `statut_invalide` (la ressource, le chef de Q sur un brouillon) ; `statut_invalide` avant `rien_a_devalider` (chef sur un brouillon) | §7 Dévalidation (1) | DEV-I | packages/api/test/devalidation.test.ts |
+
+### Couverture des champs, dévalidation API (règle « Couverture des champs »)
+
+| Champ de l'API | Champ d'écran | Tests |
+|---|---|---|
+| POST /api/feuilles/:id/devalider (sans corps) | hors écran en DEV-I ; écran Validation en DEV-E (bouton « Dévalider ») | DEV-12 à DEV-20 |
+
+### Preuves de la phase rouge de DEV-I (D-176)
+
+- Lancés (D-128) : devalidation.test.ts seul ; lint et typecheck verts.
+- Rouges : 9 sur 9 (DEV-12 à DEV-20). La route n'existe pas : Fastify répond 404 avec le corps `{ message: 'Route POST:/api/feuilles/…/devalider not found', … }`. Les tests de 404 (DEV-16, DEV-20) comparent le corps exact `{ erreur: 'Feuille introuvable' }` et échouent donc aussi ; aucun test vert à tort.
+
+### Preuves de la phase verte de DEV-I (D-176, D-178)
+
+- Code : `devalider` dans la boucle de routes/feuilles.ts et dans `agir` (planning/feuilles.ts). Aucune migration, aucun test modifié après le tag `tests-devalidation-i` (255cd89).
+- devalidation.test.ts : 9 verts ; avec les tests du cycle de 4a (lot4a-feuilles, complements, validations, lot4b-rappeler) : 37 verts. Lint et typecheck verts.
+- Suite complète une fois (D-128) : vitest 1048 verts sur 1049 ; le rouge est `scripts/test/aucune-reference-externe.test.ts` (un motif de PUB-2 (tunnel ssh) dans docs/recette.md depuis D-175), sans lien avec DEV-I. e2e : 429 verts (11,7 min).
+- Un premier passage e2e, concurrent à un vitest du reviewer sur la même base `_test`, a échoué en cascade ; rejoué seul : 429 verts.
+- Relecture @reviewer : aucun bloquant ; 2 non-bloquants de code consignés dans docs/non-bloquants.md.
+
+## Tests de DEV-E, écran Validation : Dévalider (D-176, D-179)
+
+Fichiers : packages/web/test/validation.test.ts (ajout, VFT-14 à VFT-18 ; fonctions à créer dans `packages/web/src/validation/logique.ts` : `peutDevalider(feuille)`, `codesDevalidables(feuille)`, action `'devalider'` de `cibleFocus`, code `rien_a_devalider` dans `messageRefusValidation` et `relireListe`) ; e2e/tests/devalidation-e.spec.ts et devalidation-e-helpers.ts (nouveaux ; monde de lot4c-helpers.ts, horloge H14) ; e2e/tests/lot4b.spec.ts (E2E-244-r3). Valeurs de SPEC §7 « Dévalidation (D-176) » point 2 et de D-145 (2). Données préparées par l'API ; les actions testées se font à l'écran. Base relue par SQL (`etatFeuille`) pour tout refus.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| VFT-14 | `peutDevalider` vrai : feuille validée avec un projet `valide` et `peut_valider` ; feuille soumise partiellement validée (un projet `valide` et `peut_valider`, un autre non validé) | §7 Dévalidation (2) | DEV-E | validation.test.ts |
+| VFT-15 | `peutDevalider` faux : soumise sans validation ; brouillon ; rejetée ; seuls projets validés non `peut_valider` (soumise et validée) ; `projets` vide | §7 Dévalidation (2) | DEV-E | validation.test.ts |
+| VFT-16 | `codesDevalidables` : codes des projets `valide` et `peut_valider`, ordre de l'API | §7 Dévalidation (2) | DEV-E | validation.test.ts |
+| VFT-17 | `messageRefusValidation(422, 'rien_a_devalider')` → « La feuille n’a plus de validation à retirer. » ; `relireListe(422, 'rien_a_devalider')` vrai | §7 Dévalidation (2) | DEV-E | validation.test.ts |
+| VFT-18 | `cibleFocus` avec l'action `devalider` : bouton conservé s'il existe encore ; sinon « Voir » ; sinon le tableau | D-145 (2) | DEV-E | validation.test.ts |
+| E2E-409 | Ordre des actions : administrateur, feuille soumise partiellement validée → Voir, Valider, Rejeter, Dévalider ; feuille validée → Voir, Dévalider | §7 Dévalidation (2) | DEV-E | devalidation-e.spec.ts |
+| E2E-410 | Pas de « Dévalider » : administrateur (soumise sans validation, brouillon, rejetée) ; chef de P quand seul Q est validé | §7 Dévalidation (2) | DEV-E | devalidation-e.spec.ts |
+| E2E-411 | Confirmation (administrateur, feuille validée) : titre exact « Dévalider la feuille de Alice 4B pour P4B, Q4B ? », texte « La feuille repassera au statut Soumise. », bouton « Dévalider » ; « Annuler » : aucune écriture, base inchangée | §7 Dévalidation (2) | DEV-E | devalidation-e.spec.ts |
+| E2E-412 | Succès (chef de P, feuille validée par P et Q) : « Feuille dévalidée. » (`role="status"`), liste relue, « Soumise », « P4B · À valider », « Q4B · Validé » ; base : validation de Q conservée ; focus sur « Voir » | §7 Dévalidation (2), D-145 (2) | DEV-E | devalidation-e.spec.ts |
+| E2E-413 | `rien_a_devalider` (dévalidation faite entre-temps par l'API) : dialogue fermé, liste relue, alerte au-dessus du tableau « La feuille n’a plus de validation à retirer. », effacée à l'action suivante, base inchangée | §7 Dévalidation (2), D-145 (2) | DEV-E | devalidation-e.spec.ts |
+| E2E-414 | `statut_invalide` (feuille rejetée entre-temps par l'API) : dialogue fermé, liste relue, alerte « La feuille a changé de statut. », base inchangée | §7 Dévalidation (2), D-145 (2) | DEV-E | devalidation-e.spec.ts |
+| E2E-415 | Parcours IHM : chef de P et chef de Q valident à l'écran, le chef de P dévalide, Q garde « Q4B · Validé », la ressource voit « Soumise » ; le chef de Q dévalide ; la ressource rappelle, corrige, enregistre, soumet de nouveau | §7 Dévalidation (3) | DEV-E | devalidation-e.spec.ts |
+| E2E-244-r3 | Révision d'E2E-244-r2 (D-031, autorisée par D-176 (5)) : parcours complet, le chef dévalide à l'écran (« Feuille dévalidée. », « Soumise ») puis valide de nouveau avant la suite inchangée | D-176 (5) | DEV-E | e2e/tests/lot4b.spec.ts |
+
+### Couverture des champs, DEV-E
+
+| Champ de l'API | Champ d'écran | Tests |
+|---|---|---|
+| POST /api/feuilles/:id/devalider (sans corps) | bouton « Dévalider la feuille de <ressource> » et sa confirmation | E2E-411, E2E-412, E2E-415, E2E-244-r3 |
+
+### Preuves de la phase rouge de DEV-E (D-176, D-179)
+
+- Lancés (D-128) : validation.test.ts seul (web), devalidation-e.spec.ts, E2E-244-r3 ; lint et typecheck verts.
+- Web : 5 rouges sur 5 (VFT-14 à VFT-18). `peutDevalider` et `codesDevalidables` « is not a function » ; VFT-17 reçoit « Une erreur est survenue. » ; VFT-18 : `cibleFocus` ne connaît pas l'action `devalider`.
+- E2E : 8 rouges sur 8 nouveaux et révisés (E2E-409 à E2E-415, E2E-244-r3) : bouton « Dévalider la feuille de … » absent (attente expirée, ou liste des actions sans « Dévalider »).
+- E2E-410 : vert tel que d'abord écrit, par construction (absence d'un bouton qui n'existe pas) ; corrigé avant le commit par un contrôle positif (le chef de Q voit « Dévalider ») : rouge pour la bonne raison.
+
+### Captures de DEV-E (phase verte)
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-416 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement, comme E2E-320) : confirmation de « Dévalider » et succès « Feuille dévalidée. », 1440 et 1024 px, e2e/captures/validation-devalider-{confirmation,succes}-{1440,1024}.png | D-133 (3), D-180 | DEV-E | e2e/tests/devalidation-e-captures.spec.ts |
+
+### Preuves de la phase verte de DEV-E (D-176, D-180)
+
+- Code : `peutDevalider`, `codesDevalidables`, action `devalider` de `cibleFocus`, code `rien_a_devalider` (logique.ts) ; bouton `Undo2` et `Confirmation` (Validation.tsx). Aucune route, aucun test sous tag modifié (`tests-devalidation-e` = 700011d).
+- validation.test.ts : 18 verts. E2E-409 à E2E-415 et E2E-416 : 3 passes vertes (24/24) ; E2E-244-r3 : 3 passes vertes ; lot4c.spec.ts : 21 verts. Lint et typecheck verts.
+- Suite complète une fois (D-128) : vitest 1054 verts (129 fichiers) ; e2e 437 verts (13,0 min) ; aucun intermittent.
+- Relecture @reviewer : OK, aucun bloquant. Captures : aucun défaut bloquant.
+
+## Tests d'AUT-I, saisie pour autrui, API (D-181, D-182)
+
+Fichier : packages/api/test/autrui.test.ts. Date du jour du serveur : mercredi 13/01/2027. Préfixe AUT- (libre avant AUT-I).
+
+| ID | Cas | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| AUT-1 | PUT de l'administrateur pour Alice : feuille d'Alice, imputations, charge réelle ; égale au GET | D-181 (2) | AUT-I | autrui.test.ts |
+| AUT-2 | Reste modifié : auteur administrateur ; témoin : auteur Alice | D-181 (3) | AUT-I | autrui.test.ts |
+| AUT-3 | Pour autrui : `jour_futur` 422, base inchangée | D-181 (2) | AUT-I | autrui.test.ts |
+| AUT-4 | Pour autrui : `ligne_fermee` 422, base inchangée | D-181 (2) | AUT-I | autrui.test.ts |
+| AUT-5 | Pour autrui : `feuille_verrouillee` soumise puis validée | D-181 (2) | AUT-I | autrui.test.ts |
+| AUT-6 | Pour autrui : `assignation_invalide` de Bob ; corps invalide 400 | D-181 (2) | AUT-I | autrui.test.ts |
+| AUT-7 | Droits : 401, 404 (inconnu, mal formé, hors plage, Bob), chef 403, Alice soi-même 200 | D-181 (2) | AUT-I | autrui.test.ts |
+| AUT-8 | Ordre des refus : 401, 400, 404, 403, puis 422 | D-181 (2) | AUT-I | autrui.test.ts |
+| AUT-9 | `ressource_id` non ressource : ligne 422, `lignes: []` 200 id null | D-182 (1) | AUT-I | autrui.test.ts |
+| AUT-10 | (révisé en AUT-10-r1, D-183) Administrateur soumet pour autrui : 200, `feuille_vide`, `statut_invalide` | D-181 (4) | AUT-I | autrui.test.ts |
+| AUT-10-r1 | Révision d'AUT-10 (D-031, D-183) : mise en place de `feuille_vide` : imputer 1 pour Alice puis remettre 0 (la feuille existe, aucune imputation > 0) ; le reste est inchangé | D-181 (4), D-119 (6) | AUT-I | autrui.test.ts |
+| AUT-11 | Administrateur rappelle pour autrui : 200 ; `deja_validee` | D-181 (4) | AUT-I | autrui.test.ts |
+| AUT-12 | Chaîne : validée, dévalidée, rappelée, corrigée, soumise, revalidée | D-181 (2), (4), D-176 | AUT-I | autrui.test.ts |
+
+### Couverture des champs, saisie pour autrui API (règle « Couverture des champs »)
+
+| Champ de l'API | Écran | Raison |
+|---|---|---|
+| paramètre `ressource_id` du PUT /api/feuilles | liste « Ressource » (AUT-E) | écran à venir (D-181 (5)) |
+
+### Preuves de la phase rouge d'AUT-I (D-181, D-182)
+
+- Lancés (D-128) : autrui.test.ts seul ; lint et typecheck verts. FDT-3-r1 : lot4a-feuilles.test.ts, 15 verts.
+- Rouges : 12 sur 12 (AUT-1 à AUT-12). Cause : le PUT ignore `ressource_id` et écrit pour l'administrateur (422 `assignation_invalide` au lieu de 200 ou du refus attendu) ; `soumettre` et `rappeler` par l'administrateur donnent 403.
+- Parties vertes à l'intérieur de tests rouges : AUT-6 (la première ligne d'Alice est acceptée seulement après le PUT pour autrui, donc rouge dès cette étape), AUT-9 (premier refus 422 déjà vert, le test échoue ensuite sur `ressource_id`) ; témoin d'AUT-2 (auteur = Alice) et d'AUT-7 (Alice avec son propre `ressource_id`), verts seuls.
+
+### Preuves de la phase verte d'AUT-I (D-181, D-183)
+
+- Ciblé (D-128) : autrui.test.ts, lot4a-*.test.ts et devalidation.test.ts : 79/79 verts ; lint et typecheck verts.
+- AUT-10-r1 (405f8c7, tag `tests-autrui-i-r1`) : rouge prouvé sans le code vert, échec sur le premier PUT pour autrui (422 `assignation_invalide`).
+- Suite complète une fois (D-128, D-179) : vitest 1066 verts (130 fichiers), puis e2e 437 verts (12,6 min), sans intermittent ; E2E-221 reste vert (AUT-I ne touche pas l'écran).
+- Relecture @reviewer : code conforme, un bloquant documentaire (D-183 absent) corrigé, deux non-bloquants (docs/non-bloquants.md).
+
+
+## Révisions D-031 d'AUT-E (D-181 (7))
+
+| ID | Raison de la révision | Spec | Fichier |
+|---|---|---|---|
+| E2E-221-r1 | Même intention (entrée « Imputations », semaine courante, statut Brouillon). Ancien comportement : entrée absente pour l'administrateur non ressource. Nouveau : présente pour la ressource et pour tout administrateur, ressource ou non ; absente pour un chef de projet non ressource (contrôle positif : l'entrée « Validation » du chef est visible). Le reste du test (clic, adresse, `aria-current`, libellé de semaine, statut) est inchangé | D-181 (5), (7) | e2e/tests/lot4b.spec.ts |
+
+Preuve du rouge d'E2E-221-r1 : échec à la première assertion, entrée « Imputations » introuvable pour l'administrateur non ressource (attente expirée).
+
+## Tests d'AUT-E, saisie pour autrui, écran Feuille de temps (D-181 (5), (6))
+
+Fichiers : packages/web/test/autrui.test.ts (AUT-13 à AUT-16 ; fonctions à créer dans `packages/web/src/imputations/logique.ts` : `ressourcesChoisissables(annuaire)`, `ressourceAffichee(param, choix, utilisateur)`, `adresseImputations(semaine, ressource)`, `titreFeuille(nomRessource, estSoi)`) ; e2e/tests/autrui-e.spec.ts et autrui-e-helpers.ts (nouveaux ; monde de lot4b-helpers.ts, horloge H14) ; e2e/tests/lot4b.spec.ts (E2E-244-r4, commit séparé, ligne ajoutée avec lui). Liste « Ressource » : route existante `GET /api/annuaire` (tout utilisateur connecté ; `nom`, `est_ressource`, `actif`, tri par nom), aucune route d'API nouvelle. Contrat de phase verte : liste native de nom accessible exact « Ressource » (`combobox`), options de valeur = identifiant de la ressource, au plus une option de valeur `''` (invite) en tête ; message « Choisissez une ressource. » ; titre de niveau 1 « Feuille de temps de <nom> » pour autrui. Dans les tests de refus, l'état en base est relu par l'API (session d'Alice).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| AUT-13 | `ressourcesChoisissables` : actifs et ressources seulement, triés par nom (ordre français, accents) ; inactif, non ressource et liste vide | D-181 (5) | AUT-E | packages/web/test/autrui.test.ts |
+| AUT-14 | `ressourceAffichee` : paramètre dans la liste gardé ; absent : soi si ressource, sinon aucune, sans correction ; inconnu, non numérique, hors liste : défaut avec correction | D-181 (5) | AUT-E | packages/web/test/autrui.test.ts |
+| AUT-15 | `adresseImputations` : `/imputations?semaine=…` sans ressource ; `&ressource=<id>` avec | D-181 (5) | AUT-E | packages/web/test/autrui.test.ts |
+| AUT-16 | `titreFeuille` : « Feuille de temps » pour soi, « Feuille de temps de <nom> » pour autrui | D-181 (5) | AUT-E | packages/web/test/autrui.test.ts |
+| E2E-417 | Liste « Ressource » de l'administrateur : ressources actives triées par nom (Alice, Bob, Zoé créés dans le désordre) ; inactif, chef et administrateur non ressource absents | D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-418 | Liste « Ressource » absente pour une ressource (contrôle positif : titre « Feuille de temps » et tableau visibles) | D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-419 | Administrateur non ressource : « Choisissez une ressource. », aucune requête vers /api/feuilles (requêtes comptées) ; après le choix d'Alice, requête comptée et feuille affichée | D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-420 | Administrateur ressource : lui-même sélectionné, titre « Feuille de temps » inchangé, feuille chargée | D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-421 | Choisir Alice : adresse `/imputations?semaine=…&ressource=<id>`, titre « Feuille de temps de Alice 4B » | D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-422 | Ouvrir directement l'adresse avec `ressource=<id d'Alice>` : Alice sélectionnée, titre pour autrui, feuille d'Alice | D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-423 | `ressource` inconnue, non numérique, non ressource ou inactive : paramètre retiré, comportement par défaut, adresse corrigée sans rechargement (un chargement par ouverture) ; valeur valide gardée ensuite | D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-424 | Pour Alice, par l'administrateur : saisie, « Enregistrer », « Feuille enregistrée. » ; base : imputation de la feuille d'Alice | D-181 (5), D-120 (9) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-425 | Pour Alice : « Soumettre » (statut « Soumise », base), « Rappeler » (« Brouillon », base) | D-181 (5), (4), D-120 (10) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-426 | Pour Alice : feuille soumise par l'API après le chargement, « Enregistrer » : texte `feuille_verrouillee` de 4b, saisie gardée, base inchangée | D-181 (5), D-120 (9) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-427 | Case modifiée, changement de ressource : une seule confirmation (titre et texte de D-172) ; « Annuler » garde saisie, ressource et adresse ; « Abandonner » change de ressource, rien n'est envoyé, base inchangée | D-181 (5), D-172 (2) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-428 | Sans modification, et après un enregistrement réussi : changement de ressource sans confirmation | D-172 (2) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-429 | Parcours IHM : administrateur non ressource, à l'écran : choisit Alice, saisit, enregistre, soumet ; le chef valide à l'écran Validation ; Alice se connecte et voit « Validée » avec la charge saisie, en lecture seule | D-181 (6) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-244-r4 | Révision d'E2E-244-r3 (D-031, autorisée par D-181 (6), (7)) : parcours complet étendu ; après la dernière validation, l'administrateur (non ressource) ouvre « Imputations », choisit la ressource à l'écran et voit « Validée », titre « Feuille de temps de Ressource 4B-244 », charge 0,5 en lecture seule ; le reste est inchangé | D-181 (6) | AUT-E | e2e/tests/lot4b.spec.ts |
+| E2E-430 | Ressource (Alice) qui ouvre `/imputations?semaine=…&ressource=<id de Bob>` : paramètre retiré de l'adresse sans rechargement, titre « Feuille de temps », ses propres lignes, aucune requête /api/feuilles avec `ressource_id` (requêtes comptées, contrôle positif : au moins une requête de feuille) | D-184 (3), D-181 (5) | AUT-E | e2e/tests/autrui-e.spec.ts |
+| E2E-431 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement, comme E2E-416) : liste « Ressource » sans choix (message) et feuille d'Alice pour autrui ; 1440 et 1024 px, e2e/captures/imputations-autrui-{choix,feuille}-{1440,1024}.png | D-133 (3), D-181 (5) | AUT-E | e2e/tests/autrui-e-captures.spec.ts |
+
+### Couverture des champs, AUT-E (règle « Couverture des champs »)
+
+| Champ modifiable de l'API | Champ d'écran, ou hors écran | Tests |
+|---|---|---|
+| paramètre `ressource_id` de GET et PUT /api/feuilles | liste « Ressource » de l'administrateur (adresse `ressource=<id>`) | E2E-417, E2E-421 à E2E-424, E2E-429 |
+| POST /api/feuilles/:id/soumettre et rappeler, par l'administrateur | boutons « Soumettre » et « Rappeler » de la feuille d'autrui | E2E-425, E2E-429 |
+| GET /api/annuaire (lecture : `nom`, `est_ressource`, `actif`) | contenu et ordre de la liste « Ressource » | AUT-13, E2E-417 |
+
+### Preuves de la phase rouge d'AUT-E (D-181)
+
+- Lancés (D-128) : autrui.test.ts, autrui-e.spec.ts, E2E-244-r4, E2E-221-r1 seuls ; lint et typecheck verts.
+- AUT-13 à AUT-16 : fichier rouge, fonctions absentes de `logique.ts` (échec à la collecte, `ressourcesChoisissables` n'est pas une fonction).
+- E2E-221-r1 : entrée « Imputations » introuvable pour l'administrateur non ressource. E2E-244-r4 : même clic, étape ajoutée en fin de parcours. E2E-417, E2E-419, E2E-421, E2E-429 : même clic de menu (attente expirée).
+- E2E-420 : liste « Ressource » introuvable. E2E-422, E2E-424 à E2E-428 : titre « Feuille de temps de Alice 4B » introuvable. E2E-423 : adresse non corrigée (paramètre gardé).
+- Vert en phase rouge : E2E-418 (absence de la liste pour une ressource ; garde de non-régression, avec contrôle positif titre et tableau), par construction.
+
+### Preuves de la phase verte d'AUT-E (D-181, D-184)
+
+- Code : `logique.ts` (`ressourcesChoisissables`, `ressourceAffichee`, `adresseImputations`, `titreFeuille`), `FeuilleTemps.tsx` (`FeuilleAdmin`, liste « Ressource », `ressource_id`, point 3 de D-184), `Layout.tsx` (entrée de menu). Aucun test sous tag modifié ; aucune route d'API nouvelle.
+- E2E-430 : rouge prouvé avant le code (adresse gardée avec `&ressource=…`), commit a6aaf64, tag `tests-autrui-e`.
+- Ciblés : AUT-13 à AUT-16 et imputations.test.ts : 27 verts ; E2E-417 à E2E-431, E2E-221-r1, E2E-244-r4 : 17 verts sur 3 passes.
+- Suite complète une fois (D-128, D-179) : lint, typecheck verts ; vitest 1074 verts (131 fichiers) ; e2e 452 verts (14,2 min), aucun intermittent.
+- Relecture @reviewer : un bloquant documentaire (D-184 absente), corrigé par la clôture ; code conforme.
+
+## Tests de la retouche de la Feuille de temps (D-186)
+
+Fichiers : packages/web/test/retouche-feuille.test.ts (AUT-17 ; fonction à créer dans `packages/web/src/imputations/logique.ts` : `optionsListeRessource(choix, ressource, prete)` → `{ value, label, disabled? }[]`) ; e2e/tests/retouche-feuille.spec.ts (E2E-432 à E2E-435) et retouche-feuille-captures.spec.ts (E2E-436). Monde : `mondeAutrui` (autrui-e-helpers.ts), horloge H14. Valeurs de D-186. Contrat de phase verte : liste « Ressource » visible et désactivée pendant le chargement de l'annuaire ; option « Choisir… » de valeur `''`, désactivée ; en-tête `main > header`.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| AUT-17 | `optionsListeRessource` : annuaire non chargé → seule « Chargement… » désactivée ; chargé sans choix → « Choisir… » désactivée en tête puis les ressources ; chargé avec choix → « Choisir… » toujours présente, désactivée | D-186 (1), (2) | Retouche | packages/web/test/retouche-feuille.test.ts |
+| E2E-432 | 1024 px, feuille d'Alice par l'administrateur : « 1 Tâche A » entier dans sa cellule (non tronqué), colonne Activité d'au moins 110 px, aucun en-tête ne déborde de sa cellule, en-têtes voisins sans chevauchement, texte d'Assigné à au moins 8 px de celui de Réel cumulé ; aucun défilement horizontal | D-186 (3) | Retouche | e2e/tests/retouche-feuille.spec.ts |
+| E2E-433 | 1280 px : mêmes contrôles, colonne Activité d'au moins 300 px (garde de non-régression) | D-186 (3) | Retouche | e2e/tests/retouche-feuille.spec.ts |
+| E2E-434 | Annuaire retardé : liste « Ressource » visible et désactivée pendant le chargement ; après le chargement, position et hauteur de l'en-tête et position du titre identiques | D-186 (1) | Retouche | e2e/tests/retouche-feuille.spec.ts |
+| E2E-435 | « Choisir… » : désactivée, présente avant et après le choix d'Alice ; sélectionnée seulement sans choix ; administrateur ressource : présente, désactivée, lui-même sélectionné ; la liste ne propose que les ressources actives en plus | D-186 (2) | Retouche | e2e/tests/retouche-feuille.spec.ts |
+| E2E-436 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement, comme E2E-431), avant et après : choix et feuille, 1440 et 1024 px, e2e/captures/retouche-feuille-{choix,feuille}-{1440,1024}-{avant,apres}.png | D-133 (3), D-186 | Retouche | e2e/tests/retouche-feuille-captures.spec.ts |
+
+### Couverture des champs, retouche de la Feuille de temps
+
+Aucun champ d'API ajouté ni modifié : l'API est inchangée.
+
+### Preuves de la phase rouge de la retouche (D-186)
+
+- Lancés (D-128) : retouche-feuille.spec.ts et AUT-17 seuls ; lint et typecheck verts. Captures « avant » prises (E2E-436, `CAPTURE_PHASE=avant`, vert par construction).
+- AUT-17 : rouge, `optionsListeRessource` n'est pas une fonction (collecte, trois cas ensemble).
+- E2E-432 : cellule « 1 Tâche A » tronquée. E2E-433 : en-tête « Assigné » qui déborde de sa cellule (rouge, pas un simple garde-fou). E2E-434 : liste « Ressource » introuvable pendant le chargement. E2E-435 : option « Choisir… » non désactivée.
+
+### Preuves de la phase verte de la retouche (D-186, D-187)
+
+- Code : `logique.ts`, `Select.tsx` (option `disabled`), `FeuilleTemps.tsx`, `TableauFeuille.tsx`. Aucun test sous tag modifié.
+- Ciblés : retouche-feuille.spec.ts 4 verts sur 3 passes ; E2E-436 vert ; lot4b, lot4b-corr, lot5d, lot4c, autrui-e et sortie : 92 verts. AUT-17 : 3 verts.
+- Suite complète une fois (D-128, D-179) : lint, typecheck verts ; vitest 1077 verts (132 fichiers) ; e2e 457 verts (13,4 min), aucun intermittent.
+- Mises au point des largeurs : Assigné `w-[4.25rem]` suffisait contre le débordement mais l'écart avec Réel cumulé restait de 6 px ; jours `w-[2.75rem]` et `w-[2.875rem]` débordaient ; retenu : en-têtes `text-petit`, jours `w-12`.
+- Relecture @reviewer : OK, aucun bloquant.
+
+## Complément de la retouche : dialogue « Voir » de Validation (D-186, D-187)
+
+Contrôle demandé par le porteur après la clôture : effet des en-têtes `text-petit` de `TableauFeuille` sur le dialogue « Voir ». E2E-323 (c) couvre déjà l'absence de défilement horizontal du dialogue à 1024 px, pas le débordement des en-têtes. Fichier : e2e/tests/retouche-voir.spec.ts (monde de lot4c-helpers.ts, horloge H14, administrateur).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-437 | Dialogue « Voir la feuille de Alice 4B » à 1024 et 1440 px : aucun en-tête du tableau ne déborde de sa cellule, en-têtes voisins sans chevauchement, aucun défilement horizontal du tableau, « 1 Tâche A » non tronqué | D-186 (3), D-135 (4) | Retouche | e2e/tests/retouche-voir.spec.ts |
+| E2E-438 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement, comme E2E-436) : dialogue « Voir », 1440 et 1024 px, e2e/captures/retouche-voir-{1440,1024}-{avant,apres}.png | D-133 (3), D-186 | Retouche | e2e/tests/retouche-voir-captures.spec.ts |
+
+## Tests de la confirmation à la fermeture des dialogues (D-188)
+
+Fichiers : packages/web/test/garde-dialogue.test.ts (GDL-1 à GDL-4) et garde-dialogue-structure.test.ts (GDL-5 à GDL-7) ; fonctions à créer dans `packages/web/src/components/garde-dialogue.ts` : `instantane(champs, dialogue, strict?)`, `modifie(reference, courant)`) ; e2e/tests/garde-dialogue.spec.ts et garde-dialogue-helpers.ts (E2E-439 à E2E-455) ; garde-dialogue-captures.spec.ts (E2E-456, phase verte). Valeurs de D-188 (1) à (10). Base « administrateur seul » avant et après chaque test, horloge H14 ; mondes : `monde4b` (assignation d'Alice), `monde4c` (feuille soumise), `preparer` (calendrier). Contrat de phase verte : la confirmation est le dialogue nommé « Abandonner les modifications ? » (boutons « Annuler » = rester, « Abandonner » = quitter), empilé au-dessus du dialogue de formulaire.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GDL-1 | `modifie` : référence nulle = non modifié ; instantanés égaux = non modifié ; valeur changée = modifié ; valeur remise à l'initiale = non modifié ; clé ajoutée ou retirée = modifié | D-188 (1), (3), (10) c | GDL | packages/web/test/garde-dialogue.test.ts |
+| GDL-2 | `instantane` : champs désactivés, boutons, `submit`, `reset`, `hidden` ignorés ; case = `checked` ; autres = `value` | D-188 (3) | GDL | packages/web/test/garde-dialogue.test.ts |
+| GDL-3 | `instantane` strict : champ actif sans `id` ou `id` en double : erreur explicite nommant le dialogue et le champ ; non strict : champ ignoré, aucune erreur | D-188 (10) c | GDL | packages/web/test/garde-dialogue.test.ts |
+| GDL-4 | Mot de passe : l'instantané n'écrit rien dans la console, et les messages d'erreur ne contiennent aucune valeur de champ | D-188 (10) e | GDL | packages/web/test/garde-dialogue.test.ts |
+| GDL-5 | Structurel : `sansGarde` n'apparaît que dans les cinq fichiers de l'audit, une occurrence chacun (PlanningProjet.tsx, DialogueCalcul.tsx, DialogueExport.tsx, Validation.tsx, Confirmation.tsx) | D-188 (10) d | GDL | packages/web/test/garde-dialogue-structure.test.ts |
+| GDL-6 | Structurel : `Dialog` déclare `sansGarde = false` (garde par défaut) et la soupape `modifie` | D-188 (1), (10) d | GDL | packages/web/test/garde-dialogue-structure.test.ts |
+| GDL-7 | Structurel : `FormulaireDialogue` passe « Annuler » par le contrôle de `Dialog` (aucun appel direct de `onAnnuler` sur le bouton) | D-188 (6) | GDL | packages/web/test/garde-dialogue-structure.test.ts |
+| E2E-439 | Échap, « Nouvelle équipe » : sans modification, fermeture sans confirmation ; nom saisi : confirmation, dialogue ouvert ; nom saisi puis effacé : fermeture sans confirmation | D-188 (1), (2) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-440 | Clic hors du dialogue : mêmes trois cas | D-188 (1) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-441 | Bouton « Annuler » du formulaire : mêmes trois cas | D-188 (1), (6) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-442 | Croix « Fermer » : mêmes trois cas | D-188 (1) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-443 | Champ nombre (« Modifier l'assignation », charge) : modifié puis Échap : confirmation ; remis à l'initiale : aucune | D-188 (3), (10) f | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-444 | Champ date (« Ajouter un jour férié ») : idem | D-188 (3), (10) f | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-445 | Champ mot de passe (« Nouvel utilisateur ») : idem | D-188 (3), (10) e, f | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-446 | Liste native (« Nouvel utilisateur », Rôle) : idem | D-188 (3), (10) f | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-447 | Case à cocher (« Modifier le calendrier ») : idem | D-188 (3), (10) f | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-448 | Zone de texte (Rejeter) : commentaire saisi puis Échap : confirmation ; effacé : aucune ; Rejeter est gardé | D-188 (10) a, f | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-449 | Asynchrone, « Nouveau projet » (annuaire retardé) : clic dans le formulaire pendant le chargement, fin du chargement, Échap : aucune confirmation ; contrôle positif : saisie puis Échap : confirmation | D-188 (10) b | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-450 | Asynchrone, « Modifier le projet » (projet retardé) : clic pendant le chargement, fin, Échap : aucune confirmation ; contrôle positif : saisie puis Échap : confirmation | D-188 (10) b | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-451 | Dialogue sans garde (« Exporter les imputations ») : date modifiée puis Échap : aucune confirmation (garde-fou) | D-188 (7), (10) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-452 | Envoi réussi (« Nouvelle équipe », Créer) : le dialogue se ferme, aucune confirmation à aucun moment ; équipe créée | D-188 (5) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-453 | Envoi en échec (équipe en double) puis Échap : confirmation (la saisie existe encore), base inchangée | D-188 (5) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-454 | « Annuler » de la confirmation (rester) : confirmation fermée, dialogue ouvert, saisie et focus conservés | D-188 (2) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-455 | « Abandonner » : confirmation et dialogue fermés, aucune requête d'écriture envoyée, base inchangée | D-188 (2) | GDL | e2e/tests/garde-dialogue.spec.ts |
+| E2E-456 | Captures sans assertion fonctionnelle (ne compte pas comme test de comportement, comme E2E-436) : confirmation au-dessus d'un dialogue, 1440 et 1024 px, e2e/captures/garde-dialogue-{1440,1024}.png | D-133 (3), D-188 | GDL | e2e/tests/garde-dialogue-captures.spec.ts |
+
+### Couverture des champs, confirmation à la fermeture des dialogues
+
+Aucun champ d'API ajouté ni modifié : l'API est inchangée.
+
+### Inventaire des tests existants à réviser (D-188 (8), indicatif)
+
+Recherche par script dans e2e/tests : une saisie dans un dialogue, un refus de l'API (dialogue resté ouvert), puis « Annuler » : la saisie existe encore, une confirmation s'ouvrira. Candidats repérés : E2E-24 (lot1b-c.spec.ts, copie refusée puis « Annuler »), E2E-151 (lot3d3b.spec.ts), E2E-340-r1 et E2E-344 (lot6a.spec.ts), E2E-361 (lot6c.spec.ts), E2E-346-r1 (captures, lot6a-captures.spec.ts, Échap après refus). Limite : le script ne voit que les enchaînements proches (12 lignes) ; la liste exacte vient de la suite complète de la phase verte. Chaque révision : -rN, tag dédié, justification dans docs/non-bloquants.md.
+
+### Révisions D-031 des tests de la garde des dialogues (phase verte de D-188)
+
+Les tests rouges d'origine (tag `tests-garde-dialogue`, cc2d055) contenaient trois erreurs de mise en oeuvre du test, sans rapport avec le comportement attendu ; elles sont apparues à l'exécution contre le code (rouge prouvé de nouveau contre l'ancien code : 15 rouges, 2 verts par construction, comme avant). Un seul commit `test:`, tag `tests-garde-dialogue-r1`.
+
+| ID | Raison de la révision | Fichier |
+|---|---|---|
+| E2E-439-r1 à E2E-448-r1 | `dialogueNomme` : le dialogue recouvert par la confirmation est masqué aux technologies d'assistance par Radix (`aria-hidden`) ; la recherche par rôle l'excluait. Ajout de `includeHidden`. Même intention, mêmes assertions | e2e/tests/garde-dialogue-helpers.ts, garde-dialogue.spec.ts |
+| E2E-446-r1 | `selectOption` ne donne ni focus ni `pointerdown` : aucun geste, donc aucune référence (D-188 (10) b). Un utilisateur a toujours un geste ; le test donne le focus avant le choix | e2e/tests/garde-dialogue.spec.ts |
+| E2E-453-r1, E2E-455-r1 | `request` n'est pas authentifié (« Non authentifié ») : base relue par SQL (`equipesEnBase`) ; équipes remises à zéro entre les tests (`remettreAdminSeul6a`) | e2e/tests/garde-dialogue.spec.ts |
+
+### Révisions D-031 des tests existants touchés par la garde (D-188 (8), phase verte)
+
+La suite complète (1090 vitest verts ; 460 e2e verts, 17 rouges) a donné la liste exacte. Les 17 tests saisissent dans un dialogue, reçoivent un refus de l'API (dialogue resté ouvert, saisie gardée), puis le ferment par « Annuler », Échap ou la croix : la saisie existe encore, la confirmation s'ouvre (D-188 (5)). Même intention, mêmes assertions ; seule la fermeture change : le déclencheur, puis « Abandonner » dans la confirmation (`fermerEnAbandonnant`, garde-dialogue-helpers.ts). Un seul commit `test:`, un tag dédié `tests-garde-dialogue-r2` (écart assumé à « un tag par test » : même décision, même motif). Les tests dont le formulaire n'est modifié que par `selectOption` (sans geste, donc sans référence) restent inchangés : E2E-113, E2E-115, E2E-124 (`refuse` d'origine conservé).
+
+| ID | Fichier | Fermeture avant | Fermeture après |
+|---|---|---|---|
+| E2E-111-r1, E2E-112-r1, E2E-114-r1, E2E-116-r1 à E2E-121-r1, E2E-123-r2 | e2e/tests/cloture-c2.spec.ts | « Annuler » après refus | `refuseEtAbandonne` : « Annuler », « Abandonner » |
+| E2E-24-r1 | e2e/tests/lot1b-c.spec.ts | « Annuler » après refus de copie | « Annuler », « Abandonner » |
+| E2E-203-r2 | e2e/tests/lot3f2.spec.ts | « Annuler » après deux refus | « Annuler », « Abandonner » (focus du tableau relu après) |
+| E2E-311-r1 | e2e/tests/lot4c.spec.ts | croix après saisie du commentaire | croix, « Abandonner » |
+| E2E-340-r2 | e2e/tests/lot6a.spec.ts | « Annuler » après doublon | « Annuler », « Abandonner » |
+| E2E-346-r2 | e2e/tests/lot6a-captures.spec.ts | Échap après refus (capture) | Échap, « Abandonner » |
+| E2E-361-r1 | e2e/tests/lot6c.spec.ts | « Annuler » après refus | « Annuler », « Abandonner » |
+| E2E-73-r1 | e2e/tests/rex2d.spec.ts | « Annuler » après refus (deux fois) | « Annuler », « Abandonner » |
+
+Rouge : ces révisions échouent sans le code (la confirmation est attendue), par construction.
+
+### Preuves de la phase rouge de la garde des dialogues (D-188)
+
+- Lancés (D-128) : garde-dialogue.test.ts, garde-dialogue-structure.test.ts, garde-dialogue.spec.ts seuls ; lint et typecheck verts.
+- GDL-1 à GDL-4 : rouges, module `garde-dialogue` absent (collecte). GDL-5 : `sansGarde` introuvable dans les cinq fichiers ; GDL-6 : `Dialog` sans `sansGarde = false` ni soupape ; GDL-7 : « Annuler » appelle `onAnnuler` directement.
+- E2E-439 à E2E-448, E2E-453 à E2E-455 : confirmation « Abandonner les modifications ? » introuvable. E2E-449, E2E-450 : rouges au contrôle positif (saisie puis Échap : pas de confirmation).
+- Verts dès la phase rouge, par construction : E2E-451 (dialogue sans garde, garde-fou) et E2E-452 (envoi réussi, aucune confirmation, garde-fou).
+
+### Preuves de la phase verte de la garde des dialogues (D-188, D-189)
+
+- Code : `garde-dialogue.ts`, `Dialog.tsx` (garde, contexte, `sansGarde`, `modifie`, `focusRetour`, `useDialoguePret`), `Confirmation.tsx`, `commun.tsx` (`FormulaireDialogue`), `sansGarde` sur Déplacer, Calculer, Exporter, Voir, Confirmation ; `useDialoguePret` pour « Nouveau projet » et « Modifier le projet ».
+- Tests : GDL-1 à GDL-7 (13 verts) ; E2E-439-r1 à E2E-456 : 17 verts sur 3 passes. Révisions -r1 (tag `tests-garde-dialogue-r1`) avant le code ; 17 tests existants révisés (tag `tests-garde-dialogue-r2`).
+- Suite complète une fois (D-128, D-179) : lint, typecheck verts ; vitest 1090 verts (134 fichiers) ; e2e 477 verts (13,6 min), aucun intermittent (une première passe avait donné 17 rouges : l'inventaire des tests révisés).
+- Relecture @reviewer : OK ; un bloquant documentaire (decisions.md reformaté, corrigé) ; code conforme ; non-bloquants dans docs/non-bloquants.md.
+
+## Tests du lot de consolidation après la garde des dialogues (D-190)
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| PRT-1 | Chaque dossier de travail (racine, `packages/*`, `e2e`, `scripts`) contient un `.prettierignore` qui ignore `**/*.md` (prettier lancé depuis un dossier de travail ne reformate plus les documents) | D-190 (2), D-189 (5) | Consolidation | scripts/test/prettier-md.test.ts |
+| E2E-113-r1, E2E-115-r1, E2E-124-r1 | Révisions D-031 (D-190 (3)) : clic réel sur la liste avant `selectOption` ; refus, puis « Annuler » et « Abandonner » (confirmation attendue). Même intention, mêmes assertions | D-190 (3), D-188 (3), (4) | Consolidation | e2e/tests/cloture-c2.spec.ts |
+| E2E-446-r2 | Révision D-031 (D-190 (3)) : le geste devant `selectOption` est un clic réel sur la liste, non un focus programmatique | D-190 (3) | Consolidation | e2e/tests/garde-dialogue.spec.ts |
+| E2E-457 | Confirmation « Abandonner les modifications ? » : le focus initial est sur « Annuler » (rester) ; la touche Entrée y reste sans fermer le dialogue de formulaire ; Échap ferme la confirmation seule | D-190 (4) | Consolidation | e2e/tests/garde-dialogue-focus.spec.ts |
+| E2E-458 | Confirmation de suppression (équipe) : le focus initial est sur « Annuler » ; Entrée ne supprime rien | D-190 (4) | Consolidation | e2e/tests/garde-dialogue-focus.spec.ts |
+| E2E-459 | Boutons « Annuler » propres à leur formulaire (hors `FormulaireDialogue`) : « Nouveau calendrier », « Ajouter un jour férié », « Nouveau projet », « Rejeter » : modifié puis « Annuler » : confirmation (dialogue ouvert, saisie gardée) ; « Abandonner » : fermeture sans envoi ; sans modification : fermeture directe | D-188 (6), D-190 (7) | Consolidation | e2e/tests/garde-dialogue-focus.spec.ts |
+
+
+### Preuves de la phase rouge du lot de consolidation (D-190)
+
+- Contre le code d'avant le lot : PRT-1 rouge (aucun `.prettierignore` de dossier de travail, la racine ne porte que `*.md`) ; E2E-457 et E2E-458 : focus initial sur la croix « Fermer », pas sur « Annuler » ; E2E-459 : « Annuler » de « Nouveau calendrier » ferme sans confirmation (bouton propre au formulaire) ; E2E-115-r1 : « Annuler » de « Nouveau projet » sans confirmation (même cause).
+- Verts par construction (révisions neutres, elles précisent le geste) : E2E-113-r1, E2E-124-r1, E2E-446-r2 (la garde de `FormulaireDialogue` fonctionne ; le geste réel rend le test fidèle). Un premier essai d'E2E-446-r2 (clic puis `selectOption` puis Tab) était faux : Tab ou Échap referme la liste native ouverte et annule le choix ; retenu : clic, Échap (ferme la liste), flèche haut sur la liste fermée.
+- E2E-459 a aussi montré, après un premier correctif, que « Rejeter » appelait les crochets hors du `Dialog` (contexte absent) : composant enfant `ActionsRejet`.
+
+### Couverture des champs, lot de consolidation
+
+Aucun champ d'API ajouté ni modifié : l'API est inchangée.
+
+### Révision D-031 d'E2E-457 (D-190, phase verte)
+
+| ID | Raison de la révision | Fichier |
+|---|---|---|
+| E2E-457-r1 | Intermittent en suite complète (une fois sur 479 : le second Échap, pressé dès que la confirmation est visible, arrivait avant que son gestionnaire d'Échap soit en place). Ajout de l'attente du focus sur « Annuler » avant le second Échap. Même intention, mêmes assertions. 3 passes vertes ciblées, puis suite complète relancée. Tag `tests-garde-dialogue-r4` | e2e/tests/garde-dialogue-focus.spec.ts |
+
+## Tests de l'outillage de test, garde-fou de base et suite complète (D-193)
+
+Règle de nommage d'une base de test : nom du chemin de l'URL, décodé, qui finit par `_test` avec un préfixe non vide (D-193 (1)). Fichiers : `scripts/test/garde-base-test.test.ts` (GBT) et `scripts/test/suite-complete.test.ts` (SUI). Les valeurs viennent de D-193, pas de `SPEC.md` (outillage).
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| GBT-1 | une URL dont la base finit par `_test` est acceptée et renvoyée inchangée (avec requête, avec nom encodé) | D-193 (1) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-2 | une base hors règle (`planersource`, `planersource_demo`, `planersource_test_old`, `test`, `_test`, chemin vide) est refusée ; le message commence par « Garde-fou base de test », nomme la variable et la base, ne contient pas le mot de passe | D-193 (1), (2) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-3 | variable absente, vide, blanche ou URL illisible : refus explicite | D-193 (2) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-4 | `exigerBaseTest` lit la variable nommée et ne se replie jamais sur `DATABASE_URL` | D-193 (2) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-5 | `e2e/prepare-db.mjs` pointé sur une base de dev ou sans variable : code non nul, message du garde-fou, 0 connexion reçue par un serveur d'écoute | D-193 (2) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-6 | la configuration Playwright pointée sur une base de dev ou sur une variable vide : code non nul, message du garde-fou, 0 connexion | D-193 (2) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-7 | un test d'API lancé avec `TEST_DATABASE_URL` sur une base de dev : code non nul, message du garde-fou, 0 connexion | D-193 (2) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-8 | `avec-base-test` : base valide, la commande reçoit `DATABASE_URL` égale à la base de test même si `DATABASE_URL` désigne la dev ; base invalide ou variable vide, la commande n'est pas lancée (fichier témoin absent), 0 connexion | D-193 (3) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| GBT-9 | inventaire : tout fichier suivi qui lit `TEST_DATABASE_URL` importe le garde-fou, sauf la liste figée des hérités (tests sous tag), qui gardent un `endsWith('_test')` en ligne ; aucune entrée obsolète | D-193 (2) | Optimisation des tests 2a | scripts/test/garde-base-test.test.ts |
+| SUI-1 | lot absent du journal (journal absent ou vide) : suite autorisée sans justification | D-193 (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-2 | lot déjà présent, justification absente, vide ou blanche : refus qui cite les lignes existantes ; le journal est inchangé (octets) | D-193 (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-3 | lot déjà présent avec justification non vide : autorisée, et la justification est écrite dans la ligne `debut` | D-193 (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-4 | le journal est en ajout seulement : les octets existants sont conservés et chaque évènement ajoute exactement une ligne JSON terminée par un saut de ligne | D-193 (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-5 | exécution vert et vert : ligne `debut` avant les suites, ligne `fin` après (date, commit, durées numériques, statuts, résultat « vert ») ; vitest rouge : e2e « non lancé », résultat « échec vitest », code de sortie non nul ; suite interrompue : ligne `fin` « interrompu » | D-193 (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-6 | `lignesDuLot` renvoie les lignes du lot, dans l'ordre ; `--lister` d'un lot absent affiche « aucune suite complète » et sort avec 0 | D-193 (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-7 | `suite-complete` sans `--lot` : code 2, journal inchangé ; avec une base de dev : code non nul, journal inchangé, aucune suite lancée, 0 connexion | D-193 (2), (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-8 | la règle de process est écrite : docs/tests.md, CLAUDE.md et les trois agents citent `npm run suite-complete` ; le relecteur « ne lance jamais la suite complète » | D-193 (5) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+| SUI-9 | `package.json` déclare `suite-complete` et `avec-base-test` vers leurs scripts | D-193 (3), (4) | Optimisation des tests 2a | scripts/test/suite-complete.test.ts |
+
+## Règle de la suite complète (D-193)
+
+Appliquée mécaniquement par `npm run suite-complete` (journal `docs/journal-suites.jsonl`, ajout seulement) et par le garde-fou de base de test ; elle resserre D-128, qui n'avait pas été tenue (5 suites complètes sur un lot).
+
+- Pendant le développement : passes ciblées (`npx vitest run <fichier>`, `cd e2e && npx playwright test -g <ID>`), lint et typecheck. Les passes ciblées ×3 sont réservées aux tests nouveaux ou révisés (-rN).
+- Une seule suite complète (vitest puis e2e) par lot, après les corrections du relecteur : `npm run suite-complete -- --lot <nom>`. Le point d'entrée vérifie la base de test, journalise le début et la fin (date, commit, durées, résultat) et ne lance pas les e2e si vitest est rouge.
+- Un échec de la suite complète se corrige, puis seuls les fichiers en échec sont relancés ×3 ; la suite complète n'est pas relancée, la CI la rejoue au push. Si une seconde suite est inévitable, `--justification "<texte>"` est obligatoire (sans elle, refus et journal inchangé) et le rapport de clôture la justifie.
+- Le relecteur ne lance jamais la suite complète (ni `npm test`, ni `npm run test:e2e`) : il lance les passes ciblées du lot. Les trois agents portent la même consigne.
+- Le rapport de clôture cite les lignes du journal pour le lot : `npm run suite-complete -- --lister <lot>`.
+- Base de test : un nom qui finit par `_test`, précédé d'un préfixe. Tout lancement ad hoc qui touche une base passe par `npm run avec-base-test -- <commande>` (il force `DATABASE_URL` sur la base de test et ne lance rien si le contrôle échoue). Les points d'entrée des tests (vitest de l'API, Playwright, `e2e/prepare-db.mjs`) refusent de démarrer avant toute connexion.
+- Limite connue : `npx vitest run` et `npm test` restent possibles ; le contrôle repose sur le journal, relu à la clôture, et sur les consignes des agents.
+- Le prompt d'ouverture d'un lot déclare ses domaines (noms de `e2e/domaines.json` : `dialogues`, `feuille-de-temps`, `gantt`…). Les passes ciblées du lot utilisent `npm run tests-cibles -- --depuis <commit d'ouverture> [--domaine <nom>…]` ; `--lister` montre la sélection (spec et raison) sans rien exécuter. `--depuis` retient les specs modifiées et celles qui importent un fichier modifié (`playwright --only-changed`) et lance `vitest --changed` ; `--domaine` ajoute les specs du domaine. Une nouvelle spec est classée dans `e2e/domaines.json` avant d'être commitée (TC-5). Ce n'est pas une suite complète : rien n'est écrit au journal (D-194).
+- Les passes ×3 des tests nouveaux ou révisés : `tests-cibles` trois fois, ou `cd e2e && npx playwright test -g <ID>`.
+- Un changement de configuration de test (vitest, Playwright, base, workers) se valide par le point d'entrée réel (`npm run suite-complete` ou `npm run tests-cibles`), jamais seulement par des options en ligne de commande : c'est la leçon des deux suites de vitest-parallele (D-196), où `maxWorkers` passé en option fonctionnait et était refusé par projet dans la configuration (D-197). Les trois agents portent la même consigne.
+
+## Tests du ciblage des tests et de la session partagée (D-194)
+
+Fichiers : `scripts/test/tests-cibles.test.ts` (TC), `scripts/test/suite-complete-lot.test.ts` (SUI-10, SUI-11), `e2e/tests/session-partagee.spec.ts` (E2E-460 à E2E-463). Valeurs de D-194, pas de `SPEC.md` (outillage).
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| TC-1 | sélection par commit : une spec modifiée est retenue avec la raison « modifiée depuis <commit> » | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-2 | sélection par domaine : les specs du domaine sont retenues avec la raison « domaine <nom> » | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-3 | union sans doublon : une spec modifiée et d'un domaine, ou de deux domaines, apparaît une fois avec toutes ses raisons, triée par nom | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-4 | domaine inconnu : erreur explicite qui nomme le domaine et liste les domaines connus ; en ligne de commande, code 1 et rien n'est lancé | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-5 | toute spec de `e2e/tests` appartient à au moins un domaine de `e2e/domaines.json` ; le message nomme les specs orphelines | D-194 (2) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-6 | `e2e/domaines.json` ne référence aucune spec inexistante, aucun domaine vide, aucun doublon dans un domaine | D-194 (2) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-7 | commandes construites : une commande Playwright avec `tests/<spec>` par spec retenue, aucune s'il n'y en a pas ; vitest `--changed <commit>` seulement avec `--depuis` | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-8 | `--lister --domaine dialogues` : liste les specs du domaine avec leur raison, code 0, journal des suites inchangé, rien n'est exécuté | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-9 | sans `--depuis` ni `--domaine` : code 2 ; base de dev : code non nul, message du garde-fou, 0 connexion, journal inchangé | D-194 (1), D-193 (2) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-10 | intégration `--only-changed` (dépôt git temporaire, projet Playwright minimal) : spec modifiée retenue, spec qui importe un helper modifié retenue, spec non touchée absente | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-11 | lecture de la sortie de `vitest list --filesOnly` : « [projet] chemin » donne la liste des chemins, lignes étrangères ignorées | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-12 | la règle est écrite : docs/tests.md (section « Règle de la suite complète » : domaines déclarés à l'ouverture d'un lot), CLAUDE.md et les trois agents citent `npm run tests-cibles` | D-194 (3) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| TC-13 | `package.json` déclare `tests-cibles` vers `scripts/tests-cibles.mjs` | D-194 (1) | Optimisation des tests 2b | scripts/test/tests-cibles.test.ts |
+| E2E-460 | après `loginAsAdmin` (qui réécrit l'état si la session partagée a été révoquée par une spec précédente), `e2e/.auth/admin.json` existe, porte le cookie de session et ce cookie ouvre une session valide (`GET /api/auth/me` : 200, administrateur) | D-194 (4) | Optimisation des tests 2b | e2e/tests/session-partagee.spec.ts |
+| E2E-461 | `loginAsAdmin` réutilise l'état : aucun `POST /api/auth/login` pendant l'appel, arrivée sur « / » avec la navigation | D-194 (4) | Optimisation des tests 2b | e2e/tests/session-partagee.spec.ts |
+| E2E-462 | session partagée révoquée par une déconnexion : l'appel suivant se rabat sur la connexion par l'écran (un seul `POST`) et réécrit l'état ; l'appel d'après n'en fait aucun | D-194 (4) | Optimisation des tests 2b | e2e/tests/session-partagee.spec.ts |
+| E2E-463 | `E2E_CONNEXION_ECRAN=1` force la connexion par l'écran (un `POST`) ; sans la variable, aucun | D-194 (4) | Optimisation des tests 2b | e2e/tests/session-partagee.spec.ts |
+| SUI-10 | lot7 puis Lot7, « lot 7 » : la seconde suite est refusée sans justification, journal inchangé (octets) | D-194 (5) | Optimisation des tests 2b | scripts/test/suite-complete-lot.test.ts |
+| SUI-11 | le nom de lot est écrit normalisé (minuscules, sans espaces) dans les lignes `debut` et `fin` ; `lignesDuLot` ignore la casse et les espaces, y compris pour des lignes déjà au journal avec majuscules | D-194 (5) | Optimisation des tests 2b | scripts/test/suite-complete-lot.test.ts |
+
+Specs touchées indirectement par la modification du helper `loginAsAdmin` (aucune n'est modifiée ; 46, toutes sous tag, relancées en suite complète) : accueil-g2, accueil-g3, accueil-g3-captures, accueil-g4, autrui-e, autrui-e-captures, cloture-c2, devalidation-e, devalidation-e-captures, garde-dialogue, garde-dialogue-captures, garde-dialogue-focus, login, lot1, lot1b, lot1b-c, lot3c, lot3d1, lot3d3b, lot3d4, lot3e, lot3f1, lot3f2, lot4b, lot4c, lot4c-captures, lot5d, lot5d-captures, lot5i, lot6a, lot6a-captures, lot6b, lot6c, lot6d, lot6e, lot6f, retouche-feuille, retouche-feuille-captures, retouche-voir, retouche-voir-captures, rex1, rex2, rex2b, rex2c, rex2d, rex5. Les connexions par l'écran propres aux specs (E2E-1, E2E-2, `connecterAvec`, rex2, lot5b, lot5i) ne passent pas par ce helper.
+
+## Tests du correctif E2E-457 : demande de fermeture pendant la confirmation (D-195)
+
+Fichier : `e2e/tests/garde-dialogue-focus.spec.ts` (domaine `dialogues`). Comportement attendu fixé par le porteur (D-195), pas de `SPEC.md`. Les gestes rapides sont envoyés dans une seule tâche du navigateur (`page.evaluate`, évènements `keydown` et `pointerdown`), sans attente arbitraire, pour placer la seconde demande de façon déterministe avant ou après l'ouverture de la confirmation.
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| E2E-464 | double Échap dans la même tâche sur « Nouvelle équipe » modifié (seconde demande pendant l'ouverture de la confirmation) : la confirmation est visible, focus sur « Annuler », le dialogue reste ouvert, saisie conservée | D-195 (3) | Correctif 457 | e2e/tests/garde-dialogue-focus.spec.ts |
+| E2E-465 | Échap puis clic dehors dans la même tâche : la confirmation est visible, focus sur « Annuler », le dialogue reste ouvert, saisie conservée | D-195 (3) | Correctif 457 | e2e/tests/garde-dialogue-focus.spec.ts |
+| E2E-466 | Échap reçu une fois la confirmation ouverte et focalisée (focus sur « Annuler » constaté dans la même tâche, avant la bascule de l'écouteur d'Échap de Radix) : vaut « Rester » ; la confirmation se ferme, le dialogue reste ouvert, saisie conservée, focus revenu sur « Nom » | D-195 (3) | Correctif 457 | e2e/tests/garde-dialogue-focus.spec.ts |
+
+### Révision D-031 d'E2E-457-r1 (D-195)
+
+| id | motif | fichier |
+|---|---|---|
+| E2E-457-r2 | Seconde course relevée par le diagnostic (D-195 (2)) : `fill` juste après l'ouverture n'est pas un geste réel ; s'il arrive pendant le focus automatique, aucune référence n'est prise et le premier Échap ferme sans confirmation. Ajout d'un clic réel dans « Nom » avant `fill` (comme E2E-446-r2). Même intention, mêmes assertions. Tag `tests-correctif-457-r2` | e2e/tests/garde-dialogue-focus.spec.ts |
+
+## Tests de la base par worker de vitest (D-196)
+
+Fichiers : `scripts/test/bases-worker.test.ts` (BPW-1 à BPW-7, projet scripts, en série) et `packages/api/test/bases-worker.test.ts` (BPW-8, projet api). Valeurs de D-196, pas de `SPEC.md` (outillage). Les essais sur la base réelle utilisent une famille de bases propre aux tests (`<préfixe>_essaibpw_…_test`), jamais celle de vitest.
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| BPW-1 | noms dérivés : depuis `…/planersource_test` et le worker 2, modèle `planersource_vitest_modele_test` et worker `planersource_vitest_w2_test` ; hôte, utilisateur, mot de passe et requête de l'URL conservés | D-196 (1) | vitest-parallele | scripts/test/bases-worker.test.ts |
+| BPW-2 | refus : base de maintenance hors règle (message du garde-fou), nom dérivé de plus de 63 octets, caractère hors `[a-z0-9_]`, worker absent, 0, négatif ou non entier | D-196 (1) | vitest-parallele | scripts/test/bases-worker.test.ts |
+| BPW-3 | empreinte : identique pour les mêmes fichiers, différente si un contenu change, si un fichier est ajouté ou renommé | D-196 (2) | vitest-parallele | scripts/test/bases-worker.test.ts |
+| BPW-4 | base modèle : construite au premier appel (migrations appliquées, empreinte en commentaire) ; réutilisée si l'empreinte est la même (une ligne témoin écrite dans le modèle est conservée) ; reconstruite si elle change (témoin disparu, nouvelle empreinte) | D-196 (2) | vitest-parallele | scripts/test/bases-worker.test.ts |
+| BPW-5 | base du worker : créée depuis le modèle (elle contient ses tables et son témoin) ; un second appel la garde telle quelle (une écriture dans la base du worker est conservée) | D-196 (3) | vitest-parallele | scripts/test/bases-worker.test.ts |
+| BPW-6 | nettoyage : supprime toutes les bases de worker de la famille, garde le modèle, la base de maintenance et les bases d'une autre famille | D-196 (4) | vitest-parallele | scripts/test/bases-worker.test.ts |
+| BPW-7 | aucune connexion hors test : base de maintenance hors règle, refus de chaque fonction avec le message du garde-fou et 0 connexion reçue par un serveur d'écoute ; sur la base réelle, toute URL ouverte par la préparation désigne une base qui finit par `_test` (jamais `postgres` ni `template1`) | D-196 (1) | vitest-parallele | scripts/test/bases-worker.test.ts |
+| BPW-8 | dans un test de l'API, `testDbUrl()` désigne la base du worker courant (`…_vitest_w<VITEST_POOL_ID>_test`), qui existe et porte les migrations | D-196 (3) | vitest-parallele | packages/api/test/bases-worker.test.ts |
+
+### Révision D-031 de TRX-2, TRX-4 et TRX-5 (D-196, lot vitest-parallele)
+
+Décision du porteur (2026-11-23) : révision -r1 plutôt qu'un projet vitest séparé en série.
+
+| id | motif | fichier |
+|---|---|---|
+| TRX-2-r1 | Le relevé des verrous consultatifs lisait `pg_locks` sans filtre : tout le serveur, donc aussi les verrous des bases des autres workers de vitest (D-196). Filtre ajouté : base courante seulement. Même intention, mêmes assertions. Preuve : avant, rouge quand un verrou est tenu dans une autre base ; après, vert. Tag `tests-vitest-parallele-r1` | packages/api/test/lot2a-transaction.test.ts |
+| TRX-4-r1 | Même motif et même filtre ; échec relevé dans la passe en ordre aléatoire à 3 workers (2 verrous au lieu de 1). Tag `tests-vitest-parallele-r1` | packages/api/test/lot3c-calcul.test.ts |
+| TRX-5-r1 | Même motif et même filtre. Tag `tests-vitest-parallele-r1` | packages/api/test/lot3c-calcul.test.ts |
+
+## Tests de la robustesse des e2e et des tests dépendants de l'ordre (D-197, lot robustesse-tests)
+
+Fichiers : `e2e/tests/stabilite-helpers.ts` (aides) et `e2e/tests/stabilite-helpers.spec.ts` (domaine `dialogues`). Règle : synchronisation sur un état observable seulement (confirmation visible, focus sur « Annuler », champ focalisé), jamais sur un délai fixe ; geste réel (clic dans le champ) avant le premier `fill` d'un dialogue gardé. Identifiants posés ici après l'écriture du premier jet du test (écart à la règle « identifiant avant le test », consigné en D-197).
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| STB-1 | `saisirParGeste` : clic dans « Nom » de « Nouvelle équipe », champ focalisé puis valeur saisie ; Échap ouvre la confirmation | D-197 | robustesse-tests | e2e/tests/stabilite-helpers.spec.ts |
+| STB-2 | `cliquerDansConfirmation` : attend la confirmation visible et le focus sur « Annuler » avant de cliquer « Abandonner » ; le dialogue se ferme | D-197 | robustesse-tests | e2e/tests/stabilite-helpers.spec.ts |
+
+### Révisions D-031 (D-197, lot robustesse-tests)
+
+Décision du porteur (2026-11-23) : révision de ces tests en -rN, même intention, mêmes assertions.
+
+(A) Clic dans une confirmation après `expect(confirmation).toBeVisible()` (et focus sur « Annuler » pour les confirmations de sortie), par `cliquerDansConfirmation` :
+
+| id | motif | fichier |
+|---|---|---|
+| E2E-400-r1, E2E-402-r1, E2E-405-r1, E2E-406-r1 | Clic sur « Abandonner » sans attendre la confirmation de sortie | e2e/tests/sortie.spec.ts |
+| E2E-177-r1 | Clic sur « Supprimer » de la confirmation sans attendre sa visibilité | e2e/tests/lot3e.spec.ts |
+| E2E-18-r1, E2E-19-r1, E2E-21-r2 | Même motif, suppressions (jalon, dépendance, assignation, affectation, jour férié, calendrier) | e2e/tests/lot1b-c.spec.ts |
+| E2E-395-r1 | Même motif, suppression du calendrier | e2e/tests/rex5.spec.ts |
+| E2E-346-r3 | Même motif, suppression de l'équipe (captures) | e2e/tests/lot6a-captures.spec.ts |
+| E2E-459-r1 | Clic sur « Abandonner » du §2 sans attente (voir aussi (B)) | e2e/tests/garde-dialogue-focus.spec.ts |
+
+(B) Clic réel dans le champ avant le premier `fill`, par `saisirParGeste` :
+
+| id | motif | fichier |
+|---|---|---|
+| E2E-439-r2 à E2E-442-r2, E2E-443-r2, E2E-444-r2, E2E-445-r2, E2E-448-r2, E2E-449-r1, E2E-450-r1, E2E-454-r1, E2E-455-r2 | `fill` sans geste réel dans un dialogue gardé (D-195 (2)) | e2e/tests/garde-dialogue.spec.ts |
+| E2E-459-r1 | Mêmes §1 à §4 | e2e/tests/garde-dialogue-focus.spec.ts |
+| E2E-456-r1 | Même motif (captures) | e2e/tests/garde-dialogue-captures.spec.ts |
+| E2E-311-r2 | Même motif, premier `fill` du commentaire de rejet | e2e/tests/lot4c.spec.ts |
+
+Tests vitest (révision -r1, indépendants de l'ordre, prouvés par des passes en ordre aléatoire de leurs fichiers) :
+
+| id | motif | fichier |
+|---|---|---|
+| INST-13-r1 | Le `afterEach` attendait l'évènement `exit` d'un serveur déjà tué par signal (`exitCode` nul, `signalCode` non nul) : délai du hook dépassé si « démarrage réel » passait avant le test pur. `signalCode` testé aussi, `fils` remis à `undefined` | packages/api/test/lot5b-demarrage.test.ts |
+| BPW-7-r1 | La vérification « toute URL ouverte finit par `_test` » lisait les URL relevées par BPW-4 à BPW-6 (liste vide si lancée en premier). Les URL sont relevées dans le test lui-même (famille `essaibpw7`). Le second BPW-7 (refus avant toute connexion) est inchangé | scripts/test/bases-worker.test.ts |
+
+Hors périmètre déclaré, non révisés : E2E-401 et E2E-403 (clic « Abandonner » de `sortie.spec.ts`), même motif que (A), absents de la liste de l'audit.
+
+## Tests des prérequis du lot e2e-parallele : pré-contrôle et hook commit-msg (D-198)
+
+Fichiers : `scripts/test/pre-controle.test.ts` (PRC) et `scripts/test/hook-commit-msg.test.ts` (HCM), projet scripts. Valeurs de D-198, pas de `SPEC.md` (outillage).
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| PRC-1 | pré-contrôle rouge : `executerSuite` rend le code 1 et le résultat « pré-contrôle en échec », message qui commence par « Pré-contrôle en échec » ; vitest et e2e non lancés ; journal inchangé octet pour octet (aucune ligne `debut`) | D-198 (1) | e2e-parallele | scripts/test/pre-controle.test.ts |
+| PRC-2 | pré-contrôle vert : lancé avant la ligne `debut` (journal encore vide pendant son exécution), puis vitest et e2e ; lignes `debut` et `fin` écrites | D-198 (1) | e2e-parallele | scripts/test/pre-controle.test.ts |
+| PRC-3 | lot déjà présent sans justification : refus avant le pré-contrôle (pré-contrôle non lancé, journal inchangé) | D-198 (1) | e2e-parallele | scripts/test/pre-controle.test.ts |
+| PRC-4 | liste du pré-contrôle : chaque identifiant figure dans un `describe` ou un `it` de son fichier, qui existe ; commandes construites : `vitest run <fichiers> -t <motif>` (le motif retient chaque identifiant et rejette TC-1, TC-50, GBT-1), puis `playwright test --list` dans `e2e` | D-198 (1) | e2e-parallele | scripts/test/pre-controle.test.ts |
+| PRC-5 | `scripts/suite-complete.mjs` passe le pré-contrôle à `executerSuite` | D-198 (1) | e2e-parallele | scripts/test/pre-controle.test.ts |
+| HCM-1 | dans un dépôt git temporaire où `npm run setup-depot` a été lancé : sujet seul accepté (commit créé) | D-198 (2) | e2e-parallele | scripts/test/hook-commit-msg.test.ts |
+| HCM-2 | sujet, ligne vide, corps et trailer : accepté | D-198 (2) | e2e-parallele | scripts/test/hook-commit-msg.test.ts |
+| HCM-3 | sujet suivi directement d'un trailer, ou du corps : refusé, code non nul, message qui nomme la ligne vide manquante, aucun commit créé (HEAD inchangé) | D-198 (2) | e2e-parallele | scripts/test/hook-commit-msg.test.ts |
+| HCM-4 | lignes de commentaire et partie après la ligne de ciseaux ignorées (sujet, commentaires git, ciseaux, diff : accepté) | D-198 (2) | e2e-parallele | scripts/test/hook-commit-msg.test.ts |
+| HCM-5 | `.githooks/commit-msg` est suivi par git avec le mode exécutable ; `setup-depot` pose `core.hooksPath` = `.githooks` ; hors d'un dépôt git, il ne fait rien et rend le code 0 | D-198 (2) | e2e-parallele | scripts/test/hook-commit-msg.test.ts |
+
+## Tests des e2e en parallèle, une pile par worker (D-199)
+
+Fichiers : `scripts/test/piles-e2e.test.ts` (E2P-1 à E2P-5, E2P-7, E2P-8, projet scripts, en série) et `e2e/tests/pile-worker.spec.ts` (E2P-6, domaine `authentification`). Module testé : `scripts/lib/piles-e2e.mjs`. Valeurs de D-199, pas de `SPEC.md` (outillage). Les essais sur la base réelle utilisent une famille de bases propre aux tests (`<préfixe>_essaie2p_…_test`) et des ports hors de la plage des e2e.
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| E2P-1 | noms et ports : worker 1 → base `planersource_e2e_w1_test`, modèle `planersource_vitest_modele_test`, API 3301, front 5301 ; worker 0, négatif ou non entier refusé ; de 1 à 64 workers, jamais le port 3000 ni 5173 ; base de maintenance hors règle refusée (message du garde-fou) | D-199 (1), (2) | e2e-parallele | scripts/test/piles-e2e.test.ts |
+| E2P-2 | base e2e du worker recréée neuve depuis le modèle de vitest : elle porte le témoin du modèle ; une écriture de l'exécution précédente a disparu | D-199 (1) | e2e-parallele | scripts/test/piles-e2e.test.ts |
+| E2P-3 | registre : lanceur encore vivant → refus qui nomme son pid, aucun processus arrêté, registre inchangé ; lanceur mort → groupes marqués arrêtés, bases de la famille supprimées, registre effacé | D-199 (6) | e2e-parallele | scripts/test/piles-e2e.test.ts |
+| E2P-4 | un pid du registre dont le processus ne porte pas le marqueur de la pile n'est pas arrêté | D-199 (6) | e2e-parallele | scripts/test/piles-e2e.test.ts |
+| E2P-5 | configuration Playwright évaluée dans le worker d'index 1 : `TEST_DATABASE_URL` = base `…_e2e_w2_test`, `baseURL` = `http://localhost:5302`, état de session `e2e/.auth/admin-w2.json` ; hors worker : `TEST_DATABASE_URL` inchangée ; l'évaluation ne crée aucune base et n'ouvre aucun port | D-199 (3), (5) | e2e-parallele | scripts/test/piles-e2e.test.ts |
+| E2P-6 | dans un worker : `TEST_DATABASE_URL` désigne la base du worker courant ; un calendrier créé par l'API derrière le front du worker est dans cette base, et absent de `planersource_test` | D-199 (1), (3) | e2e-parallele | e2e/tests/pile-worker.spec.ts |
+| E2P-7 | bout en bout : `playwright test pile-worker.spec.ts --workers=2` rend 0 ; après la fin, aucune base `…_e2e_w…_test`, ports 3301, 3302, 5301, 5302 libres, registre effacé | D-199 (3), (6) | e2e-parallele | scripts/test/piles-e2e.test.ts |
+| E2P-8 | arrêt brutal : piles démarrées par un lanceur tué par SIGKILL ; le nettoyage du démarrage suivant arrête les processus orphelins, supprime les bases et libère les ports | D-199 (6) | e2e-parallele | scripts/test/piles-e2e.test.ts |
+| E2P-9 | structurel (pré-contrôle) : aucun fichier suivi sous `e2e/`, hors `e2e/pile-worker.ts`, ne contient `localhost:5173`, `localhost:3000`, `127.0.0.1:5173`, `127.0.0.1:3000` ni `.auth/admin.json` | D-199 (12), D-198 (4) | e2e-parallele | scripts/test/adresses-e2e.test.ts |
+| E2P-10 | réservation du registre (relecture) : un lanceur en préparation réserve le registre par création exclusive avant toute base ; un second démarrage est refusé (pid du premier nommé) sans toucher la base ni le registre du premier ; `arreterPiles` en mode propriétaire ne fait rien si le registre appartient à un autre lanceur vivant ; `global-setup.ts` réserve le registre après `nettoyerPiles` et avant `preparerModele`, et arrête en mode propriétaire | D-199 (14) | e2e-parallele | scripts/test/piles-e2e-reservation.test.ts |
+
+### Révisions D-031 (D-199, lot e2e-parallele)
+
+Décision du porteur (2026-11-24) : révisions -r1, même intention ; tag `tests-e2e-parallele-r1`.
+
+| id | motif | fichier |
+|---|---|---|
+| E2E-460-r1 | Lisait `e2e/.auth/admin.json` et ouvrait un contexte d'API sur `http://localhost:5173` : avec une pile par worker, l'état de session est `e2e/.auth/admin-w<N>.json` et le front du worker a son propre port (D-199 (2), (5)). Chemin et URL pris de `etat-session.ts` et `pile-worker.ts`. Mêmes assertions | e2e/tests/session-partagee.spec.ts |
+| PRC-4-r1 | La liste attendue du pré-contrôle était celle de D-198 (1) seule ; E2P-9 y est ajouté (D-198 (4)) | scripts/test/pre-controle.test.ts |
+
+Helper modifié (pas une révision de test, D-194 (4)) : `sessionDe` de `e2e/tests/lot4b-helpers.ts`, `baseURL` pris de `pile-worker.ts` au lieu de `http://localhost:5173`. Specs touchées indirectement : celles qui importent `sessionDe` (lot4b, lot4c et suivantes, voir `grep sessionDe e2e/tests`).
+
+### Preuves de la phase rouge (D-198, D-199, lot e2e-parallele)
+
+- PRC et HCM (commit 73b6b84, tag `tests-prerequis-e2e-parallele`, tag léger : son remplacement par un tag annoté exigeait un push forcé, refusé) : 16 rouges ; PRC-3 déjà vert (refus d'un lot présent sans justification, D-193 (4)) ; HCM : `.githooks/commit-msg` et `setup-depot` absents ; PRC : `preControle` non appelé, module `pre-controle.mjs` absent.
+- E2P-1 à E2P-8 (commit aad7551, tag `tests-e2e-parallele`) : 13 rouges sur 14 ; module `piles-e2e.mjs` absent, E2P-5 « worker d'index 1 » : base restée `planersource_test` ; E2P-7 : E2P-6 rouge (base hors pile) ; E2P-5 « hors worker » déjà vert (comportement existant).
+- E2P-9 (commit 6005426) : 6 fautes (`etat-session.ts`, `global-setup.ts`, `playwright.config.ts`, `lot4b-helpers.ts`, deux dans `session-partagee.spec.ts`).
+- PRC-4-r1 et E2E-460-r1 (commit af2c089, tag `tests-e2e-parallele-r1`) : PRC-4-r1 rouge (E2P-9 absent de la liste) ; E2E-460-r1 rouge à la collecte (`e2e/pile-worker.ts` absent).
+
+### Preuves de la phase verte (D-198, D-199)
+
+- `pre-controle`, `hook-commit-msg`, `suite-complete`, `suite-complete-lot` : 47 verts ; pré-contrôle réel 3,9 s.
+- `piles-e2e`, `adresses-e2e`, `pre-controle`, `garde-base-test`, `bases-worker`, `tests-cibles` : 96 verts.
+- e2e : chaque spec seule, deux passes mélangées, trois passes de validation à 2 workers : docs/mesure-tests.md, section 14.
+
+### Couverture des champs, lot e2e-parallele
+
+Aucun champ d'API ni écran modifié (outillage de test seulement).
+
+## Correctif 244 : choix fait avant la correction différée de l'adresse (D-200)
+
+Fichier : `e2e/tests/correctif-244.spec.ts`, domaine feuille-de-temps (e2e/domaines.json). Valeurs de D-200 et de D-181 (5) (adresse `/imputations?semaine=…&ressource=<id>`, titre « Feuille de temps de <nom> »). Données préparées par l'API (monde de AUT-E) ; la ressource choisie reçoit un calendrier propre (D-163 (3)). Le choix dans « Ressource » est fait par un `MutationObserver` installé dans la page avant le clic de menu (D-200 (3)) : dès que la liste est activable et contient l'option, sa valeur change et un évènement `change` qui remonte est envoyé, dans le rappel de l'observateur, avant les effets passifs de React. Aucun délai.
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| E2E-467 | administrateur non ressource, sur l'Accueil ; clic « Imputations » dans le menu (adresse sans `semaine`) ; le choix « Alice 4B » dans « Ressource » est fait par l'observateur dès que la liste est activable et contient l'option. Attendus : adresse finale avec `semaine=2026-01-12` et `ressource=<id d'Alice>` ; titre h1 « Feuille de temps de Alice 4B » ; statut de la feuille affiché (« Brouillon ») ; `history.length` après le choix − avant le clic ≤ 2 (clic de menu, choix ; la correction d'adresse n'ajoute pas d'entrée) | D-200 (1), (2), (3) ; D-181 (5) | correctif-244 | e2e/tests/correctif-244.spec.ts |
+
+Non exposés, aucun test (constat de la phase rouge, D-200 (7)) :
+
+- Plan de charge : `Redirect` dépend seulement de l'adresse (`corrige`, `PlanDeCharge.tsx:68`) ; tant qu'il est vrai, `Contenu`, qui porte « Équipe », « Mois de départ » et les boutons de mois, n'est pas rendu (`PlanDeCharge.tsx:69`). Aucun contrôle de l'écran qui appelle `navigate` n'existe pendant la fenêtre.
+- Validation : même schéma, `Redirect` sur `corrigee` (`Validation.tsx:65`), `Liste` (avec `NavigationSemaine`, `Validation.tsx:184-188`) non rendue tant que `corrigee` est vrai (`Validation.tsx:68`).
+- Feuille de temps de la ressource (non administrateur) : même schéma (`FeuilleTemps.tsx:65-68`).
+- Seule FeuilleAdmin a la fenêtre : `when={aCorriger}` attend l'annuaire (`FeuilleTemps.tsx:92`, `:109-112`) et la liste « Ressource » est rendue activable dans le même commit (`disabled={!prete}`, `FeuilleTemps.tsx:104`).
+- Reste commun à tous les écrans, hors test : les liens du menu (`Layout`) sont rendus pendant la fenêtre de tout `Redirect` ; un clic à ce moment serait écrasé de la même façon. Fenêtre de l'ordre d'une tâche sur Plan de charge et Validation ; couvert par la correction du routeur (D-200 (2)).
+
+### Couverture des champs, correctif 244
+
+Aucun champ d'API ni écran modifié.
+
+### Preuves de la phase rouge du correctif 244 (D-200)
+
+- Commit d'ouverture abf0d5a ; test commité en b02277f.
+- `cd e2e && npx playwright test -g E2E-467 --repeat-each=5 --workers=1` (par `npm run avec-base-test`) : 5 échecs sur 5, `toHaveURL` reçoit `/imputations?semaine=2026-01-12` (sans `ressource`) ; titre h1 resté « Feuille de temps » dans les 5 instantanés d'erreur.
+- Contrôle de diagnostic, spec temporaire jamais commitée (mêmes gestes, assertions d'adresse et de titre retirées), 3 passes : l'observateur choisit sur `/imputations` (adresse pas encore corrigée) et `history.length` augmente de 2 : le `change` atteint bien `navigate` (entrée poussée), puis la redirection différée remplace l'adresse. Le rouge vient de la course, pas d'un choix non reçu.
+- Lint, typecheck et PUB-1, PUB-2 verts ; `tests-cibles --depuis abf0d5a --lister` retient `correctif-244.spec.ts` (modifiée ; domaine feuille-de-temps).
+
+## Recette automatisée (D-204)
+
+Lot recette-auto : une ligne de la recette du porteur devient un e2e, même compte ou même rôle, même écran, même attendu (D-204 (2)). Valeurs attendues recopiées de la colonne Attendu de docs/recette.md (D-204 (3)) ; seuls changent les noms et les dates des données de test, créées par l'API avec un calendrier propre (D-204 (4), D-163 (3)). Tests sur un comportement existant : rouge prouvé par modification locale de l'écran, défaite ensuite (D-204 (5)). Sections `Preuves de la phase rouge` : docs/tests.md, « Preuves de la phase rouge (D-204) ».
+
+| ID | Ligne de recette | Attendu | Source |
+|---|---|---|---|
+| E2E-468 | 1 (admin) | Accueil, Projets, Plan de charge, Imputations, Validation, Modèles, Utilisateurs ; ni « Équipes » ni « Calendriers » ; pas de « Mes tâches » (administrateur non ressource ; « Imputations » présente pour tout administrateur, D-181 (5), D-184) | RX5-5 ; D-165 (3) ; AUT-RD-1 ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-469 | 23 (admin) | « Calendrier par défaut » avec 0 jour férié ; lien vers le détail | RX5-2 ; D-165 (2) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-470 | 30 (admin) | Entrée « Plan de charge » après « Projets » ; tableau « Plan de charge » : 12 colonnes « MM/AAAA » à partir du mois courant (11/2026) ; ressources Alice, Bob, Chef B, tout replié | L6-6d1 ; SPEC 6d (6, 7) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-471 | 31 (admin) | `title` « Charge 10 j, disponible 21 j, écart 11 j » (valeurs de la base de démonstration) | L6-6d1 ; SPEC 6d (7) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-472 | 34 (admin) | « Aucune ressource. » | L6-6d2 ; SPEC 6d (4, 7) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-473 | 42 (admin) | Alice « Soumise » : « DEMO-R · À valider », « DEMO-S · Validé » ; Bob « Soumise » : « DEMO-R · À valider » | 4c-RD-3 ; D-136 (2) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-474 | 43 (admin) | Bob « Validée » : « DEMO-R · Validé » ; Alice « Rejetée » : « DEMO-R » et « DEMO-S » sans suffixe | 4c-RD-4 ; D-136 (2) ; SPEC 4c (10b) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-475 | 45 (admin) | Dialogue en lecture seule ; commentaire de rejet « Imputations du jeudi à revoir » | 4c-RD-5 ; SPEC 4c (4) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-476 | 56 (admin) | « Aucune feuille de temps pour cette semaine. » | 4c-RD-3 ; SPEC 4c (3) ; fichier e2e/tests/recette-auto-admin.spec.ts |
+| E2E-477 | 57 (chefa) | Accueil, Projets, Plan de charge, Validation, Modèles ; ni Utilisateurs, ni « Mes tâches », ni « Imputations » (chefa non ressource) | RX5-5 ; D-165 (5) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-478 | 59 (chefa) | Alice « Soumise » : « DEMO-R · À valider », « DEMO-S · Validé » ; Bob « Soumise » : « DEMO-R · À valider ». Boutons « Valider » et « Rejeter » présents | 4c-RD-1 ; D-136 (2) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-479 | 60 (chefa) | Bob « Validée » ; Alice « Rejetée », sans « Valider » ni « Rejeter », « Voir » présent | 4c-RD-4 ; SPEC 4c (7) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-480 | 62 (chefa) | Adresse `/?ressource=<id>` ; tableau Projet, Activité, Début, Fin, Assigné, Réel, Reste, Drapeaux ; lignes DEMO-R et DEMO-S ; « Calculer », « Tout déplier » et case « Initiales » masqués | L6-6e1 ; SPEC 6e (6, 7, 8) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-481 | 63 (chefa) | Retour au Gantt global, zoom conservé | L6-6e1 ; SPEC 6e (6) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-482 | 64 (chefa) | Badge « Retard » sur Livraison et Intégration ; cellule vide sur les lignes de projet (décision D-132 (b) : pas un défaut) | DO-b ; D-132 ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-483 | 73 (chefa) | Cadrage : vendu 4, marge +1 ; Conception : vendu 2, marge −1 en couleur flag ; Phase 1 (parent) : vendu 6 ; jalons : cellules vides | L6-6c1 ; SPEC 6c ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-484 | 74 (chefa) | « Vendu 6 j · Assigné Y j · Marge Z j · Réel W j », virgule décimale, marge < 0 en couleur flag | L6-6c2 ; SPEC 6c ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-485 | 77 (chefa) | Badge « Client » (couleur flag), `title` « Engagement client dépassé » | L6-6c4 ; SPEC 6c ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-486 | 87 (chefa) | Confirmation « Abandonner les modifications ? », texte « Les modifications non enregistrées seront perdues. », bouton « Abandonner » | D172-2 ; D-172 (2, 6) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-487 | 88 (chefa) | On reste sur le mois, même adresse, case toujours cochée | D172-2 ; D-172 (2) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-488 | 89 (chefa) | Mois suivant affiché ; retour au mois courant : la case n'est pas cochée, rien enregistré | D172-2 ; D-172 (2) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-489 | 90 (chefa) | Une seule confirmation « Abandonner les modifications ? » | D172-2 ; D-172 (2, 6) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-490 | 92 (chefa) | Une seule confirmation ; « Abandonner » mène à « / » | D172-2 ; D-172 (2) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-491 | 94 (chefa) | Aucune confirmation après l'enregistrement | D172-3 ; D-172 (2) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-492 | 96 (chefa) | Message du navigateur | D172-4 ; D-172 (4) ; fichier e2e/tests/recette-auto-chefa.spec.ts |
+| E2E-493 | 97 (chefb) | Mes tâches (en tête), Accueil, Projets, Plan de charge, Imputations, Validation, Modèles ; arrivée sur « / » | RX5-5 ; D-148 (11) ; fichier e2e/tests/recette-auto-chefb.spec.ts |
+| E2E-494 | 103 (chefb) | Seule Alice, « Soumise » : « DEMO-R · Non autorisé », « DEMO-S · Validé » ; Bob absent | 4c-RD-2 ; D-136 (2) ; fichier e2e/tests/recette-auto-chefb.spec.ts |
+| E2E-495 | 104 (chefb) | Seule Alice, « Rejetée » ; Bob absent | 4c-RD-5 ; SPEC 4c (7) ; fichier e2e/tests/recette-auto-chefb.spec.ts |
+| E2E-496 | 107 (chefb) | « Aucune activité à imputer cette semaine. » | 4b-RD ; SPEC 4b (3) ; fichier e2e/tests/recette-auto-chefb.spec.ts |
+| E2E-497 | 125 (alice) | Titre « Feuille de temps » ; « Semaine du 23/11/2026 au 29/11/2026 » ; statut « Brouillon » ; lundi 23/11 : 0,5 sur Cadrage ; jours postérieurs au jour du navigateur : cases désactivées | 4b-RD ; SPEC 4b (2, 3) ; fichier e2e/tests/recette-auto-alice.spec.ts |
+| E2E-498 | 139 (alice) | Une seule confirmation « Abandonner les modifications ? », texte « Les modifications non enregistrées seront perdues. », bouton « Abandonner » | D172-1 ; D-172 (2) ; fichier e2e/tests/recette-auto-alice.spec.ts |
+| E2E-499 | 145 (alice) | Une seule confirmation (pas de doublon) ; « Annuler » garde la semaine, l'adresse et la saisie | D172-1 ; D-172 (2) ; SPEC 4b (8) ; fichier e2e/tests/recette-auto-alice.spec.ts |
+| E2E-500 | 146 (alice) | Aucune confirmation | D172-3 ; D-172 (2) ; fichier e2e/tests/recette-auto-alice.spec.ts |
+| E2E-501 | 147 (alice) | Aucune confirmation après l'enregistrement | D172-3 ; D-172 (2) ; fichier e2e/tests/recette-auto-alice.spec.ts |
+| E2E-502 | 149 (alice) | Message du navigateur | D172-4 ; D-172 (4) ; fichier e2e/tests/recette-auto-alice.spec.ts |
+| E2E-503 | 156 (chefa) | Statut « Validée » ; badge « DEMO-R · Validé » ; boutons « Voir la feuille de Bob » et « Dévalider la feuille de Bob » ; ni « Valider » ni « Rejeter » | DEV-RD-1 ; SPEC Dévalidation (D-176) (2) ; fichier e2e/tests/recette-auto-chefa-retour.spec.ts |
+| E2E-504 | 157 (chefa) | Dialogue « Dévalider la feuille de Bob pour DEMO-R ? », texte « La feuille repassera au statut Soumise. », boutons « Annuler » et « Dévalider » | DEV-RD-2 ; SPEC Dévalidation (D-176) (2) ; fichier e2e/tests/recette-auto-chefa-retour.spec.ts |
+| E2E-505 | 158 (chefa) | Dialogue fermé ; statut de Bob toujours « Validée » | DEV-RD-2 ; SPEC Dévalidation (D-176) (2) ; fichier e2e/tests/recette-auto-chefa-retour.spec.ts |
+| E2E-506 | 159 (chefa) | `role="status"` « Feuille dévalidée. » ; statut « Soumise » ; badge « DEMO-R · À valider » ; focus sur « Voir la feuille de Bob » | DEV-RD-3 ; SPEC Dévalidation (D-176) (2) ; D-145 (2) ; fichier e2e/tests/recette-auto-chefa-retour.spec.ts |
+| E2E-507 | 160 (chefa) | « Feuille validée. » ; statut « Validée » ; badge « DEMO-R · Validé » | DEV-RD-4 ; SPEC 4c (5) ; fichier e2e/tests/recette-auto-chefa-retour.spec.ts |
+| E2E-508 | 170 (admin) | Liste présente dès l'affichage (désactivée, « Chargement… »), l'en-tête ne bouge pas quand elle se remplit ; « Choisir… » grisée, non sélectionnable, en tête de liste | RET-RD-2 ; D-186 (1), (2) ; fichier e2e/tests/recette-auto-admin-retour.spec.ts |
+| E2E-509 | 173 (admin) | Aucune confirmation dans tous les cas | GDL-RD-2 ; D-188 (1) ; fichier e2e/tests/recette-auto-admin-retour.spec.ts |
+| E2E-510 | 174 (admin) | Confirmation (la saisie existe encore) ; « Abandonner » ferme sans création | GDL-RD-3 ; D-188 (5) ; fichier e2e/tests/recette-auto-admin-retour.spec.ts |
+| E2E-511 | 176 (admin) | Sans toucher : aucune confirmation ; nom changé : confirmation | GDL-RD-4 ; D-188 (4), (10) b ; fichier e2e/tests/recette-auto-admin-retour.spec.ts |
+
+### Preuves de la phase rouge (D-204)
+
+Les 44 e2e portent sur un comportement existant : verts d'emblée (3 exécutions ciblées vertes par fichier, 9, 16, 15 puis 4 tests). Rouge prouvé par une modification locale de l'écran (`packages/web`), défaite par `git checkout -- packages/web` après chaque passe, jamais commitée (D-204 (5)). Passes : toutes les modifications d'une passe sont appliquées ensemble, les tests ciblés tournent, et chaque ID attendu rouge a échoué.
+
+| IDs | Modification locale | Résultat |
+|---|---|---|
+| E2E-468 à E2E-476 | libellé « Modèles » du menu ; colonne Jours fériés + 1 ; en-tête de mois suffixé ; « écart » sans accent dans le title ; « Aucune ressource. » changé ; « · À valider » sans accent ; « · Validé » devenu « · Validée » ; commentaire de rejet masqué ; texte de l'état vide de Validation changé | 9 rouges sur 9 |
+| E2E-477 à E2E-485 | « Modèles » ; « · À valider » ; boutons Valider affichés pour toute feuille ; en-tête « Reste » du planning de ressource ; zoom retiré de l'adresse au retour à « Tous les projets » ; badge « Retard » raccourci ; colonne « Vendu » renommée ; couleur flag retirée des totaux ; title du badge « Client » changé | 9 rouges sur 9 |
+| E2E-486 à E2E-490, E2E-492 | `GardeSortie` : `if (!modifie) return;` remplacé par `return;` (plus de garde) | 6 rouges sur 6 ; E2E-491 resté vert, attendu |
+| E2E-491 | `PlanningManuel` : `<GardeSortie modifie={true} />` (garde toujours active) | rouge |
+| E2E-493 à E2E-497 | « Modèles » ; « · Non autorisé » changé ; libellés « Rejetée » et « Brouillon » ; texte de l'état vide de la Feuille de temps | 5 rouges sur 5 |
+| E2E-504 à E2E-507 | texte « La feuille repassera au statut Soumise. » ; « Annuler » sans fermeture ; messages de succès changés | 4 rouges sur 4 |
+| E2E-498, E2E-499, E2E-502, E2E-503 | `GardeSortie` sans garde ; libellé « Dévalider la feuille de » changé | 4 rouges sur 4 (E2E-500 et E2E-501 verts, attendu) |
+| E2E-500, E2E-501 | `FeuilleTemps` : `<GardeSortie modifie={true} />` | 2 rouges sur 2 |
+| E2E-508, E2E-510 | libellé « Chargement… » de la liste Ressource ; texte « Cet identifiant est déjà utilisé. » changé | 2 rouges sur 2 |
+| E2E-509, E2E-511 | `Dialog` : `if (modifiee)` remplacé par `if (true)` (confirmation sur dialogue intact) | 2 rouges sur 2 |
+| E2E-510 | `Dialog` : `if (modifiee)` remplacé par `if (false)` (aucune confirmation) | rouge |
+
+Aucune ligne « KO (e2e) » : les 44 tests sont verts sur le code actuel.
+
+Écarts de données assumés (D-204 (4)) : E2E-470 fige l'horloge au 14/01/2026 (colonnes 01/2026 à 12/2026 au lieu de 11/2026 à 10/2027) ; E2E-471 et E2E-472 ouvrent `?debut=2027-01` (même `title`, 21 j ouvrés) ; les semaines de validation et de feuille de temps sont celles du 05/01 et du 12/01/2026, les projets s'appellent P4B et Q4B. Les textes et les statuts attendus sont inchangés.
+
+## Correctif rex3b (D-207)
+
+Fichier : `e2e/tests/correctif-rex3b.spec.ts`, domaine gantt (e2e/domaines.json). Valeurs de D-207 (1) et de SPEC.md, Gantt, point 17. Retenue du PATCH ou du POST par `page.route` (promesse libérée à la main, aucun délai). Monde de rex3b (activité START 11/01/2027, 5 j).
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| E2E-512 | Deux glissers de barre (11 → 12 → 13/01), le second retenu ; Ctrl+Z pendant la retenue : aucun PATCH de plus (2 requêtes), pas de « Geste annulé. » ; libéré : base au 13/01 ; deux annulations : 12/01 puis 11/01 (corps `{ debut_valide }` vérifiés) | D-207 (1) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+| E2E-513 | Même cas avec le bouton « Annuler » : désactivé pendant la retenue (aucun PATCH, pas de « Geste annulé. »), actif après la réponse ; deux annulations : 12/01 puis 11/01 | D-207 (1) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+| E2E-514 | Geste de lien : barre A glissée (+1 j), puis lien A → B créé par glisser, POST retenu ; Ctrl+Z et bouton : ignorés (aucun PATCH ni DELETE), bouton désactivé ; libéré : dépendance en base, bouton actif ; annulation : DELETE du lien, puis PATCH inverse de A | D-207 (1) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+| E2E-515 | Geste de ligne : barre Q glissée (+1 j), puis ligne R glissée dans Phase P, POST `…/deplacer` retenu ; Ctrl+Z et bouton : ignorés, bouton désactivé ; libéré : arbre changé ; annulation : POST inverse `{ parent_id: null, rang: 3 }`, puis PATCH inverse de Q | D-207 (1) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+| E2E-516 | Autre élément : barre A glissée (+1 j), puis barre B glissée (+1 j) retenue ; Ctrl+Z et bouton : ignorés (A garde 12/01) ; libéré : annulation de B (18/01) puis de A (11/01) | D-207 (1) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+| E2E-517 | PATCH du second geste retenu puis refusé (500 simulé) : pendant la retenue, bouton désactivé et Ctrl+Z ignoré ; après la réponse : alerte « Modification impossible pour le moment. Réessayez. », base au 12/01 (inchangée), bouton actif (pile d'une entrée) ; une annulation : PATCH `{ debut_valide: '2027-01-11' }`, base 11/01, bouton désactivé | D-207 (1) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+
+### Révision D-031 de E2E-517 (tag `tests-correctif-rex3b-r1`)
+
+Erreur du test sous tag, relevée à la première exécution verte : l'alerte `role="alert"` contient aussi le bouton « Fermer » (texte lu « …Réessayez.Fermer »), `toHaveText` exact ne peut pas passer. Aucun code de production, valeurs attendues inchangées ; l'assertion devient `toContainText`. À confirmer par le porteur (D-031).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-517-r1 | Révision de E2E-517 : texte de l'alerte vérifié par `toContainText` | D-207 (1) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+
+### Révisions D-031 (D-207 (3), tag `tests-rex3b-r3`)
+
+Aucun code de production. Intention et valeurs attendues inchangées. Corps de chaque requête inverse vérifié ; base relue par `expect.poll` avec la dernière valeur lue et le journal des PATCH dans le message d'échec (assistants `debutEnBase`, `corpsDuPatch`, rex3b.spec.ts).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-264-r3 | Révision de E2E-264-r2 : corps des deux inverses et base relus avec le journal en message | D-207 (3) | correctif-rex3b | e2e/tests/rex3b.spec.ts |
+| E2E-267-r3 | Révision de E2E-267-r2 : corps des 20 inverses (valeur d'avant chaque geste) vérifiés, base finale relue avec le journal | D-207 (3) | correctif-rex3b | e2e/tests/rex3b.spec.ts |
+| E2E-272-r3 | Révision de E2E-272-r2 : corps de l'inverse vérifié, nombre de PATCH et base avec le journal | D-207 (3) | correctif-rex3b | e2e/tests/rex3b.spec.ts |
+| E2E-277-r3 | Révision de E2E-277-r2 : corps des deux inverses vérifiés, base relue avec le journal | D-207 (3) | correctif-rex3b | e2e/tests/rex3b.spec.ts |
+
+### Révision D-031 de E2E-514 (D-210 (2), tag `tests-correctif-rex3b-r2`)
+
+Défaut du test sous tag (D-209 (7)) : lecture unique de la base après l'émission du DELETE, qui échoue parfois (3 échecs sur 20 sans la correction de 64bf694). Aucun code de production ; intention et valeurs attendues inchangées. La base est relue par `expect.poll` après la réponse du DELETE, avec le journal des requêtes dans le message d'échec. Décision du porteur : D-210 (2).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-514-r1 | Révision de E2E-514 : base relue par `expect.poll` après le DELETE, journal des requêtes en message d'échec | D-210 (2) | correctif-rex3b | e2e/tests/correctif-rex3b.spec.ts |
+
+### Couverture des champs, correctif rex3b
+
+Aucun champ d'API ni écran modifié : comportement du bouton « Annuler » et de Ctrl+Z seulement.
+
+## Correctif inverse (D-208 (4), D-209)
+
+Fichier : `e2e/tests/correctif-inverse.spec.ts`, domaine gantt (e2e/domaines.json). Valeurs de D-123 (1) et de SPEC.md, Gantt, point 17 (annulation = requête inverse avec les valeurs d'avant le geste). Cause prouvée au diagnostic : une réponse de `GET /api/projets/:id/gantt` partie avant un geste et reçue après sa réponse remplace l'élément mis à jour localement ; le geste suivant calcule son inverse sur l'élément d'avant. La réponse périmée est retenue par `page.route` (`route.fetch` puis `route.fulfill`, libérée à la main, aucun délai).
+
+| id | énoncé | décision | lot | fichier |
+|---|---|---|---|---|
+| E2E-518 | Barre START (11/01) : second `GET …/gantt` du montage retenu ; glisser +1 j (base 12/01), réponse périmée libérée, glisser +2 j (base 13/01) ; Ctrl+Z : corps `{ debut_valide: '2027-01-12' }`, base 12/01 ; Ctrl+Z : corps `{ debut_valide: '2027-01-11' }`, base 11/01 | D-123 (1), D-208 (4) | correctif-inverse | e2e/tests/correctif-inverse.spec.ts |
+| E2E-519 | Même cas par la poignée de fin d'une FDUR (11/01, 5 j) : +72 px (durée 6), +96 px (durée 7) ; Ctrl+Z : `{ duree_validee: 6 }`, base 6 ; Ctrl+Z : `{ duree_validee: 5 }`, base 5 | D-123 (1), D-208 (4) | correctif-inverse | e2e/tests/correctif-inverse.spec.ts |
+| E2E-520 | Rechargement après un lien créé par glisser (A → B), `GET …/gantt` retenu ; glissers de A +1 j puis +2 j ; réponse libérée entre les deux ; Ctrl+Z : `{ debut_valide: '2027-01-12' }` ; Ctrl+Z : `{ debut_valide: '2027-01-11' }` ; base relue après chaque annulation | D-123 (1), D-208 (4) | correctif-inverse | e2e/tests/correctif-inverse.spec.ts |
+
+### Preuves (D-209)
+
+- Rouge (ecaf7fa, tag `tests-correctif-inverse`) : 15 échecs sur 15 (5 passes) ; PATCH #3 lu `{ debut_valide: '2027-01-11' }` (E2E-518, E2E-520) et `{ duree_validee: 5 }` (E2E-519).
+- Vert (64bf694) : 9 sur 9 (3 par test) ; suite complète verte (journal, lignes 25 et 26).
+
+### Couverture des champs, correctif inverse
+
+Aucun champ d'API ni écran modifié : chargement des données de l'écran (`useListe`) seulement.
+
+## Gantt : colonnes et défilement (D-212)
+
+Tranche 1 (sous-lot gantt-colonnes-1) : séparateur, défilement, mémorisation du séparateur. Fichiers : `e2e/tests/gantt-colonnes.spec.ts` (domaines gantt et accueil, e2e/domaines.json ; le domaine vue-ressource couvre « Mes tâches », pas le planning d'une ressource de l'Accueil, qui est dans le domaine accueil), `packages/web/test/gantt-disposition.test.ts`. Données créées par l'API : un chef, deux ressources, un projet ; montage court (3 activités, dont une au nom de 60 caractères) ou long (60 activités de 1 j assignées à Alice, plus « Tâche B », START 11/01/2027, 5 j, Bob). Vues : Gantt d'un projet (`/projets/<id>?onglet=gantt&zoom=jour`), Gantt global de l'Accueil (`/?zoom=jour`, « Tout déplier »), planning d'Alice (`/?ressource=<id>&zoom=jour`). Valeurs de SPEC §6 « Colonnes et défilement (gantt-colonnes, D-212) ».
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-521 | Gantt d'un projet, 1440 et 1024 px : largeur par défaut du tableau = 40 % de la vue (± 1 px), ou largeur minimale du critère D-069 (Nom jointif de Drapeaux, ± 1 px) si elle est plus grande ; en-têtes WBS, Nom et Drapeaux entièrement dans la zone, Nom non recouvert par Drapeaux ; au plus 80 % de la vue | D-212 (2), SPEC Colonnes et défilement 3 | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-522 | Gantt global de l'Accueil : même contrôle que E2E-521 (Code, Nom, Drapeaux) | D-212 (2) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-523 | Planning d'une ressource : même contrôle que E2E-521 (Projet, Activité, Drapeaux) | D-212 (2) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-524 | Gantt d'un projet : séparateur `role="separator"`, `aria-orientation="vertical"`, nom « Largeur du tableau », focalisable ; `aria-valuenow` = largeur du tableau ; glisser de +100 px : +100 ; flèche droite : +16, flèche gauche : −16 ; bornes 200 px et 80 % de la vue (souris et clavier) ; double-clic puis Entrée : largeur par défaut | D-212 (2) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-525 | Gantt global de l'Accueil : même contrôle que E2E-524 | D-212 (2) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-526 | Planning d'une ressource : même contrôle que E2E-524 | D-212 (2) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-527 | Gantt d'un projet : largeur réglée (+32 px) gardée au rechargement ; stockage du navigateur indisponible (`localStorage` qui lève une exception, `addInitScript`) : largeur par défaut, séparateur utilisable, aucune erreur de page ni de console | D-212 (5) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-528 | Gantt global de l'Accueil : même contrôle que E2E-527 | D-212 (5) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-529 | Planning d'une ressource : même contrôle que E2E-527 | D-212 (5) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-530 | Gantt d'un projet, 61 lignes, 1440×900 : bas de la zone du calendrier dans la fenêtre ; calendrier plus large que sa zone (barre horizontale) ; page sans défilement horizontal | D-212 (3) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-531 | Gantt global de l'Accueil, projet déplié (62 lignes) : même contrôle que E2E-530 | D-212 (3) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-532 | Planning d'une ressource (60 lignes) : même contrôle que E2E-530 | D-212 (3) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-533 | Gantt d'un projet : défilement vertical du calendrier (300 px) : même `scrollTop` dans le tableau ; en-têtes du tableau et du calendrier en haut de leur zone ; flèche bas dans la zone du tableau focalisée : les deux zones défilent, à la même position | D-212 (3) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-534 | Gantt global de l'Accueil : même contrôle que E2E-533 | D-212 (3) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-535 | Planning d'une ressource : même contrôle que E2E-533 | D-212 (3) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-536 | Gantt d'un projet, après défilement vertical jusqu'en bas (tableau au même `scrollTop`) : glisser de la barre de « Tâche B » de +72 px au zoom jour : un PATCH `{ debut_valide: '2027-01-14' }` (comme E2E-132), début validé lu en base 2027-01-14 | D-212 (3), E2E-132 | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-537 | Gantt d'un projet, après défilement vertical jusqu'en bas : glisser de la ligne « Tâche B » avant « Tâche 60 » : un POST de déplacement `{ parent_id: null, rang: 60 }` (comme E2E-182), rangs lus en base : Tâche B 60, Tâche 60 61 | D-212 (3), E2E-182 | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-538 | Captures sans assertion (D-212 (6)) : `e2e/captures/gantt-colonnes-<vue>-<largeur>.png` pour les trois vues à 1440 et 1024 px (61 lignes, défilées à mi-hauteur), et `gantt-colonnes-separateur-focus.png`, `-survol.png`, `-glisser.png` (séparateur focalisé, survolé, glissé) | D-212 (6) | gantt-colonnes-1 | e2e/tests/gantt-colonnes-captures.spec.ts |
+| E2E-539 | Gantt d'un projet, 1024 px, projet non calculé dont une activité STARR (06/01/2027) aura « Début non respecté » (Eve occupée le 06/01 par une MAN) : « Calculer » à l'écran (D0 du navigateur, 06/01/2027) ; sans rechargement, le badge « Début non respecté » est entièrement dans la zone du tableau et WBS et Nom ne sont pas recouverts par Drapeaux (D-069 (a), (b)) | D-212 (2) | gantt-colonnes-1 | e2e/tests/gantt-colonnes.spec.ts |
+| GCO-1 | `largeurParDefaut` : 40 % de la vue arrondi, relevé au minimum mesuré, borné à [200, 80 % de la vue] | D-212 (2) | gantt-colonnes-1 | packages/web/test/gantt-disposition.test.ts |
+| GCO-2 | `bornerLargeur` : 200 px au moins, 80 % de la vue au plus (arrondi inférieur) | D-212 (2) | gantt-colonnes-1 | packages/web/test/gantt-disposition.test.ts |
+| GCO-3 | `lireDisposition` : objet JSON `{ tableau: <nombre> }` lu ; clé absente, JSON illisible, valeur non numérique ou stockage qui lève une exception : `{}` | D-212 (5) | gantt-colonnes-1 | packages/web/test/gantt-disposition.test.ts |
+| GCO-4 | `ecrireDisposition` : écrit le JSON sous la clé de la vue ; stockage qui lève une exception : aucune exception | D-212 (5) | gantt-colonnes-1 | packages/web/test/gantt-disposition.test.ts |
+
+### Révisions D-031 de gantt-colonnes-1
+
+D-213 (séparateur dans l'ordre de focus) : seul ajout, l'arrêt « Largeur du tableau » entre la zone du tableau et la zone du calendrier. D-212 (7) (disposition, sans décision préalable) : à 1440 px, le tableau par défaut (40 % de la vue) défile ; le séparateur est d'abord porté au maximum (80 % de la vue), assertions et valeurs inchangées.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-92-r6 | E2E-92-r5 : « Largeur du tableau » entre « Modifier le projet Projet92 » et la zone du calendrier (12 arrêts) | D-213 | gantt-colonnes-1 | e2e/tests/accueil-g2.spec.ts |
+| E2E-100-r4 | E2E-100-r3 : même insertion (12 arrêts) | D-213 | gantt-colonnes-1 | e2e/tests/accueil-g3.spec.ts |
+| E2E-109-r3 | E2E-109-r2 : même insertion (12 arrêts) | D-213 | gantt-colonnes-1 | e2e/tests/accueil-g4.spec.ts |
+| E2E-381-r1 | E2E-381 : « Largeur du tableau » entre le lien « 6E1 » et la zone du calendrier (7 arrêts) | D-213 | gantt-colonnes-1 | e2e/tests/lot6e.spec.ts |
+| E2E-43-r6 | E2E-43-r5 : séparateur focalisé entre le crayon du sous-projet et la zone du calendrier | D-213 | gantt-colonnes-1 | e2e/tests/lot3b-focus.spec.ts |
+| E2E-179-r4 | E2E-179-r3 : même insertion | D-213 | gantt-colonnes-1 | e2e/tests/lot3e.spec.ts |
+| E2E-191-r4 | E2E-191-r3 : même insertion | D-213 | gantt-colonnes-1 | e2e/tests/lot3f1.spec.ts |
+| E2E-289-r1 | E2E-289 : séparateur porté au maximum avant les mesures | D-212 (7) | gantt-colonnes-1 | e2e/tests/rex3b-r4.spec.ts |
+| E2E-366-r2 | E2E-366-r1 : à 1440 px, séparateur porté au maximum avant les mesures (identifiant d'abord noté par erreur E2E-366-r1, déjà pris par D-153 (2) ; corrigé après relecture) | D-212 (7) | gantt-colonnes-1 | e2e/tests/lot6c.spec.ts |
+| E2E-209-r1 | E2E-209 : après la capture de survol de « Tâche R », zone du tableau ramenée à `scrollLeft` 0 (le survol d'une ligne plus large que le tableau l'avait fait défiler, poignées hors zone) | D-212 (7) | gantt-colonnes-1 | e2e/tests/lot3f2-captures.spec.ts |
+
+### Couverture des champs, gantt-colonnes-1
+
+Aucun champ d'API créé ni modifié : la largeur du tableau est gardée dans le stockage du navigateur (D-212 (5)), réglée par le séparateur de chaque vue.
+
+Tranche 2 (sous-lot gantt-colonnes-2, D-212 (4), (5), D-216) : largeur de chaque colonne, choix des colonnes, mémorisation, « Rétablir l'affichage par défaut ». Fichiers : `e2e/tests/gantt-colonnes-2.spec.ts` (domaines gantt et accueil), `e2e/tests/gantt-colonnes-2-captures.spec.ts` (domaine captures), `packages/web/test/gantt-disposition.test.ts`. Données créées par l'API : montage court de la tranche 1 (un chef, Alice et Bob, un projet début 04/01/2027 : « Tâche 01 », l'activité au nom de 60 caractères, « Tâche B » ; calculé). Vues et adresses de la tranche 1. Valeurs recopiées de D-212 (4), (5) et D-216 : poignée `role="separator"`, nom « Largeur de la colonne <en-tête> », 16 px par flèche, minimum 48 px, 120 px pour la colonne du nom (Nom ; Activité sur le planning d'une ressource, colonne du nom de D-216 (1)). Menus attendus, dans l'ordre (D-216 (7)) : Gantt d'un projet, utilisateur qui écrit : Planification, Début, Fin, Charge, Vendu, Marge, Avancement, Drapeaux (tous cochés) ; Accueil : Charge, Avancement, Réel, Vendu, Marge (décochés), Début, Fin, Drapeaux (cochés) ; planning d'une ressource : Début, Fin, Assigné, Réel, Reste, Drapeaux (cochés) ; puis « Rétablir l'affichage par défaut ». Stockage : clé `planersource.gantt.<vue>` de la tranche 1, JSON `{ tableau?, colonnes?: { <id>: booléen }, largeurs?: { <id>: px } }` ; identifiants : `wbs`, `nom`, `planification`, `debut`, `fin`, `charge`, `vendu`, `marge`, `avancement`, `drapeaux` (Gantt d'un projet) ; `code`, `nom`, `charge`, `avancement`, `reel`, `vendu`, `marge`, `debut`, `fin`, `drapeaux` (Accueil) ; `projet`, `activite`, `debut`, `fin`, `assigne`, `reel`, `reste`, `drapeaux` (planning d'une ressource).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-540 | Gantt d'un projet : menu « Colonnes » à la souris (clic) : éléments à case à cocher dans l'ordre fixe, cases cochées selon les défauts, WBS et Nom absents du menu, dernier élément « Rétablir l'affichage par défaut » ; décocher « Début » : menu ouvert, en-tête et cellules absents (cellules par ligne = en-têtes) ; recocher : colonne à sa place ; clic hors du menu : fermé, focus sur « Colonnes ». Au clavier : Entrée sur le bouton, flèches jusqu'à « Drapeaux », Espace : décochée, menu ouvert, Drapeaux absente ; Espace : rétablie ; Échap : menu fermé, focus sur « Colonnes » | D-212 (4), D-216 (2), (4), (7) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-541 | Gantt global de l'Accueil : même contrôle que E2E-540 (Code et Nom absents du menu ; cocher « Charge » l'affiche entre Nom et Début, décocher l'enlève) | D-212 (4), D-216 | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-542 | Planning d'une ressource : même contrôle que E2E-540 (Projet et Activité absents du menu) | D-212 (4), D-216 (1) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-543 | Gantt d'un projet : une poignée par en-tête, nom « Largeur de la colonne <en-tête> », `aria-valuenow` = largeur de l'en-tête (± 1 px) ; colonne du nom : glisser de +40 px, flèche droite +16, flèche gauche −16, glisser de −2000 px : 120, flèche gauche : 120 ; nom long toujours tronqué (`scrollWidth` > `clientWidth`), `title` = nom complet, contenu dans la colonne ; double-clic, puis flèche droite et Entrée : largeur par défaut ; « Début » : glisser de −2000 px : 48 ; « Début » réglée (+32), masquée puis réaffichée : largeur gardée | D-212 (4), D-216 (5) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-544 | Gantt global de l'Accueil : même contrôle que E2E-543 | D-212 (4), D-216 (5) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-545 | Planning d'une ressource : même contrôle que E2E-543 (colonne du nom : Activité) | D-212 (4), D-216 (5) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-546 | Gantt d'un projet : « Début » masquée et colonne du nom réglée (+32) gardées au rechargement et sur un autre projet ; valeur illisible : défauts, aucune erreur ; stockage indisponible : défauts, menu et poignées utilisables, aucune erreur ; `{ colonnes: { inconnue: false, debut: false }, largeurs: { inconnue: 300 } }` : « Début » masquée, le reste par défaut, aucune erreur | D-212 (5), D-216 | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-547 | Gantt global de l'Accueil : même contrôle que E2E-546, sans l'autre projet | D-212 (5) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-548 | Planning d'une ressource : même contrôle que E2E-547 | D-212 (5) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-549 | Gantt d'un projet : « Début » masquée, colonne du nom +32, séparateur +48 ; « Rétablir l'affichage par défaut » : en-têtes, largeur de la colonne du nom et du tableau par défaut, gardés au rechargement | D-212 (4) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-550 | Gantt global de l'Accueil : même contrôle que E2E-549 (en plus « Charge » affichée avant le rétablissement) | D-212 (4) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-551 | Planning d'une ressource : même contrôle que E2E-549 | D-212 (4) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-552 | Gantt d'un projet, 1440 et 1024 px, réglages par défaut : deux premières colonnes et Drapeaux dans la zone du tableau, colonne du nom non recouverte par Drapeaux (D-069 (a), (b)) ; toutes les colonnes affichées : page sans défilement horizontal ; séparateur porté à 200 px : Drapeaux fixée à droite (bord droit de l'en-tête = bord droit de la zone cliente, ± 1 px) | D-216 (4), 3b point 15 | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-553 | Gantt global de l'Accueil : même contrôle que E2E-552 | D-216 (4) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-554 | Planning d'une ressource : même contrôle que E2E-552 | D-216 (4) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-555 | Gantt d'un projet, chef qui lit sans écrire : menu Planification, Début, Fin, Charge, Avancement, Drapeaux, sans Vendu ni Marge | D-212 (4) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-556 | Accueil, chef qui écrit P1 et lit P2, Charge, Avancement, Réel, Vendu, Marge cochées : en-têtes Code, Nom, Charge, Avancement, Réel, Vendu, Marge, Début, Fin, Drapeaux ; activité de P1 (4 j assignés, 1,5 j imputé, vendue 3) : « 4 », « 37,5 % », « 1,5 », « 3 », « −1 » en couleur flag ; jalon de P1 : Charge, Avancement et Réel « — », Vendu et Marge vides ; lignes de projet : cinq cellules vides ; activité de P2 (2 j, vendue 5 par l'administrateur) : « 2 », « 0 % », « 0 », Vendu et Marge vides | D-212 (4), D-216 (6) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-557 | Captures sans assertion (D-212 (6)) : `e2e/captures/gantt-colonnes-2-menu-<vue>.png` (menu ouvert, 1440 px), `gantt-colonnes-2-toutes-<vue>-<largeur>.png` (toutes les colonnes, 1440 et 1024 px), `gantt-colonnes-2-poignee-survol.png`, `-focus.png`, `-glisser.png` | D-212 (6) | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2-captures.spec.ts |
+| GCO-5 | `lireDisposition` : `colonnes` (booléens) et `largeurs` (nombres finis) lus pour les identifiants connus de la vue ; identifiant inconnu, colonne toujours affichée dans `colonnes`, valeur d'un autre type : ignorés | D-212 (5) | gantt-colonnes-2 | packages/web/test/gantt-disposition.test.ts |
+| GCO-6 | `colonnesAffichees` : défauts de chaque vue, dans l'ordre fixe ; réglages appliqués ; Vendu et Marge seulement si disponibles (Gantt d'un projet) | D-212 (4), D-216 (7) | gantt-colonnes-2 | packages/web/test/gantt-disposition.test.ts |
+| GCO-7 | `colonnesDuMenu` : colonnes au choix de chaque vue, dans l'ordre fixe, sans les colonnes toujours affichées ; sans Vendu ni Marge si non disponibles | D-212 (4), D-216 (1), (7) | gantt-colonnes-2 | packages/web/test/gantt-disposition.test.ts |
+| GCO-8 | `bornerColonne` : arrondi, au moins 48 px, 120 px pour la colonne du nom | D-212 (4) | gantt-colonnes-2 | packages/web/test/gantt-disposition.test.ts |
+| GCO-9 | `avecColonne`, `avecLargeur` : nouvelle disposition sans modifier l'ancienne ; largeur retirée par `undefined` ; une colonne masquée garde sa largeur | D-212 (5), D-216 (5) | gantt-colonnes-2 | packages/web/test/gantt-disposition.test.ts |
+
+### Révisions D-031 de gantt-colonnes-2
+
+Décision du porteur (2026-11-24, avant le vert) : tests sous le tag `tests-gantt-colonnes-2` jugés faux, valeurs attendues inchangées. Défauts : planning d'Alice attendu sur « Tâche B » (tâche de Bob) ; flèches enchaînées sans attendre le focus (Radix déplace le focus des éléments du menu par `setTimeout`) ; après Échap, focus rendu au bouton « Colonnes » un tick plus tard (Radix), volé à la poignée focalisée ensuite par le test ; glisser d'une poignée recouverte par Drapeaux (fixée à droite) quand le tableau défile. Tag `tests-gantt-colonnes-2-r1`.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-540-r1 à E2E-556-r1 | E2E-540 à E2E-556 : planning d'une ressource attendu sur « 1 Tâche 01 » ; focus attendu après chaque flèche du menu et sur « Colonnes » après Échap ; E2E-543 à E2E-545 : séparateur porté au maximum avant les glisser de poignée | D-031, D-216 | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-557-r1 | E2E-557 : planning d'une ressource attendu sur « 1 Tâche 01 » | D-031 | gantt-colonnes-2 | e2e/tests/gantt-colonnes-2-captures.spec.ts |
+
+### Révisions de gantt-colonnes-2 (passes ciblées)
+
+D-216 (3) (arrêts « Colonnes » et poignées de largeur dans l’ordre de focus, sans décision préalable) ; E2E-38-r3 : décision du porteur. Intention et valeurs attendues inchangées.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-38-r3 | E2E-38-r2 : 5 boutons dans l'onglet (zooms, « Annuler » désactivé, « Colonnes ») pour le chef en lecture seule | D-031, D-212 (4) | gantt-colonnes-2 | e2e/tests/lot3b.spec.ts |
+| E2E-143-r1, E2E-144-r1, E2E-145-r1, E2E-146-r1, E2E-148-r1, E2E-149-r1, E2E-150-r2, E2E-151-r1, E2E-155-r1, E2E-156-r1, E2E-157-r1 | Même test ; `tabulerJusqua` : 60 appuis de Tab au plus (30 avant), « Colonnes » et les poignées de largeur s'ajoutant aux arrêts | D-216 (3) | gantt-colonnes-2 | e2e/tests/lot3d3b.spec.ts |
+| E2E-92-r7 | E2E-92-r6 : « Colonnes » après « Initiales » ; « Largeur de la colonne » Code, Nom, Début, Fin, Drapeaux après la zone du tableau (17 arrêts) | D-216 (3) | gantt-colonnes-2 | e2e/tests/accueil-g2.spec.ts |
+| E2E-100-r5 | E2E-100-r4 : même insertion (17 arrêts) | D-216 (3) | gantt-colonnes-2 | e2e/tests/accueil-g3.spec.ts |
+| E2E-109-r4 | E2E-109-r3 : même insertion (17 arrêts) | D-216 (3) | gantt-colonnes-2 | e2e/tests/accueil-g4.spec.ts |
+| E2E-43-r7 | E2E-43-r6 : « Colonnes » entre « Initiales » et « Copier » ; dix poignées « Largeur de la colonne » (WBS à Drapeaux) après la zone du tableau | D-216 (3) | gantt-colonnes-2 | e2e/tests/lot3b-focus.spec.ts |
+| E2E-381-r2 | E2E-381-r1 : « Colonnes » après « Mois » ; huit poignées (Projet à Drapeaux) après la zone du tableau (16 arrêts) | D-216 (3) | gantt-colonnes-2 | e2e/tests/lot6e.spec.ts |
+| E2E-179-r5 | E2E-179-r4 : « Colonnes » entre « Initiales » et « Copier » ; dix poignées après la zone du tableau | D-216 (3) | gantt-colonnes-2 | e2e/tests/lot3e.spec.ts |
+| E2E-191-r5 | E2E-191-r4 : même insertion | D-216 (3) | gantt-colonnes-2 | e2e/tests/lot3f1.spec.ts |
+| E2E-204-r2 | E2E-204-r1 : « Colonnes » entre « Initiales » et « Copier » dans l'ordre de tabulation | D-216 (3) | gantt-colonnes-2 | e2e/tests/lot3f2.spec.ts |
+| E2E-209-r2 | E2E-209-r1 : deux appuis de Tab d'« Initiales » à « Copier » (« Colonnes » entre les deux) | D-216 (3) | gantt-colonnes-2 | e2e/tests/lot3f2-captures.spec.ts |
+
+### Couverture des champs, gantt-colonnes-2
+
+Aucun champ d'API créé ni modifié : colonnes affichées, largeurs des colonnes et largeur du tableau sont gardées dans le stockage du navigateur (D-212 (5)), réglées par le menu « Colonnes », les poignées de largeur et le séparateur de chaque vue. Les colonnes ajoutées à l'Accueil lisent des champs existants de GET …/gantt (D-216 (6)). E2E-547-r1 (rouge intermittent, `aria-valuenow` périmé un instant après le dépliage) est le test rouge de la correction 42112bc.
+
+## Retouches REX-6 (D-218)
+
+Fichier : `e2e/tests/retouches-rex6.spec.ts`, inscrit aux domaines accueil, gantt, projets, vue-ressource, captures et feuille-de-temps (e2e/domaines.json). Données par l'API. Valeurs attendues recopiées de D-218 et de SPEC §6 « Retouches REX-6 ».
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-558 | « Nouveau modèle » : date de début préremplie à la date du jour du navigateur (2027-01-06, horloge fixée), obligatoire, aide « Date de référence : … » sous le champ ; création par l'écran : `date_debut` enregistrée | D-218 (1) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-559 | Onglet Planning, « Nouvelle dépendance » : options « Fin → début (FD) », « Début → début (DD) », « Fin → fin (FF) » ; aide selon le type (`aria-describedby`) ; création en FF : code `FF` en base | D-218 (2) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-560 | Onglet Planning, tableau des dépendances (libellés des trois types) et dialogue « Modifier la dépendance » (liste, aide) | D-218 (2) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-561 | Gantt, dialogue d'un lien : libellés et aide selon le type | D-218 (2) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-562 | « Modifier l'activité » avant tout calcul : « Début planifié » et « Fin planifiée » en texte (« — »), aucun champ, placés après « Fin validée » | D-218 (3) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-563 | « Modifier l'activité » avant puis après « Calculer » par l'écran : « — », puis 11/01/2027 et 15/01/2027 | D-218 (3) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-564 | Accueil sans paramètre : projet déplié, activité et initiales « AL » visibles, case cochée ; décocher : `initiales=0`, gardé au rechargement ; « Tout replier » puis « Tout déplier » | D-218 (4) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-565 | Gantt d'un projet inchangé : « Initiales » décochée par défaut, cochée : `initiales=1` | D-218 (4) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-566 | Mes tâches d'une ressource : aucune section « Mon calendrier », aucune requête vers /api/calendriers | D-218 (5) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-567 | Logo : lien « PlanerSource » vers « / » ; clic depuis une fiche projet : Accueil | D-218 (6) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-568 | Logo depuis la Feuille de temps avec une saisie : confirmation (D-172) ; « Annuler » reste, « Abandonner » : /mes-taches ; aucune écriture, aucune feuille en base | D-218 (6), D-172 | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-569 | Accueil, toutes les colonnes cochées : en-têtes et menu dans l'ordre Code, Nom, Début, Fin, Charge, Avancement, Réel, Vendu, Marge, Drapeaux | D-218 (7) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-570 | Poignée « Largeur de la colonne Nom » : glisser +40 puis retour avant le relâchement : `aria-valuenow`, largeur de l'en-tête et valeur enregistrée inchangés, au défaut puis après une flèche | D-218 (8) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-571 | Captures sans assertion de valeur : `e2e/captures/retouches-rex6-*.png` (Accueil 1440 et 1024 px, dialogues d'une activité et d'une dépendance) | D-218 | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+
+### Couverture des champs, retouches-rex6
+
+Aucun champ d'API créé ni modifié. Types de dépendance : champ `type` (codes FD, DD, FF inchangés) → liste « Type » des dialogues de dépendance et du lien du Gantt (E2E-559 à E2E-561). `date_debut` d'un modèle → champ « Date de début » (E2E-558). `debut_planifie` et `fin_planifiee` d'une activité : calculés, hors écran de saisie, affichés en lecture seule (E2E-562, E2E-563).
+
+### Révisions et retraits de retouches-rex6 (D-218)
+
+Décision du porteur (2026-11-24) : logo (nom accessible « PlanerSource »), E2E-570, E2E-172 et E2E-176. D-218 (9), sans décision préalable : départ replié, ordre des colonnes de l'Accueil. Intention et valeurs attendues inchangées, sauf mention.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-558-r1, E2E-570-r1, E2E-570-r2 | E2E-558 : lecture des modèles par le contexte de la page ; E2E-570 : colonne « Début » (Nom : minimum 120 px), valeur lue sous l'identifiant `debut` | D-031 | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-567-r1, E2E-568-r1 | Logo : nom accessible « PlanerSource » | D-218 (6) | retouches-rex6 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-172-r1, E2E-176-r1 | Cellule du type dans le tableau des dépendances : « Fin → début (FD) », « Début → début (DD) » | D-218 (2) | retouches-rex6 | e2e/tests/lot3e.spec.ts |
+| E2E-86-r1, E2E-90-r1, E2E-91-r2, E2E-92-r8 | Départ replié (« Tout replier ») | D-218 (4), (9) | retouches-rex6 | e2e/tests/accueil-g2.spec.ts |
+| E2E-93-r3, E2E-94-r1 à E2E-99-r1, E2E-100-r6 | Idem ; E2E-94-r1 : un appel à /gantt au chargement (0 avant) ; E2E-99-r1 : premier chargement refusé (500) pour une plage initiale étroite | D-218 (4), (9) | retouches-rex6 | e2e/tests/accueil-g3.spec.ts |
+| E2E-101-r1 | Idem (captures) | D-218 (4), (9) | retouches-rex6 | e2e/tests/accueil-g3-captures.spec.ts |
+| E2E-103-r1, E2E-108-r1, E2E-109-r5, E2E-110-r2 | Idem ; E2E-103-r1 : projet B lu une fois (chargement) ; E2E-108-r1 : lecture de B refusée (500) | D-218 (4), (9) | retouches-rex6 | e2e/tests/accueil-g4.spec.ts |
+| E2E-522-r1, E2E-525-r1, E2E-528-r1, E2E-531-r1, E2E-534-r1, E2E-538-r1 | Accueil déjà déplié | D-218 (4), (9) | retouches-rex6 | e2e/tests/gantt-colonnes.spec.ts, gantt-colonnes-captures.spec.ts |
+| E2E-540-r2, E2E-542-r2 | Clic hors du menu hors du coin haut gauche (logo) | D-218 (6) | retouches-rex6 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-541-r3, E2E-544-r2, E2E-547-r2, E2E-550-r2, E2E-553-r2, E2E-556-r2, E2E-557-r2 | Accueil déplié ; ordre des colonnes (menu et en-têtes) | D-218 (4), (7), (9) | retouches-rex6 | e2e/tests/gantt-colonnes-2.spec.ts, gantt-colonnes-2-captures.spec.ts |
+| E2E-129-r1 | Initiales cochées par défaut sur l'Accueil, `initiales=0` | D-218 (4), (9) | retouches-rex6 | e2e/tests/lot3d1.spec.ts |
+| E2E-155-r2, E2E-195-r2, E2E-273-r1, E2E-276-r2, E2E-278-r1, E2E-281-r1, E2E-282-r1, E2E-283-r1, E2E-288-r1, E2E-290-r1, E2E-367-r1, E2E-377-r2, E2E-482-r1 | Accueil déjà déplié (le bouton « Replier » remplace le clic sur « Déplier ») | D-218 (4), (9) | retouches-rex6 | e2e/tests/lot3d3b, lot3f2, rex3b-*, lot6c, lot6e, recette-auto-chefa |
+| GCO-6-r1, GCO-7-r1 | Ordre des colonnes de l'Accueil | D-218 (7), (9) | retouches-rex6 | packages/web/test/gantt-disposition.test.ts |
+
+Retraits (D-218 (5), (9)) : E2E-396, E2E-397, E2E-398, E2E-399 (section « Mon calendrier », `e2e/tests/rex5.spec.ts`).
+

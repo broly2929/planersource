@@ -69,7 +69,7 @@ async function glisserVers(page: Page, depart: Locator, cible: Locator, fy: numb
   await page.mouse.up();
 }
 
-test('E2E-209 captures du lot 3f-2 : menu contextuel et captures pour la séance UX', async ({
+test('E2E-209-r2 captures du lot 3f-2 : menu contextuel et captures pour la séance UX', async ({
   page,
   request,
 }) => {
@@ -100,6 +100,8 @@ test('E2E-209 captures du lot 3f-2 : menu contextuel et captures pour la séance
     const copier = page.getByRole('button', { name: 'Copier', exact: true });
     // Focus clavier (Tab) pour que le contour de focus visible apparaisse.
     await page.getByRole('checkbox', { name: 'Initiales', exact: true }).focus();
+    // Révision -r2 (D-216 (3)) : le bouton « Colonnes » s'insère entre « Initiales » et « Copier ».
+    await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
     await expect(copier).toBeFocused();
     await page.screenshot({
@@ -136,6 +138,11 @@ test('E2E-209 captures du lot 3f-2 : menu contextuel et captures pour la séance
     const poigneeLigne = ligneDe(page, 'Tâche R').locator('[data-poignee-ligne]');
     await ligneDe(page, 'Tâche R').hover();
     await page.screenshot({ path: cheminCapture(`ux-poignee-ligne-survol-${l}.png`) });
+    // Révision -r5 (D-212 (7)) : le survol de la ligne, plus large que le tableau à sa largeur par défaut, a
+    // fait défiler la zone du tableau ; elle revient à gauche, où sont les poignées.
+    await tableau(page).evaluate((e) => {
+      e.scrollLeft = 0;
+    });
     await glisserVers(
       page,
       poigneeLigne,

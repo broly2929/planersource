@@ -41,7 +41,7 @@ async function ouvrir(
 }
 
 for (const largeur of LARGEURS) {
-  test(`E2E-43-r5 (${largeur} px) : zones à défilement en région focalisable, ordre de tabulation, barres et jalons hors tabulation`, async ({
+  test(`E2E-43-r7 (${largeur} px) : zones à défilement en région focalisable, ordre de tabulation, barres et jalons hors tabulation`, async ({
     page,
     request,
   }) => {
@@ -84,6 +84,9 @@ for (const largeur of LARGEURS) {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('checkbox', { name: 'Initiales', exact: true })).toBeFocused();
     expect(await horsBarre()).toBe(true);
+    // Révision -r7 (D-216 (3)) : le bouton « Colonnes » s'insère après « Initiales ».
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Colonnes', exact: true })).toBeFocused();
     // Révision -r3 (D-031, D-111 (6)) : le bouton « Copier » s'insère après « Initiales ».
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Copier', exact: true })).toBeFocused();
@@ -91,6 +94,24 @@ for (const largeur of LARGEURS) {
     await page.keyboard.press('Tab');
     await expect(tableau).toBeFocused();
     expect(await horsBarre()).toBe(true);
+    // Révision -r7 (D-216 (3)) : poignées de largeur, dans l'ordre des en-têtes, avant le contenu des lignes.
+    for (const titre of [
+      'WBS',
+      'Nom',
+      'Planification',
+      'Début',
+      'Fin',
+      'Charge',
+      'Vendu',
+      'Marge',
+      'Avancement',
+      'Drapeaux',
+    ]) {
+      await page.keyboard.press('Tab');
+      await expect(
+        tableau.getByRole('separator', { name: `Largeur de la colonne ${titre}`, exact: true }),
+      ).toBeFocused();
+    }
     // Révision -r5 (D-031, D-127 (6), (7)) : les boutons-noms des éléments, en ordre WBS, puis le lien et
     // le crayon du sous-projet.
     for (const nom of ['Activité A', 'Jalon J']) {
@@ -113,6 +134,11 @@ for (const largeur of LARGEURS) {
         name: `Modifier le projet Sous-projet E2E43-${largeur}`,
         exact: true,
       }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
+    await expect(
+      page.getByRole('separator', { name: 'Largeur du tableau', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(calendrier).toBeFocused();

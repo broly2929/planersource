@@ -26,8 +26,14 @@ import {
 import { BoutonsZoom } from '../gantt/BoutonsZoom';
 import { CaseInitiales } from '../gantt/CaseInitiales';
 import { Drapeaux } from '../gantt/Drapeaux';
+import {
+  DispositionGantt,
+  MenuColonnes,
+  poigneeColonne,
+  useDispositionGantt,
+} from '../gantt/DispositionGantt';
 import { CLASSE_CELLULE_DRAPEAUX, CLASSE_ENTETE_DRAPEAUX, CLASSE_NOM_MAX } from '../gantt/largeurs';
-import { dateLocale, lireInitiales, lireZoom } from '../gantt/echelle';
+import { dateLocale, lireInitialesAccueil, lireZoom } from '../gantt/echelle';
 import {
   GanttSvg,
   datesLigne,
@@ -35,7 +41,8 @@ import {
   type ElementGantt,
   type LigneSvg,
 } from '../gantt/GanttSvg';
-import { formaterDate } from '../gantt/libelles';
+import { formaterAvancement, formaterDate, formaterNombre, VIDE } from '../gantt/libelles';
+import { formaterJours } from '../gantt/vendu';
 import { calculerPlage, etendrePlage } from '../gantt/plage';
 import { useLargeur } from '../gantt/useLargeur';
 import { indentation, sousProjets, type LigneArbre } from '../projets/arbre';
@@ -104,8 +111,9 @@ function GanttGlobal() {
   const chemin = usePath();
   const recherche = useSearch();
   const zoom = lireZoom(recherche.get('zoom'));
-  const initiales = lireInitiales(recherche.get('initiales'));
+  const initiales = lireInitialesAccueil(recherche.get('initiales'));
   const [largeurSvg, zoneSvg] = useLargeur();
+  const disposition = useDispositionGantt('accueil', { vendu: true });
   const [ouverts, setOuverts] = useState<Set<number>>(new Set());
   const [contenus, setContenus] = useState<Map<number, Contenu>>(new Map());
   const demandes = useRef<Set<number>>(new Set());
@@ -141,6 +149,15 @@ function GanttGlobal() {
     });
     if (!ouvert) chargerContenu(id);
   };
+
+  // D-218 (4) : au premier affichage des projets, tout est déplié (comme « Tout déplier »), une seule fois.
+  const depliageInitial = useRef(false);
+  useEffect(() => {
+    if (depliageInitial.current || etat.statut !== 'ok') return;
+    depliageInitial.current = true;
+    setOuverts(new Set(visibles.map((p) => p.id)));
+    visibles.forEach((p) => chargerContenu(p.id));
+  }, [etat.statut, visibles, chargerContenu]);
 
   const toutOuvert = visibles.length > 0 && visibles.every((p) => ouverts.has(p.id));
   const basculerTout = () => {
@@ -257,13 +274,57 @@ function GanttGlobal() {
   }
   if (visibles.length === 0) return <Vide>Aucun projet à afficher.</Vide>;
 
-  const colonnes: Colonne<LigneEcran>[] = [
+  /** Valeur d'une colonne ajoutée (D-216 (6)) : lignes d'éléments seulement, lignes de projet vides. */
+  const valeurElement =
+    (f: (e: ElementGantt) => string) =>
+    (l: LigneEcran): string =>
+      l.type === 'element' ? f(l.element) : '';
+  /** Charge, avancement, réel : activité, valeur ; jalon, « — » (3b point 2). */
+  const chargeActivite = (f: (e: ElementGantt) => string) =>
+    valeurElement((e) => (e.type === 'activite' ? f(e) : VIDE));
+  /** Vendu et Marge (D-149 (8b)) : activité d'un projet que l'utilisateur écrit ; jalon et lecture : vide. */
+  const vendu = (f: (e: ElementGantt) => number | null | undefined) =>
+    valeurElement((e) => {
+      const idProjet = projetDeElement.get(e.id);
+      return e.type === 'activite' && idProjet !== undefined && peutEcrire.has(idProjet)
+        ? formaterJours(f(e) ?? null)
+        : '';
+    });
+  const colonnesAjoutees: (Colonne<LigneEcran> & { id: string })[] = [
     {
+      id: 'charge',
+      titre: 'Charge',
+      cellule: chargeActivite((e) => formaterNombre(e.charge_assignee ?? null)),
+    },
+    {
+      id: 'avancement',
+      titre: 'Avancement',
+      cellule: chargeActivite((e) => formaterAvancement(e.avancement ?? null)),
+    },
+    {
+      id: 'reel',
+      titre: 'Réel',
+      cellule: chargeActivite((e) => formaterNombre(e.charge_reelle ?? null)),
+    },
+    { id: 'vendu', titre: 'Vendu', cellule: vendu((e) => e.charge_vendue) },
+    {
+      id: 'marge',
+      titre: 'Marge',
+      cellule: vendu((e) => e.marge),
+      // Clé absente sur un projet en lecture (D-149 (4)) : jamais en couleur flag.
+      classeCelluleLigne: (l) =>
+        l.type === 'element' && (l.element.marge ?? 0) < 0 ? 'text-flag' : '',
+    },
+  ];
+  const colonnes = disposition.colonnes<LigneEcran>([
+    {
+      id: 'code',
       titre: 'Code',
       cellule: (l) =>
         l.type === 'projet' ? l.projet.code : l.type === 'element' ? l.element.wbs : null,
     },
     {
+      id: 'nom',
       titre: 'Nom',
       cellule: (l) => {
         if (l.type === 'message') {
@@ -277,21 +338,25 @@ function GanttGlobal() {
           const idProjet = projetDeElement.get(l.element.id);
           const modifiable = idProjet !== undefined && peutEcrire.has(idProjet);
           return (
-            <span style={indentation(l.profondeur, true)}>
+            // Ligne de texte (nom puis badge) ; dans une colonne réglée, rangée flexible pour tronquer le nom.
+            <span
+              className="in-data-cadre:flex in-data-cadre:items-center"
+              style={indentation(l.profondeur, true)}
+            >
               {modifiable ? (
                 <button
                   type="button"
                   title={l.element.nom}
                   disabled={chargementEdition}
                   onClick={() => void modifierElement(idProjet, l.element)}
-                  className={`inline-block ${CLASSE_NOM_MAX} cursor-pointer truncate text-left align-middle text-accent underline focus-visible:rounded-ui disabled:cursor-wait disabled:opacity-60`}
+                  className={`inline-block min-w-0 ${CLASSE_NOM_MAX} cursor-pointer truncate text-left align-middle text-accent underline focus-visible:rounded-ui disabled:cursor-wait disabled:opacity-60`}
                 >
                   {l.element.nom}
                 </button>
               ) : (
                 <span
                   title={l.element.nom}
-                  className={`inline-block ${CLASSE_NOM_MAX} truncate align-middle`}
+                  className={`inline-block min-w-0 ${CLASSE_NOM_MAX} truncate align-middle`}
                 >
                   {l.element.nom}
                 </span>
@@ -299,7 +364,7 @@ function GanttGlobal() {
               {l.element.type === 'jalon' && (
                 <>
                   {' '}
-                  <span className="ml-2 align-middle">
+                  <span className="ml-2 shrink-0 align-middle">
                     <Badge statut="neutre">Jalon</Badge>
                   </span>
                 </>
@@ -320,7 +385,7 @@ function GanttGlobal() {
             <Link
               to={`/projets/${p.id}`}
               title={p.nom}
-              className={`block ${CLASSE_NOM_MAX} truncate text-accent underline`}
+              className={`block min-w-0 ${CLASSE_NOM_MAX} truncate text-accent underline`}
             >
               {p.nom}
             </Link>
@@ -337,6 +402,7 @@ function GanttGlobal() {
       },
     },
     {
+      id: 'debut',
       titre: 'Début',
       cellule: (l) =>
         l.type === 'projet'
@@ -346,6 +412,7 @@ function GanttGlobal() {
             : null,
     },
     {
+      id: 'fin',
       titre: 'Fin',
       cellule: (l) =>
         l.type === 'projet'
@@ -354,7 +421,9 @@ function GanttGlobal() {
             ? formaterDate(datesElement(l)?.fin ?? null)
             : null,
     },
+    ...colonnesAjoutees,
     {
+      id: 'drapeaux',
       titre: 'Drapeaux',
       classeEntete: CLASSE_ENTETE_DRAPEAUX,
       classeCellule: CLASSE_CELLULE_DRAPEAUX,
@@ -363,7 +432,7 @@ function GanttGlobal() {
           <Drapeaux drapeaux={l.element.drapeaux} />
         ) : null,
     },
-  ];
+  ]);
 
   const lignesGantt = lignes.map(ligneSvg);
   const dependances = visibles.flatMap((p) => {
@@ -446,7 +515,8 @@ function GanttGlobal() {
       )}
       <div className="flex items-center gap-4">
         <BoutonsZoom zoom={zoom} chemin={chemin} />
-        <CaseInitiales actif={initiales} chemin={chemin} />
+        <CaseInitiales actif={initiales} chemin={chemin} cocheeParDefaut />
+        <MenuColonnes etat={disposition} />
         {visibles.some((p) => p.peut_ecrire) && (
           <Button variante="secondaire" onClick={() => setCalcul(true)}>
             Calculer
@@ -456,22 +526,21 @@ function GanttGlobal() {
           {toutOuvert ? 'Tout replier' : 'Tout déplier'}
         </Button>
       </div>
-      <div className="flex rounded-ui border border-gray-200 bg-white shadow-ui">
-        <div
-          tabIndex={0}
-          role="region"
-          aria-label="Tableau du Gantt global"
-          className="w-fit max-w-4/5 shrink-0 overflow-x-auto border-r border-gray-200 focus-visible:outline-offset-[-2px]"
-        >
-          <Table compact legende="Projets" colonnes={colonnes} lignes={lignes} cle={cleLigne} />
-        </div>
-        <div
-          ref={zoneSvg}
-          tabIndex={0}
-          role="region"
-          aria-label="Calendrier du Gantt global"
-          className="min-w-0 flex-1 overflow-x-auto focus-visible:outline-offset-[-2px]"
-        >
+      <DispositionGantt
+        etat={disposition}
+        propsTableau={{ 'aria-label': 'Tableau du Gantt global' }}
+        propsCalendrier={{ ref: zoneSvg, 'aria-label': 'Calendrier du Gantt global' }}
+        tableau={
+          <Table
+            compact
+            legende="Projets"
+            colonnes={colonnes}
+            lignes={lignes}
+            cle={cleLigne}
+            poigneeLargeur={poigneeColonne(disposition)}
+          />
+        }
+        calendrier={
           <GanttSvg
             lignes={lignesGantt}
             dependances={dependances}
@@ -480,8 +549,8 @@ function GanttGlobal() {
             aujourdhui={aujourdhui}
             initiales={initiales}
           />
-        </div>
-      </div>
+        }
+      />
     </section>
   );
 }

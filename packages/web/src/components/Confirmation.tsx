@@ -29,6 +29,7 @@ export function Confirmation({
   libelleConfirmer = 'Supprimer',
   variante = 'danger',
   messageErreur = messageRefus,
+  focusRetour,
 }: {
   nom?: string;
   action: () => Promise<unknown>;
@@ -40,6 +41,8 @@ export function Confirmation({
   variante?: 'primaire' | 'danger';
   /** Texte du refus de l'API (défaut : textes de suppression). */
   messageErreur?: (err: unknown) => string;
+  /** Élément qui reprend le focus à la fermeture (D-188). */
+  focusRetour?: (() => HTMLElement | null) | undefined;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
@@ -58,6 +61,9 @@ export function Confirmation({
 
   return (
     <Dialog
+      sansGarde
+      focusRetour={focusRetour}
+      focusInitial="[data-focus-initial]"
       ouvert
       onOuvertChange={(o) => !o && onAnnuler()}
       titre={titre}
@@ -66,7 +72,7 @@ export function Confirmation({
       <div className="flex flex-col gap-4">
         {erreur && <Notification type="erreur">{erreur}</Notification>}
         <div className="flex justify-end gap-2">
-          <Button variante="secondaire" onClick={onAnnuler}>
+          <Button variante="secondaire" onClick={onAnnuler} data-focus-initial>
             Annuler
           </Button>
           <Button variante={variante} onClick={confirmer} enCours={enCours}>

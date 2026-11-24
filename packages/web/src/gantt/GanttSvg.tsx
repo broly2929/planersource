@@ -49,6 +49,7 @@ export interface ElementGantt {
   close?: boolean;
   est_parent?: boolean;
   charge_assignee?: number;
+  charge_reelle?: number;
   avancement?: number | null;
   initiales?: string[];
   type_jalon?: 'flottant' | 'fixe';
@@ -607,11 +608,6 @@ export function GanttSvg({
       height={hautEntete + hauteurCorps}
       className="block max-w-none min-w-60 overflow-visible"
     >
-      <rect width={largeur} height={hautEntete} className="fill-gray-100" />
-      {cellules(haut, 0)}
-      {cellules(bas, 1)}
-      <line x1={0} x2={largeur} y1={hautEntete} y2={hautEntete} className="stroke-gray-200" />
-
       <g transform={`translate(0 ${hautEntete})`}>
         {weekends.map((i) => (
           <rect key={i} x={i * px} width={px} height={hauteurCorps} className="fill-gray-100" />
@@ -853,6 +849,8 @@ export function GanttSvg({
                 width={r.largeur + 2 * marge}
                 height={HAUTEUR_BARRE + 2 * marge}
                 rx={4}
+                // Défilement vers la barre active : elle ne passe pas sous les en-têtes figés (D-212 (3)).
+                style={{ scrollMarginTop: hautEntete }}
                 className="pointer-events-none fill-none stroke-accent stroke-2"
               />
             );
@@ -923,6 +921,14 @@ export function GanttSvg({
             />
           );
         })}
+      </g>
+      {/* En-têtes dessinés en dernier, au-dessus des barres, et figés en haut de la zone qui défile
+          (D-212 (3)) : décalés de la position verticale de la zone, posée par `DispositionGantt`. */}
+      <g data-entete-gantt style={{ transform: 'translateY(var(--defilement-gantt, 0px))' }}>
+        <rect width={largeur} height={hautEntete} className="fill-gray-100" />
+        {cellules(haut, 0)}
+        {cellules(bas, 1)}
+        <line x1={0} x2={largeur} y1={hautEntete} y2={hautEntete} className="stroke-gray-200" />
       </g>
     </svg>
   );

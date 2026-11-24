@@ -43,6 +43,7 @@ export function DialogueExport({
 
   return (
     <Dialog
+      sansGarde
       ouvert
       onOuvertChange={(o) => !o && onFermer()}
       titre="Exporter les imputations"

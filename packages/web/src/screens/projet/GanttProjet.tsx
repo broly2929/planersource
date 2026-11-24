@@ -85,6 +85,12 @@ import { formaterJours, texteTotaux, type TotauxProjet } from '../../gantt/vendu
 import { retrait } from '../../gantt/retraits';
 import { useLargeur } from '../../gantt/useLargeur';
 import {
+  DispositionGantt,
+  MenuColonnes,
+  poigneeColonne,
+  useDispositionGantt,
+} from '../../gantt/DispositionGantt';
+import {
   FormulaireActivite,
   FormulaireJalon,
   FormulaireModifDependance,
@@ -108,8 +114,11 @@ interface DonneesGantt {
 }
 
 /** Colonnes « Vendu » et « Marge » (D-149 (8b)) : activités seulement, marge négative en couleur flag. */
-const colonnesVendu: Colonne<LigneGantt>[] = [
+type ColonneGantt = Colonne<LigneGantt> & { id: string };
+
+const colonnesVendu: ColonneGantt[] = [
   {
+    id: 'vendu',
     titre: 'Vendu',
     cellule: (l) =>
       l.genre === 'element' && l.element.type === 'activite'
@@ -117,6 +126,7 @@ const colonnesVendu: Colonne<LigneGantt>[] = [
         : '',
   },
   {
+    id: 'marge',
     titre: 'Marge',
     cellule: (l) =>
       l.genre === 'element' && l.element.type === 'activite'
@@ -153,17 +163,9 @@ function TotauxProjetRegion({ totaux }: { totaux: TotauxProjet }) {
  * Largeur du tableau avec les colonnes de 6c (D-149 (8)) : marges internes d'un pas (`px-1`) sur toutes les colonnes
  * sauf Drapeaux, et nom limité à `CLASSE_NOM_MAX_CLIENT`, pour tenir dans les 4/5 de l'écran à 1440 px.
  */
-function resserrer(client: boolean, cols: Colonne<LigneGantt>[]): Colonne<LigneGantt>[] {
+function resserrer(client: boolean, cols: ColonneGantt[]): ColonneGantt[] {
   if (!client) return cols;
-  return cols.map((c) =>
-    c.titre === 'Drapeaux'
-      ? c
-      : {
-          ...c,
-          classeEntete: `${c.classeEntete ?? ''} px-1!`,
-          classeCellule: `${c.classeCellule ?? ''} px-1!`,
-        },
-  );
+  return cols.map((c) => (c.id === 'drapeaux' ? c : { ...c, serree: true }));
 }
 
 /** Colonnes du tableau ; `poignee` rend la poignée de glisser d'une ligne d'élément (D-108 (5)). */
@@ -175,14 +177,16 @@ const colonnes = (
   modifierSousProjet: (sousProjet: SousProjetGantt) => (() => void) | null,
   /** Colonnes « Vendu » et « Marge » et badge « Client » : seulement si l'utilisateur écrit (D-149 (8)). */
   client: boolean,
-): Colonne<LigneGantt>[] => {
+): ColonneGantt[] => {
   const nomMax = client ? CLASSE_NOM_MAX_CLIENT : CLASSE_NOM_MAX;
   return resserrer(client, [
     {
+      id: 'wbs',
       titre: 'WBS',
       cellule: (l) => (l.genre === 'element' ? l.element.wbs : VIDE),
     },
     {
+      id: 'nom',
       titre: 'Nom',
       cellule: (l) =>
         l.genre === 'sous-projet' ? (
@@ -190,7 +194,7 @@ const colonnes = (
             <Link
               to={`/projets/${l.sousProjet.id}`}
               title={`${l.sousProjet.code} · ${l.sousProjet.nom}`}
-              className={`block ${nomMax} truncate text-accent underline`}
+              className={`block min-w-0 ${nomMax} truncate text-accent underline`}
             >
               {`${l.sousProjet.code} · ${l.sousProjet.nom}`}
             </Link>
@@ -211,14 +215,14 @@ const colonnes = (
                 type="button"
                 title={l.element.nom}
                 onClick={() => modifierElement(l.element)}
-                className={`block ${nomMax} cursor-pointer truncate text-left text-accent underline focus-visible:rounded-ui ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
+                className={`block min-w-0 ${nomMax} cursor-pointer truncate text-left text-accent underline focus-visible:rounded-ui ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
               >
                 {l.element.nom}
               </button>
             ) : (
               <span
                 title={l.element.nom}
-                className={`block ${nomMax} truncate ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
+                className={`block min-w-0 ${nomMax} truncate ${retrait(l.element.wbs)} ${l.element.est_parent ? 'font-semibold' : ''}`}
               >
                 {l.element.nom}
               </span>
@@ -227,6 +231,7 @@ const colonnes = (
         ),
     },
     {
+      id: 'planification',
       titre: 'Planification',
       cellule: (l) =>
         l.genre === 'sous-projet' ? (
@@ -237,9 +242,10 @@ const colonnes = (
           VIDE
         ),
     },
-    { titre: 'Début', cellule: (l) => formaterDate(datesLigne(l)?.debut ?? null) },
-    { titre: 'Fin', cellule: (l) => formaterDate(datesLigne(l)?.fin ?? null) },
+    { id: 'debut', titre: 'Début', cellule: (l) => formaterDate(datesLigne(l)?.debut ?? null) },
+    { id: 'fin', titre: 'Fin', cellule: (l) => formaterDate(datesLigne(l)?.fin ?? null) },
     {
+      id: 'charge',
       titre: 'Charge',
       cellule: (l) =>
         l.genre === 'element' && l.element.type === 'activite'
@@ -248,6 +254,7 @@ const colonnes = (
     },
     ...(client ? colonnesVendu : []),
     {
+      id: 'avancement',
       titre: 'Avancement',
       cellule: (l) =>
         l.genre === 'element' && l.element.type === 'activite'
@@ -255,6 +262,7 @@ const colonnes = (
           : VIDE,
     },
     {
+      id: 'drapeaux',
       titre: 'Drapeaux',
       classeEntete: CLASSE_ENTETE_DRAPEAUX,
       classeCellule: CLASSE_CELLULE_DRAPEAUX,
@@ -336,6 +344,20 @@ export function GanttProjet({
   // Annulation (D-127 (4), (5)) : « Geste annulé. » affiché jusqu'au geste suivant.
   const [annule, setAnnule] = useState(false);
   const [annulation, setAnnulation] = useState(false);
+  // D-207 (1) : un geste qui enregistre dure jusqu'à la réponse de son enregistrement ; tant qu'il y en a un
+  // en cours (barre, lien ou ligne), l'annulation est ignorée et le bouton désactivé.
+  const enregistrements = useRef(0);
+  const [enregistrement, setEnregistrement] = useState(false);
+  const enregistrer = async (envoi: () => Promise<void>) => {
+    enregistrements.current++;
+    setEnregistrement(true);
+    try {
+      await envoi();
+    } finally {
+      enregistrements.current--;
+      setEnregistrement(enregistrements.current > 0);
+    }
+  };
   const elementsCourants = etat.statut === 'ok' ? etat.donnees.elements : [];
   const calendrierDefaut = useRef<Promise<CalendrierGeste> | null>(null);
   const [calcul, setCalcul] = useState(false);
@@ -462,7 +484,9 @@ export function GanttProjet({
   };
 
   /** Envoie un geste : réponse appliquée à l'élément local, contour posé ; refus : alerte (D-094 (9), (10)). */
-  const envoyerGeste = async (element: ElementGantt, geste: Geste, decalage: number) => {
+  const envoyerGeste = (element: ElementGantt, geste: Geste, decalage: number) =>
+    enregistrer(() => envoyerGesteBarre(element, geste, decalage));
+  const envoyerGesteBarre = async (element: ElementGantt, geste: Geste, decalage: number) => {
     setAnnule(false);
     const contourAvant = contours.parElement[element.id] ?? null;
     try {
@@ -503,7 +527,9 @@ export function GanttProjet({
   };
 
   /** Crée un lien FD de délai 0 (D-104 (3)) ; succès : rechargement et recalcul, refus : alerte. */
-  const creerLien = async (source: number, cible: number) => {
+  const creerLien = (source: number, cible: number) =>
+    enregistrer(() => creerLienEnregistre(source, cible));
+  const creerLienEnregistre = async (source: number, cible: number) => {
     setAnnule(false);
     try {
       const creee = await api<{ id: number }>(`/api/projets/${projetId}/dependances`, {
@@ -520,7 +546,9 @@ export function GanttProjet({
   };
 
   /** Déplace une ligne (D-108 (9), (10)) ; succès : rechargement, bandeau et recalcul, refus : alerte. */
-  const deplacerLigne = async (id: number, destination: Destination) => {
+  const deplacerLigne = (id: number, destination: Destination) =>
+    enregistrer(() => deplacerLigneEnregistre(id, destination));
+  const deplacerLigneEnregistre = async (id: number, destination: Destination) => {
     setAnnule(false);
     const avant = elementsCourants.find((e) => e.id === id);
     try {
@@ -645,12 +673,13 @@ export function GanttProjet({
     !estModele &&
     pile.entrees.length > 0 &&
     !recalcul &&
-    !annulation;
+    !annulation &&
+    !enregistrement;
 
   /** Annule le dernier geste par sa requête inverse (D-127 (5)) ; même verrou que les gestes. */
   const annuler = async () => {
     const { inverse, pile: reste } = depiler(pile.entrees);
-    if (!peutAnnuler || !inverse) return;
+    if (!peutAnnuler || !inverse || enregistrements.current > 0) return;
     if (edition || creation || copie || calcul || suppression || menu || !verrou.prendre()) return;
     setAnnulation(true);
     try {
@@ -701,6 +730,10 @@ export function GanttProjet({
     document.addEventListener('keydown', surTouche);
     return () => document.removeEventListener('keydown', surTouche);
   }, []);
+
+  const disposition = useDispositionGantt('projet', {
+    vendu: etat.statut === 'ok' && etat.donnees.projet.peut_ecrire,
+  });
 
   if (etat.statut === 'chargement') return <Chargement libelle="Chargement du Gantt…" />;
   if (etat.statut === 'erreur') {
@@ -864,6 +897,7 @@ export function GanttProjet({
         {peutCalculer && caseAuto}
         <BoutonsZoom zoom={zoom} chemin={chemin} />
         <CaseInitiales actif={initiales} chemin={chemin} />
+        <MenuColonnes etat={disposition} />
         {/* Groupe qui passe à la ligne en entier, jamais un bouton seul (D-131). */}
         <div className="flex flex-nowrap items-center gap-4">
           {peutCalculer && (
@@ -889,48 +923,50 @@ export function GanttProjet({
       </div>
       {dialogue}
       {client && projet.totaux && <TotauxProjetRegion totaux={projet.totaux} />}
-      <div className="flex rounded-ui border border-gray-200 bg-white shadow-ui">
-        <div
-          ref={zoneTableau}
-          onContextMenu={surMenuNavigateur('tableau')}
-          tabIndex={0}
-          role="region"
-          aria-label="Tableau du Gantt"
-          className={`w-fit max-w-4/5 shrink-0 overflow-x-auto border-r border-gray-200 focus-visible:outline-offset-[-2px] ${g ? 'cursor-grabbing select-none' : ''}`}
-        >
+      <DispositionGantt
+        etat={disposition}
+        propsTableau={{
+          ref: zoneTableau,
+          onContextMenu: surMenuNavigateur('tableau'),
+          'aria-label': 'Tableau du Gantt',
+          className: g ? 'cursor-grabbing select-none' : '',
+        }}
+        propsCalendrier={{
+          ref: refZone,
+          onKeyDown: surTouche,
+          onContextMenu: surMenuNavigateur('calendrier'),
+          'aria-label': 'Calendrier du Gantt',
+          className: 'pl-2',
+        }}
+        tableau={
           <Table
             compact
             legende="Éléments du projet"
-            colonnes={colonnes(
-              poignee,
-              projet.peut_ecrire
-                ? (element) => void ouvrir(element.id, lignes, projet.peut_ecrire, 'tableau')
-                : null,
-              (sp) =>
-                sousProjetsEcrits.has(sp.id)
-                  ? () => {
-                      if (!edition) {
-                        origine.current = 'tableau';
-                        setEdition({ kind: 'projet', id: sp.id });
-                      }
-                    }
+            poigneeLargeur={poigneeColonne(disposition)}
+            colonnes={disposition.colonnes(
+              colonnes(
+                poignee,
+                projet.peut_ecrire
+                  ? (element) => void ouvrir(element.id, lignes, projet.peut_ecrire, 'tableau')
                   : null,
-              client,
+                (sp) =>
+                  sousProjetsEcrits.has(sp.id)
+                    ? () => {
+                        if (!edition) {
+                          origine.current = 'tableau';
+                          setEdition({ kind: 'projet', id: sp.id });
+                        }
+                      }
+                    : null,
+                client,
+              ),
             )}
             attributsLigne={attributsLigne}
             lignes={lignes}
             cle={(l) => (l.genre === 'element' ? `e${l.element.id}` : `p${l.sousProjet.id}`)}
           />
-        </div>
-        <div
-          ref={refZone}
-          onKeyDown={surTouche}
-          onContextMenu={surMenuNavigateur('calendrier')}
-          tabIndex={0}
-          role="region"
-          aria-label="Calendrier du Gantt"
-          className="min-w-0 flex-1 overflow-x-auto pl-2 focus-visible:outline-offset-[-2px]"
-        >
+        }
+        calendrier={
           <GanttSvg
             lignes={lignes}
             dependances={dependances}
@@ -963,7 +999,8 @@ export function GanttProjet({
                   }
             }
           />
-        </div>
+        }
+      >
         <div data-annonce-gantt aria-live="polite" className="sr-only">
           {ligneActive
             ? `${nomAccessible(ligneActive, client) ?? ''}${
@@ -973,7 +1010,7 @@ export function GanttProjet({
               }`
             : ''}
         </div>
-      </div>
+      </DispositionGantt>
       <ContextMenu.Root onOpenChange={(o) => !o && setMenu(null)}>
         <ContextMenu.Trigger asChild>
           <span ref={declencheur} aria-hidden className="hidden" />

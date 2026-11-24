@@ -24,6 +24,12 @@ Règles :
 - Dépendances : MIT, Apache 2.0, BSD ou ISC uniquement. Aucune
   bibliothèque de Gantt tierce : rendu SVG interne.
 
+Tests : passes ciblées seulement (`npm run tests-cibles -- --depuis <commit> --domaine <domaine>`, ou
+`cd e2e && npx playwright test -g <ID>`). Tu ne lances jamais la
+suite complète : l'agent principal la lance une seule fois par lot, avec `npm run suite-complete`
+(D-193).
+Un changement de configuration de test (vitest, Playwright, base, workers) se valide par le point d'entrée réel (`npm run suite-complete` ou `npm run tests-cibles`), jamais seulement par des options en ligne de commande (leçon des deux suites de vitest-parallele, D-196).
+
 Vérification obligatoire : capture Playwright de chaque écran touché, en
 1440 px et 1024 px de large. Regarde les captures et corrige les défauts
 d'alignement, de débordement et de contraste avant de rendre la main.

@@ -23,7 +23,10 @@ async function photographier(page: Page, nom: string) {
   }
 }
 
-test('E2E-278 : captures de REX-3b (sans assertion fonctionnelle)', async ({ page, request }) => {
+test('E2E-278-r1 : captures de REX-3b (sans assertion fonctionnelle)', async ({
+  page,
+  request,
+}) => {
   const m = await monde3b(request, 'E2E278', ['Alice']);
   const a = await activiteAvec(request, m.projet.id, 'Tâche 278', {
     mode: 'START',
@@ -51,7 +54,9 @@ test('E2E-278 : captures de REX-3b (sans assertion fonctionnelle)', async ({ pag
 
   // Accueil déplié : boutons-noms et crayons.
   await page.goto('/');
-  await page.getByRole('button', { name: `Déplier Projet E2E278`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Replier Projet E2E278`, exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   await expect(page.getByRole('button', { name: 'Tâche 278', exact: true })).toBeVisible();
   await photographier(page, 'accueil');
 });

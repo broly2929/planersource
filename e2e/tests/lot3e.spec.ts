@@ -30,6 +30,7 @@ import {
   ouvrirCalendriers,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
+import { cliquerDansConfirmation } from './stabilite-helpers.js';
 
 const J06 = '2027-01-06T10:00:00';
 const HAUTEUR_LIGNE = 32;
@@ -223,7 +224,7 @@ test('E2E-171-r1 : connecteur sur A, B et J seulement, jour et semaine, pour le 
   await expect(connecteurs(page)).toHaveCount(0);
 });
 
-test('E2E-172 : glisser du connecteur de A jusqu’à la ligne de B crée A → B (FD, 0), bandeau sans contour', async ({
+test('E2E-172-r1 : glisser du connecteur de A jusqu’à la ligne de B crée A → B (FD, 0), bandeau sans contour', async ({
   page,
   request,
 }) => {
@@ -245,7 +246,9 @@ test('E2E-172 : glisser du connecteur de A jusqu’à la ligne de B crée A → 
   expect(r.dependances.length).toBe(1);
 
   await page.getByRole('tab', { name: 'Planning' }).click();
-  await expect(page.getByRole('row', { name: /Tâche A\s+Tâche B\s+FD\s+0/ })).toBeVisible();
+  await expect(
+    page.getByRole('row', { name: /Tâche A\s+Tâche B\s+Fin → début \(FD\)\s+0/ }),
+  ).toBeVisible();
 });
 
 test('E2E-173 : pendant le glisser, trait provisoire et ligne cible ; aucun POST si le lâcher n’est pas sur une cible', async ({
@@ -346,7 +349,7 @@ test('E2E-175 : refus d’une création : doublon (409), 422 sans code, 500 ; un
   }
 });
 
-test('E2E-176 : clic sur un lien : dialogue « Modifier la dépendance », PATCH { type, delai }, bandeau', async ({
+test('E2E-176-r1 : clic sur un lien : dialogue « Modifier la dépendance », PATCH { type, delai }, bandeau', async ({
   page,
   request,
 }) => {
@@ -374,10 +377,12 @@ test('E2E-176 : clic sur un lien : dialogue « Modifier la dépendance », PATCH
   await expect(contours(page)).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Planning' }).click();
-  await expect(page.getByRole('row', { name: /Tâche A\s+Tâche B\s+DD\s+2/ })).toBeVisible();
+  await expect(
+    page.getByRole('row', { name: /Tâche A\s+Tâche B\s+Début → début \(DD\)\s+2/ }),
+  ).toBeVisible();
 });
 
-test('E2E-177 : suppression d’un lien depuis le dialogue, avec confirmation', async ({
+test('E2E-177-r1 : suppression d’un lien depuis le dialogue, avec confirmation', async ({
   page,
   request,
 }) => {
@@ -400,7 +405,10 @@ test('E2E-177 : suppression d’un lien depuis le dialogue, avec confirmation', 
   expect(parMethode(r, 'DELETE').length).toBe(0);
 
   await dialogue.getByRole('button', { name: 'Supprimer', exact: true }).click();
-  await confirmation(page).getByRole('button', { name: 'Supprimer', exact: true }).click();
+  await cliquerDansConfirmation(
+    confirmation(page),
+    confirmation(page).getByRole('button', { name: 'Supprimer', exact: true }),
+  );
   await expect.poll(() => parMethode(r, 'DELETE').length).toBe(1);
   await expect(liens(page)).toHaveCount(0);
   await expect(bandeau(page)).toBeVisible();
@@ -447,7 +455,7 @@ test('E2E-178-r2 : clic sur un lien au zoom mois ouvre le dialogue ; sans droit 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('E2E-179-r3 : liens et connecteurs hors tabulation, ordre de tabulation de la fiche inchangé', async ({
+test('E2E-179-r5 : liens et connecteurs hors tabulation, ordre de tabulation de la fiche inchangé', async ({
   page,
   request,
 }) => {
@@ -483,10 +491,31 @@ test('E2E-179-r3 : liens et connecteurs hors tabulation, ordre de tabulation de 
   await page.keyboard.press('Tab');
   await expect(page.getByRole('checkbox', { name: 'Initiales', exact: true })).toBeFocused();
   // Révision -r1 (D-031, D-111 (6)) : le bouton « Copier » s'insère après « Initiales ».
+  // Révision -r5 (D-216 (3)) : le bouton « Colonnes » s'insère après « Initiales ».
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Colonnes', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Copier', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(tableau).toBeFocused();
+  // Révision -r5 (D-216 (3)) : poignées de largeur, dans l'ordre des en-têtes, avant le contenu des lignes.
+  for (const titre of [
+    'WBS',
+    'Nom',
+    'Planification',
+    'Début',
+    'Fin',
+    'Charge',
+    'Vendu',
+    'Marge',
+    'Avancement',
+    'Drapeaux',
+  ]) {
+    await page.keyboard.press('Tab');
+    await expect(
+      tableau.getByRole('separator', { name: `Largeur de la colonne ${titre}`, exact: true }),
+    ).toBeFocused();
+  }
   // Révision -r3 (D-031, D-127 (6), (7)) : boutons-noms des éléments en ordre WBS, puis lien et crayon.
   for (const nom of ['Tâche A', 'Tâche B', 'Jalon J', 'Tâche C']) {
     await page.keyboard.press('Tab');
@@ -502,6 +531,11 @@ test('E2E-179-r3 : liens et connecteurs hors tabulation, ordre de tabulation de 
   await page.keyboard.press('Tab');
   await expect(
     tableau.getByRole('button', { name: 'Modifier le projet Sous-projet E2E179', exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
+  await expect(
+    page.getByRole('separator', { name: 'Largeur du tableau', exact: true }),
   ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(calendrier).toBeFocused();

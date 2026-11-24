@@ -83,14 +83,16 @@ async function renommer(
   await expect(d).toHaveCount(0);
 }
 
-test('E2E-273 : Accueil, bouton-nom d’une activité puis d’un jalon : dialogue prérempli, renommage par l’écran, effet sur l’Accueil et en base', async ({
+test('E2E-273-r1 : Accueil, bouton-nom d’une activité puis d’un jalon : dialogue prérempli, renommage par l’écran, effet sur l’Accueil et en base', async ({
   page,
   request,
 }) => {
   const m = await monde(request, 'E2E273');
   await connecterAvec(page, m.emailChef);
   await page.goto('/');
-  await page.getByRole('button', { name: `Déplier ${m.nomProjet}`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Replier ${m.nomProjet}`, exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   const zone = tableauAccueil(page);
   await expect(zone.getByRole('button', { name: 'Tâche M', exact: true })).toBeVisible();
 
@@ -173,7 +175,7 @@ test('E2E-275 : crayon « Modifier le projet <nom> » : projet de l’Accueil et
   expect(await nomProjet(request, m.sp.id)).toBe('Sous-projet modifié');
 });
 
-test('E2E-276-r1 : lecture seule (chef affecté au projet d’un autre chef) : noms en texte, ni bouton-nom ni crayon, sur l’Accueil et dans l’onglet Gantt', async ({
+test('E2E-276-r2 : lecture seule (chef affecté au projet d’un autre chef) : noms en texte, ni bouton-nom ni crayon, sur l’Accueil et dans l’onglet Gantt', async ({
   page,
   request,
 }) => {
@@ -181,7 +183,9 @@ test('E2E-276-r1 : lecture seule (chef affecté au projet d’un autre chef) : n
   // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
   await connecterAvec(page, await chefLecteur(request, m.projet.id, 'E276'));
   await page.goto('/');
-  await page.getByRole('button', { name: `Déplier ${m.nomProjet}`, exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `Replier ${m.nomProjet}`, exact: true }),
+  ).toBeVisible(); // D-218 (4), (9) : déplié au chargement
   const zone = tableauAccueil(page);
   for (const nom of ['Tâche M', 'Jalon M']) {
     await expect(zone.getByText(nom, { exact: true }), nom).toBeVisible();

@@ -54,7 +54,7 @@ export function feuillesRoutes(app: FastifyInstance, { pool, aujourdhui }: AppDe
   });
 
   app.put<Q>('/api/feuilles', opts, async (request, reply) => {
-    const { semaine } = request.query;
+    const { semaine, ressource_id: brut } = request.query;
     const b = corps.safeParse(request.body);
     if (!lundiValide(semaine) || !b.success) return reply.code(400).send(invalide);
     const jours = new Set([0, 1, 2, 3, 4, 5, 6].map((k) => ajouter(semaine, k)));
@@ -68,14 +68,25 @@ export function feuillesRoutes(app: FastifyInstance, { pool, aujourdhui }: AppDe
         vus.add(i.jour);
       }
     }
+    let ressourceId: number | undefined;
+    if (brut !== undefined) {
+      const id = identifiant(brut);
+      if (id === null) return reply.code(404).send(introuvable);
+      ressourceId = id;
+    }
     const r = await transaction(pool, (db) =>
-      ecrireFeuille(db, request.user!, semaine, b.data.lignes, jourDuServeur()),
+      ecrireFeuille(db, request.user!, semaine, b.data.lignes, jourDuServeur(), ressourceId),
     );
+    if ('verdict' in r) {
+      return r.verdict === 'introuvable'
+        ? reply.code(404).send(introuvable)
+        : reply.code(403).send({ erreur: 'Interdit' });
+    }
     if ('code' in r) return reply.code(422).send(r);
     return r;
   });
 
-  for (const verbe of ['soumettre', 'rappeler', 'valider', 'rejeter'] as Verbe[]) {
+  for (const verbe of ['soumettre', 'rappeler', 'valider', 'rejeter', 'devalider'] as Verbe[]) {
     app.post<{ Params: { id: string } }>(
       `/api/feuilles/:id/${verbe}`,
       opts,

@@ -8,6 +8,7 @@ import {
   type PlaywrightWorkerArgs,
 } from '@playwright/test';
 import pg from 'pg';
+import { URL_WEB } from '../pile-worker.js';
 import { MOT_DE_PASSE, preparer } from './lot1-helpers.js';
 import { remettreAdminSeul } from './lot3c-helpers.js';
 
@@ -67,7 +68,7 @@ export async function sessionDe(
   playwright: PlaywrightWorkerArgs['playwright'],
   email: string,
 ): Promise<APIRequestContext> {
-  const ctx = await playwright.request.newContext({ baseURL: 'http://localhost:5173' });
+  const ctx = await playwright.request.newContext({ baseURL: URL_WEB });
   const r = await ctx.post('/api/auth/login', { data: { email, mot_de_passe: MOT_DE_PASSE } });
   expect(r.ok(), `connexion API de ${email} : ${r.status()}`).toBeTruthy();
   return ctx;

@@ -1,0 +1,10 @@
+{
+  "name": "@planersource/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "devDependencies": {
+    "ms": "2.1.3",
+    "is-number": "7.0.0"
+  }
+}

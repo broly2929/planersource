@@ -1,23 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ApiError } from '../api';
+import { useAnnuaire } from '../annuaire';
 import { useAuth } from '../auth';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Confirmation } from '../components/Confirmation';
 import { Chargement, Vide } from '../components/Etat';
+import { GardeSortie } from '../components/GardeSortie';
 import { Layout } from '../components/Layout';
 import { NavigationSemaine } from '../components/NavigationSemaine';
 import { Notification } from '../components/Notification';
+import { Select } from '../components/Select';
 import {
+  adresseImputations,
   aujourdhuiLocal,
   joursSemaine,
   libelleStatut,
   lignesModifiees,
   messageRefusFeuille,
+  optionsListeRessource,
+  ressourceAffichee,
+  ressourcesChoisissables,
   saisieInitiale,
   saisieValide,
   VARIANTE_STATUT,
   semaineAffichee,
+  titreFeuille,
   type JourFeuille,
   type LigneFeuille,
   type Saisie,
@@ -32,34 +39,111 @@ interface Vue {
   jours: JourFeuille[];
 }
 
-const adresse = (semaine: string) => `/imputations?semaine=${semaine}`;
+const MESSAGE_CHOIX = 'Choisissez une ressource.';
 
 export function FeuilleTemps() {
   const { etat } = useAuth();
-  const ressource = etat.statut === 'connecte' && etat.user.est_ressource;
-  const param = useSearch().get('semaine');
+  const user = etat.statut === 'connecte' ? etat.user : null;
+  const admin = user?.role === 'administrateur';
+  const ressource = !!user?.est_ressource;
   const aujourdhui = aujourdhuiLocal();
-  const { semaine, corrigee } = semaineAffichee(param, aujourdhui);
+  const recherche = useSearch();
+  const { semaine, corrigee } = semaineAffichee(recherche.get('semaine'), aujourdhui);
+  const paramRessource = recherche.get('ressource');
 
+  if (admin && user)
+    return (
+      <FeuilleAdmin
+        user={{ id: Number(user.id), est_ressource: user.est_ressource }}
+        semaine={semaine}
+        corrigee={corrigee}
+        aujourdhui={aujourdhui}
+      />
+    );
   return (
     <Layout titre="Feuille de temps">
-      <Redirect to={adresse(semaine)} when={corrigee} />
+      <Redirect to={adresseImputations(semaine, null)} when={corrigee || paramRessource !== null} />
       {!ressource ? (
         <Vide>Cette page est réservée aux ressources.</Vide>
-      ) : corrigee ? null : (
-        <Feuille semaine={semaine} aujourdhui={aujourdhui} />
+      ) : corrigee || paramRessource !== null ? null : (
+        <Feuille semaine={semaine} aujourdhui={aujourdhui} ressourceId={null} />
       )}
     </Layout>
   );
 }
 
-function Feuille({ semaine, aujourdhui }: { semaine: string; aujourdhui: string }) {
+/** Écran de l'administrateur : liste « Ressource » (D-181 (5)), feuille de la ressource choisie. */
+function FeuilleAdmin({
+  user,
+  semaine,
+  corrigee,
+  aujourdhui,
+}: {
+  user: { id: number; est_ressource: boolean };
+  semaine: string;
+  corrigee: boolean;
+  aujourdhui: string;
+}) {
+  const annuaire = useAnnuaire();
+  const param = useSearch().get('ressource');
+  const choix = useMemo(() => (annuaire ? ressourcesChoisissables(annuaire) : []), [annuaire]);
+  const { ressource, corrigee: ressourceCorrigee } = ressourceAffichee(param, choix, user);
+  const prete = annuaire !== null;
+  const aCorriger = prete && (corrigee || ressourceCorrigee);
+  const nom = choix.find((e) => e.id === ressource)?.nom ?? '';
+  const estSoi = ressource === null || ressource === user.id;
+  const liste = (
+    <Select
+      label="Ressource"
+      value={ressource === null ? '' : String(ressource)}
+      onChange={(e) => {
+        const cible = e.target.value === '' ? null : Number(e.target.value);
+        navigate(adresseImputations(semaine, cible));
+      }}
+      options={optionsListeRessource(choix, ressource, prete)}
+      disabled={!prete}
+    />
+  );
+  return (
+    <Layout titre={titreFeuille(nom, estSoi)} actions={liste}>
+      <Redirect
+        to={adresseImputations(semaine, param !== null && !ressourceCorrigee ? ressource : null)}
+        when={aCorriger}
+      />
+      {!prete || aCorriger ? (
+        <Chargement />
+      ) : ressource === null ? (
+        <Vide>{MESSAGE_CHOIX}</Vide>
+      ) : (
+        <Feuille
+          key={ressource}
+          semaine={semaine}
+          aujourdhui={aujourdhui}
+          ressourceId={estSoi ? null : ressource}
+          ressource={ressource}
+        />
+      )}
+    </Layout>
+  );
+}
+
+function Feuille({
+  semaine,
+  aujourdhui,
+  ressourceId,
+  ressource,
+}: {
+  semaine: string;
+  aujourdhui: string;
+  ressourceId: number | null;
+  ressource?: number;
+}) {
+  const suffixe = ressourceId === null ? '' : `&ressource_id=${ressourceId}`;
   const [vue, setVue] = useState<Vue | null>(null);
   const [erreurChargement, setErreurChargement] = useState(false);
   const [saisie, setSaisie] = useState<Saisie>({});
   const [retour, setRetour] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null);
   const [enCours, setEnCours] = useState(false);
-  const [versSemaine, setVersSemaine] = useState<string | null>(null);
 
   const jours = useMemo(() => joursSemaine(semaine), [semaine]);
 
@@ -76,13 +160,13 @@ function Feuille({ semaine, aujourdhui }: { semaine: string; aujourdhui: string 
     setVue(null);
     setErreurChargement(false);
     setRetour(null);
-    api<Vue>(`/api/feuilles?semaine=${semaine}`)
+    api<Vue>(`/api/feuilles?semaine=${semaine}${suffixe}`)
       .then((v) => !annule && adopter(v))
       .catch(() => !annule && setErreurChargement(true));
     return () => {
       annule = true;
     };
-  }, [semaine, adopter]);
+  }, [semaine, suffixe, adopter]);
 
   const modifications = useMemo(
     () => (vue ? lignesModifiees(vue.lignes, saisie) : []),
@@ -96,9 +180,7 @@ function Feuille({ semaine, aujourdhui }: { semaine: string; aujourdhui: string 
   );
 
   const changerSemaine = (cible: string) => {
-    if (cible === semaine) return;
-    if (modifiee) setVersSemaine(cible);
-    else navigate(adresse(cible));
+    if (cible !== semaine) navigate(adresseImputations(cible, ressource ?? null));
   };
 
   const executer = async (appel: () => Promise<Vue>, succes?: string) => {
@@ -137,7 +219,7 @@ function Feuille({ semaine, aujourdhui }: { semaine: string; aujourdhui: string 
   const enregistrer = () =>
     executer(
       () =>
-        api<Vue>(`/api/feuilles?semaine=${semaine}`, {
+        api<Vue>(`/api/feuilles?semaine=${semaine}${suffixe}`, {
           method: 'PUT',
           body: { lignes: modifications },
         }),
@@ -224,20 +306,7 @@ function Feuille({ semaine, aujourdhui }: { semaine: string; aujourdhui: string 
         ))}
       </ul>
 
-      {versSemaine && (
-        <Confirmation
-          titre="Abandonner les modifications ?"
-          description="Les modifications non enregistrées seront perdues."
-          libelleConfirmer="Abandonner"
-          action={async () => undefined}
-          onSucces={() => {
-            const cible = versSemaine;
-            setVersSemaine(null);
-            navigate(adresse(cible));
-          }}
-          onAnnuler={() => setVersSemaine(null)}
-        />
-      )}
+      <GardeSortie modifie={modifiee} />
     </div>
   );
 }

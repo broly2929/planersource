@@ -47,10 +47,11 @@ describe('Avertissements de configuration (D-140 (5) (a))', () => {
   let fils: ChildProcess | undefined;
 
   afterEach(async () => {
-    if (fils && fils.exitCode === null) {
+    if (fils && fils.exitCode === null && fils.signalCode === null) {
       fils.kill('SIGTERM');
       await once(fils, 'exit');
     }
+    fils = undefined;
   });
 
   it('INST-13 : valeurs du modèle → 2 messages ; une seule → 1 ; valeurs changées → aucun', () => {
@@ -70,7 +71,7 @@ describe('Avertissements de configuration (D-140 (5) (a))', () => {
     expect(avertissements({})).toEqual([]);
   });
 
-  it('INST-13 : démarrage réel avec les valeurs du modèle → avertissements dans la sortie, serveur démarré', async () => {
+  it('INST-13-r1 : démarrage réel avec les valeurs du modèle → avertissements dans la sortie, serveur démarré', async () => {
     const port = await portLibre();
     const env: NodeJS.ProcessEnv = {
       ...process.env,

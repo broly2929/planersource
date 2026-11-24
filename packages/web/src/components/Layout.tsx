@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '../auth';
-import { Link, usePath } from '../router';
+import { Link, sortir, usePath } from '../router';
 import { Button } from './Button';
 import { Notification } from './Notification';
 
@@ -61,13 +61,18 @@ export function Layout({
 
   const deconnecter = () => {
     setErreur(false);
-    logout().catch(() => setErreur(true));
+    sortir(() => logout().catch(() => setErreur(true)));
   };
 
   return (
     <div className="flex h-full">
       <aside className="flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white">
-        <div className="px-4 py-3 text-titre font-semibold text-accent">PlanerSource</div>
+        <Link
+          to="/"
+          className="px-4 py-3 text-titre font-semibold text-accent hover:text-accent-hover hover:underline focus-visible:rounded-ui"
+        >
+          PlanerSource
+        </Link>
         <nav aria-label="Navigation principale" className="flex flex-1 flex-col gap-1 px-2">
           {(user?.est_ressource || user?.role === 'ressource') && (
             <NavLink to="/mes-taches" icone={ListTodo}>
@@ -89,7 +94,7 @@ export function Layout({
               Plan de charge
             </NavLink>
           )}
-          {user?.est_ressource && (
+          {(user?.est_ressource || user?.role === 'administrateur') && (
             <NavLink to="/imputations" icone={ClipboardList}>
               Imputations
             </NavLink>

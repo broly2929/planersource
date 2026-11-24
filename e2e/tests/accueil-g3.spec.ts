@@ -5,6 +5,7 @@ import pg from 'pg';
 import { loginAsAdmin } from './helpers.js';
 import { preparer } from './lot1-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, sousProjet } from './lot3b-helpers.js';
+import { replierTout } from './retouches-rex6-helpers.js';
 
 const NOM_ADMIN_E2E = 'Admin E2E';
 const J06 = '2027-01-06T10:00:00';
@@ -113,7 +114,7 @@ async function monde(request: APIRequestContext, suffixe: string): Promise<Monde
   return { api, admin, ressource: r.id };
 }
 
-test('E2E-93-r2 dépliage d’un projet calculé : lignes, badge Jalon, barres, nom accessible, lien dessiné, sous-projet une seule fois', async ({
+test('E2E-93-r3 dépliage d’un projet calculé : lignes, badge Jalon, barres, nom accessible, lien dessiné, sous-projet une seule fois', async ({
   page,
   request,
 }) => {
@@ -134,6 +135,7 @@ test('E2E-93-r2 dépliage d’un projet calculé : lignes, badge Jalon, barres, 
   for (const e of elements) expect(e.debut_planifie ?? e.date_planifiee).toBeTruthy();
 
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await expect(zoneTableau(page)).toBeVisible();
   // Tout replié au chargement.
   await expect(deplier(page, 'Projet93')).toHaveAttribute('aria-expanded', 'false');
@@ -189,7 +191,7 @@ test('E2E-93-r2 dépliage d’un projet calculé : lignes, badge Jalon, barres, 
   await expect(cal.locator('[data-element-id]')).toHaveCount(0);
 });
 
-test('E2E-94 repli puis dépliage : aucun nouvel appel à /gantt', async ({ page, request }) => {
+test('E2E-94-r1 repli puis dépliage : aucun nouvel appel à /gantt', async ({ page, request }) => {
   const { api, admin, ressource } = await monde(request, '94');
   const p = await api.projet('P94', 'Projet94', admin);
   await api.affectation(p.id, ressource);
@@ -199,8 +201,10 @@ test('E2E-94 repli puis dépliage : aucun nouvel appel à /gantt', async ({ page
 
   const compteur = compterGantt(page);
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await expect(zoneTableau(page)).toBeVisible();
-  expect(compteur.get(p.id) ?? 0).toBe(0);
+  // D-218 (4) : le chargement initial (Accueil déplié) fait déjà un appel.
+  expect(compteur.get(p.id) ?? 0).toBe(1);
   await deplier(page, 'Projet94').click();
   await expect(ligne(page, 'Activité94')).toBeVisible();
   expect(compteur.get(p.id)).toBe(1);
@@ -213,7 +217,7 @@ test('E2E-94 repli puis dépliage : aucun nouvel appel à /gantt', async ({ page
   expect(compteur.get(p.id)).toBe(1);
 });
 
-test('E2E-95 « Tout déplier » : deux racines et un sous-sous-projet, relibellé « Tout replier »', async ({
+test('E2E-95-r1 « Tout déplier » : deux racines et un sous-sous-projet, relibellé « Tout replier »', async ({
   page,
   request,
 }) => {
@@ -236,6 +240,7 @@ test('E2E-95 « Tout déplier » : deux racines et un sous-sous-projet, relibell
 
   const compteur = compterGantt(page);
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await expect(zoneTableau(page)).toBeVisible();
   expect(await nomsAffiches(page)).toEqual(['Alpha95', 'Beta95']);
 
@@ -262,7 +267,7 @@ test('E2E-95 « Tout déplier » : deux racines et un sous-sous-projet, relibell
   expect(await nomsAffiches(page)).toEqual(['Alpha95', 'Beta95']);
 });
 
-test('E2E-96 sous-projet clos d’un projet ouvert : absent au dépliage', async ({
+test('E2E-96-r1 sous-projet clos d’un projet ouvert : absent au dépliage', async ({
   page,
   request,
 }) => {
@@ -274,23 +279,25 @@ test('E2E-96 sous-projet clos d’un projet ouvert : absent au dépliage', async
   expect(patch.ok()).toBeTruthy();
 
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await deplier(page, 'Projet96').click();
   await expect(ligne(page, 'Sous ouvert96')).toBeVisible();
   await expect(ligne(page, 'Sous clos96')).toHaveCount(0);
   expect(await nomsAffiches(page)).toEqual(['Projet96', 'Sous ouvert96']);
 });
 
-test('E2E-97 projet vide : « Aucune activité ni jalon. »', async ({ page, request }) => {
+test('E2E-97-r1 projet vide : « Aucune activité ni jalon. »', async ({ page, request }) => {
   const { api, admin } = await monde(request, '97');
   await api.projet('P97', 'Projet97', admin);
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await deplier(page, 'Projet97').click();
   await expect(page.getByText('Aucune activité ni jalon.')).toBeVisible();
   await replier(page, 'Projet97').click();
   await expect(page.getByText('Aucune activité ni jalon.')).toHaveCount(0);
 });
 
-test('E2E-98 échec de chargement (500) : message, le reste de l’arbre demeure', async ({
+test('E2E-98-r1 échec de chargement (500) : message, le reste de l’arbre demeure', async ({
   page,
   request,
 }) => {
@@ -306,6 +313,7 @@ test('E2E-98 échec de chargement (500) : message, le reste de l’arbre demeure
     route.fulfill({ status: 500, contentType: 'application/json', body: '{"erreur":"boum"}' }),
   );
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await deplier(page, 'Alpha98').click();
   await expect(ligne(page, 'Activité98')).toBeVisible();
   await deplier(page, 'Beta98').click();
@@ -316,7 +324,7 @@ test('E2E-98 échec de chargement (500) : message, le reste de l’arbre demeure
   await expect(zoneCalendrier(page).locator(`[data-projet-id="${a.id}"]`)).toHaveCount(1);
 });
 
-test('E2E-99 plage élargie par un élément chargé hors plage initiale, non réduite par le repli', async ({
+test('E2E-99-r1 plage élargie par un élément chargé hors plage initiale, non réduite par le repli', async ({
   page,
   request,
 }) => {
@@ -343,10 +351,21 @@ test('E2E-99 plage élargie par un élément chargé hors plage initiale, non r�
   }[];
   expect(projets.find((x) => x.id === p.id)!.fin_planifiee < '2027-03-01').toBeTruthy();
 
+  // D-218 (4), (9) : l'Accueil se déplie au chargement et la plage ne se réduit pas ; le premier chargement du
+  // projet est donc refusé (500), pour que la plage initiale ignore l'élément, puis tout est replié.
+  let refuser = true;
+  await page.route(`**/api/projets/${p.id}/gantt`, (route) =>
+    refuser
+      ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"erreur":"boum"}' })
+      : route.continue(),
+  );
   await loginAsAdmin(page);
   await page.goto('/?zoom=jour');
   const svg = page.locator('svg[data-zoom]');
   await expect(svg).toBeVisible();
+  await expect(page.getByText('Impossible de charger le contenu du projet.')).toBeVisible();
+  await replierTout(page);
+  refuser = false;
   const largeur = async () => Number(await svg.getAttribute('width'));
   const avant = await largeur();
 
@@ -367,13 +386,14 @@ test('E2E-99 plage élargie par un élément chargé hors plage initiale, non r�
   expect(await largeur()).toBe(apres);
 });
 
-test('E2E-100-r3 ordre de tabulation : zoom, « Tout déplier », tableau (bouton Déplier puis lien), calendrier', async ({
+test('E2E-100-r6 ordre de tabulation : zoom, « Tout déplier », tableau (bouton Déplier puis lien), calendrier', async ({
   page,
   request,
 }) => {
   const { api, admin } = await monde(request, '100');
   await api.projet('P100', 'Projet100', admin);
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await expect(zoneTableau(page)).toHaveAttribute('tabindex', '0');
   await expect(zoneCalendrier(page)).toHaveAttribute('tabindex', '0');
 
@@ -392,7 +412,10 @@ test('E2E-100-r3 ordre de tabulation : zoom, « Tout déplier », tableau (bouto
   const ordre: string[] = [await libelle()];
   // Révision G4 (D-031, -r1) : « Calculer » s'insère entre le zoom et « Tout déplier ».
   // Révision -r3 (D-031, D-127 (6), (7)) : le crayon « Modifier le projet <nom> » suit le lien du projet.
-  for (let i = 0; i < 10; i++) {
+  // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
+  // Révision -r5 (D-216 (3)) : « Colonnes » après « Initiales » ; poignées de largeur des colonnes après la
+  // zone du tableau, dans l'ordre des en-têtes, avant le contenu des lignes.
+  for (let i = 0; i < 17; i++) {
     await page.keyboard.press('Tab');
     ordre.push(await libelle());
   }
@@ -401,12 +424,19 @@ test('E2E-100-r3 ordre de tabulation : zoom, « Tout déplier », tableau (bouto
     'Semaine',
     'Mois',
     'Initiales',
+    'Colonnes',
     'Calculer',
     'Tout déplier',
     'Tableau du Gantt global',
+    'Largeur de la colonne Code',
+    'Largeur de la colonne Nom',
+    'Largeur de la colonne Début',
+    'Largeur de la colonne Fin',
+    'Largeur de la colonne Drapeaux',
     'Déplier Projet100',
     'Projet100',
     'Modifier le projet Projet100',
+    'Largeur du tableau',
     'Calendrier du Gantt global',
   ]);
 });

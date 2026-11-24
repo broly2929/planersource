@@ -11,6 +11,12 @@ import {
 import { BoutonsZoom } from '../gantt/BoutonsZoom';
 import { Drapeaux } from '../gantt/Drapeaux';
 import { dateLocale, lireZoom } from '../gantt/echelle';
+import {
+  DispositionGantt,
+  MenuColonnes,
+  poigneeColonne,
+  useDispositionGantt,
+} from '../gantt/DispositionGantt';
 import { GanttSvg, type ElementGantt, type LigneSvg } from '../gantt/GanttSvg';
 import {
   CLASSE_CELLULE_DRAPEAUX,
@@ -51,6 +57,7 @@ export function PlanningRessource({ id }: { id: number }) {
   const zoom = lireZoom(useSearch().get('zoom'));
   const [aujourdhui] = useMemo(() => [dateLocale(new Date())], []);
   const [largeurSvg, zoneSvg] = useLargeur();
+  const disposition = useDispositionGantt('ressource', { vendu: false });
   const lignes = etat.statut === 'ok' ? etat.donnees.lignes : [];
   const datees = lignes.filter((l) => l.debut_planifie && l.fin_planifiee);
   const plage = useMemo(
@@ -76,55 +83,51 @@ export function PlanningRessource({ id }: { id: number }) {
   if (lignes.length === 0) return <Vide>Aucune tâche pour cette ressource.</Vide>;
 
   // Colonnes resserrées (un pas de marge, sauf Drapeaux) : le tableau tient dans les 4/5 à 1024 px.
-  const resserrer = (cols: Colonne<LigneRessource>[]): Colonne<LigneRessource>[] =>
-    cols.map((c) =>
-      c.titre === 'Drapeaux'
-        ? c
-        : {
-            ...c,
-            classeEntete: `${c.classeEntete ?? ''} px-1!`,
-            classeCellule: `${c.classeCellule ?? ''} px-1!`,
-          },
-    );
-  const colonnes: Colonne<LigneRessource>[] = resserrer([
-    {
-      titre: 'Projet',
-      cellule: (l) =>
-        l.projet ? (
-          <Link
-            to={`/projets/${l.projet.id}`}
-            title={l.projet.nom}
-            className="text-accent underline"
-          >
-            {celluleProjet(l)}
-          </Link>
-        ) : (
-          <span className="text-gray-700">{celluleProjet(l)}</span>
+  const resserrer = (
+    cols: (Colonne<LigneRessource> & { id: string })[],
+  ): (Colonne<LigneRessource> & { id: string })[] =>
+    cols.map((c) => (c.id === 'drapeaux' ? c : { ...c, serree: true }));
+  const colonnes = disposition.colonnes(
+    resserrer([
+      {
+        id: 'projet',
+        titre: 'Projet',
+        cellule: (l) =>
+          l.projet ? (
+            <Link
+              to={`/projets/${l.projet.id}`}
+              title={l.projet.nom}
+              className="text-accent underline"
+            >
+              {celluleProjet(l)}
+            </Link>
+          ) : (
+            <span className="text-gray-700">{celluleProjet(l)}</span>
+          ),
+      },
+      {
+        id: 'activite',
+        titre: 'Activité',
+        cellule: (l) => (
+          <span title={celluleActivite(l)} className={`block ${CLASSE_NOM_MAX_RESSOURCE} truncate`}>
+            {celluleActivite(l)}
+          </span>
         ),
-    },
-    {
-      titre: 'Activité',
-      cellule: (l) => (
-        <span
-          title={celluleActivite(l)}
-          className={`inline-block ${CLASSE_NOM_MAX_RESSOURCE} truncate align-middle`}
-        >
-          {celluleActivite(l)}
-        </span>
-      ),
-    },
-    { titre: 'Début', cellule: (l) => formaterDate(l.debut_planifie) },
-    { titre: 'Fin', cellule: (l) => formaterDate(l.fin_planifiee) },
-    { titre: 'Assigné', cellule: (l) => formaterNombre(l.charge_assignee) },
-    { titre: 'Réel', cellule: (l) => formaterNombre(l.charge_reelle) },
-    { titre: 'Reste', cellule: (l) => formaterNombre(l.reste_a_faire) },
-    {
-      titre: 'Drapeaux',
-      classeEntete: CLASSE_ENTETE_DRAPEAUX,
-      classeCellule: CLASSE_CELLULE_DRAPEAUX,
-      cellule: (l) => (l.drapeaux.length > 0 ? <Drapeaux drapeaux={l.drapeaux} /> : null),
-    },
-  ]);
+      },
+      { id: 'debut', titre: 'Début', cellule: (l) => formaterDate(l.debut_planifie) },
+      { id: 'fin', titre: 'Fin', cellule: (l) => formaterDate(l.fin_planifiee) },
+      { id: 'assigne', titre: 'Assigné', cellule: (l) => formaterNombre(l.charge_assignee) },
+      { id: 'reel', titre: 'Réel', cellule: (l) => formaterNombre(l.charge_reelle) },
+      { id: 'reste', titre: 'Reste', cellule: (l) => formaterNombre(l.reste_a_faire) },
+      {
+        id: 'drapeaux',
+        titre: 'Drapeaux',
+        classeEntete: CLASSE_ENTETE_DRAPEAUX,
+        classeCellule: CLASSE_CELLULE_DRAPEAUX,
+        cellule: (l) => (l.drapeaux.length > 0 ? <Drapeaux drapeaux={l.drapeaux} /> : null),
+      },
+    ]),
+  );
   const lignesSvg: LigneSvg[] = lignes.map((l) => ({ genre: 'element', element: elementDe(l) }));
 
   return (
@@ -136,29 +139,23 @@ export function PlanningRessource({ id }: { id: number }) {
       )}
       <div className="flex items-center gap-4">
         <BoutonsZoom zoom={zoom} chemin={chemin} />
+        <MenuColonnes etat={disposition} />
       </div>
-      <div className="flex rounded-ui border border-gray-200 bg-white shadow-ui">
-        <div
-          tabIndex={0}
-          role="region"
-          aria-label="Tableau du planning de la ressource"
-          className="w-fit max-w-4/5 shrink-0 overflow-x-auto border-r border-gray-200 focus-visible:outline-offset-[-2px]"
-        >
+      <DispositionGantt
+        etat={disposition}
+        propsTableau={{ 'aria-label': 'Tableau du planning de la ressource' }}
+        propsCalendrier={{ ref: zoneSvg, 'aria-label': 'Calendrier du planning de la ressource' }}
+        tableau={
           <Table
             compact
             legende="Tâches de la ressource"
             colonnes={colonnes}
             lignes={lignes}
             cle={(l) => l.assignation_id}
+            poigneeLargeur={poigneeColonne(disposition)}
           />
-        </div>
-        <div
-          ref={zoneSvg}
-          tabIndex={0}
-          role="region"
-          aria-label="Calendrier du planning de la ressource"
-          className="min-w-0 flex-1 overflow-x-auto focus-visible:outline-offset-[-2px]"
-        >
+        }
+        calendrier={
           <GanttSvg
             lignes={lignesSvg}
             dependances={[]}
@@ -166,8 +163,8 @@ export function PlanningRessource({ id }: { id: number }) {
             zoom={zoom}
             aujourdhui={aujourdhui}
           />
-        </div>
-      </div>
+        }
+      />
     </section>
   );
 }

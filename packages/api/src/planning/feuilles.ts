@@ -5,7 +5,7 @@ import type { Acteur } from './projets.js';
 /** Lot 4a, D-118 et D-119 : feuilles de temps, imputations, cycle de validation. */
 
 export type Statut = 'brouillon' | 'soumise' | 'validee' | 'rejetee';
-export type Verbe = 'soumettre' | 'rappeler' | 'valider' | 'rejeter';
+export type Verbe = 'soumettre' | 'rappeler' | 'valider' | 'rejeter' | 'devalider';
 
 export interface Imputation {
   jour: string;
@@ -271,18 +271,26 @@ export async function lireFeuille(
   return vue(db, cible, lundi, ecrits);
 }
 
-/** PUT (D-118 (6), (7), D-119) : la ressource écrit sa propre feuille. */
+/** PUT (D-118 (6), (7), D-119, D-181 (2)) : la ressource écrit sa feuille ; l'administrateur écrit celle d'autrui. */
 export async function ecrireFeuille(
   db: Db,
   user: Acteur,
   lundi: string,
   lignes: LigneEnvoyee[],
   aujourdhui: string,
-): Promise<Vue | Refus> {
+  ressourceId?: number,
+): Promise<Vue | Refus | Introuvable> {
+  const cible = ressourceId ?? user.id;
+  if (cible !== user.id) {
+    // ordre D-181 (2) : 404 (inconnue ou invisible), puis 403 ; les 422 viennent ensuite
+    const lue = await lireFeuille(db, user, lundi, cible);
+    if ('verdict' in lue) return lue;
+    if (user.role !== 'administrateur') return { verdict: 'interdit' };
+  }
   const ids = lignes.map((l) => l.assignation_id).sort((a, b) => a - b);
   const { rows: fs } = await db.query<{ id: number; statut: Statut }>(
     `SELECT id, statut FROM feuille_temps WHERE ressource_id = $1 AND lundi = $2::date FOR UPDATE`,
-    [user.id, lundi],
+    [cible, lundi],
   );
   let feuille = fs[0];
   const { rows: assignations } = await db.query<{
@@ -293,13 +301,13 @@ export async function ecrireFeuille(
   }>(
     `SELECT id, projet_id, charge_reelle, reste_a_faire FROM assignation
       WHERE id = ANY($1) AND ressource_id = $2 ORDER BY id FOR UPDATE`,
-    [ids, user.id],
+    [ids, cible],
   );
   const parId = new Map(assignations.map((a) => [a.id, a]));
   if (ids.some((id) => !parId.has(id))) return refus('assignation_invalide');
 
   const ouvertes = new Set(
-    (await lignesBase(db, user.id, lundi)).filter((l) => l.ouverte).map((l) => l.assignation_id),
+    (await lignesBase(db, cible, lundi)).filter((l) => l.ouverte).map((l) => l.assignation_id),
   );
   const anciennes = await imputationsSemaine(db, ids, lundi);
   const cle = (l: Imputation[]) => l.map((i) => `${i.jour}|${cs(i.charge)}`).join(';');
@@ -340,17 +348,17 @@ export async function ecrireFeuille(
       return { l, a, nouv, changeImp: modifiee(l), resteActuel, resteNouveau };
     })
     .filter((p) => p.changeImp || p.resteNouveau !== p.resteActuel);
-  if (plan.length === 0) return vue(db, user.id, lundi, 'tous');
+  if (plan.length === 0) return vue(db, cible, lundi, 'tous');
 
   if (!feuille) {
     await db.query(
       `INSERT INTO feuille_temps (ressource_id, lundi) VALUES ($1, $2::date)
        ON CONFLICT (ressource_id, lundi) DO NOTHING`,
-      [user.id, lundi],
+      [cible, lundi],
     );
     const { rows } = await db.query<{ id: number; statut: Statut }>(
       `SELECT id, statut FROM feuille_temps WHERE ressource_id = $1 AND lundi = $2::date FOR UPDATE`,
-      [user.id, lundi],
+      [cible, lundi],
     );
     feuille = rows[0]!;
     if (feuille.statut === 'soumise' || feuille.statut === 'validee') {
@@ -390,7 +398,7 @@ export async function ecrireFeuille(
       });
     }
   }
-  return vue(db, user.id, lundi, 'tous');
+  return vue(db, cible, lundi, 'tous');
 }
 
 /** Projets concernés : projets des assignations qui portent une imputation > 0 dans la semaine. */
@@ -433,7 +441,7 @@ export async function agir(
   const concernes = await projetsConcernes(db, f.ressource_id, f.lundi);
   const aLeDroit =
     verbe === 'soumettre' || verbe === 'rappeler'
-      ? proprietaire
+      ? proprietaire || user.role === 'administrateur'
       : ecrits === 'tous' || concernes.some((p) => ecrit(ecrits, p));
   if (!aLeDroit) return { verdict: 'interdit' };
   if (verbe === 'rejeter' && !corpsValide) return { invalide: true };
@@ -472,6 +480,22 @@ export async function agir(
       if (concernes.every((p) => faits.some((x) => x.projet_id === p))) {
         await db.query(`UPDATE feuille_temps SET statut = 'validee' WHERE id = $1`, [id]);
       }
+      break;
+    }
+    case 'devalider': {
+      // D-176 (2) : retire les validations des projets écrits par l'utilisateur, garde les autres.
+      if (f.statut !== 'soumise' && f.statut !== 'validee') return refus('statut_invalide');
+      const { rows: faites } = await db.query<{ projet_id: number }>(
+        'SELECT projet_id FROM validation_feuille WHERE feuille_id = $1',
+        [id],
+      );
+      const miennes = faites.map((x) => x.projet_id).filter((p) => ecrit(ecrits, p));
+      if (miennes.length === 0) return refus('rien_a_devalider');
+      await db.query(
+        'DELETE FROM validation_feuille WHERE feuille_id = $1 AND projet_id = ANY($2::int[])',
+        [id, miennes],
+      );
+      await db.query(`UPDATE feuille_temps SET statut = 'soumise' WHERE id = $1`, [id]);
       break;
     }
     case 'rejeter':

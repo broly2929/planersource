@@ -5,6 +5,8 @@ import { Case } from '../../components/Case';
 import { Field } from '../../components/Field';
 import { Select } from '../../components/Select';
 import { aideMode, MODES_PLANIFICATION } from '../../modes';
+import { SelectTypeDependance } from '../../typesDependance';
+import { formaterDate } from '../../gantt/libelles';
 import { analyserChargeVendue } from '../../gantt/vendu';
 import { FormulaireDialogue } from './commun';
 
@@ -15,6 +17,9 @@ export interface ActiviteDetail {
   priorite: number;
   debut_valide: string | null;
   fin_valide: string | null;
+  /** Dates du dernier calcul, lecture seule dans le dialogue (D-218 (3)). */
+  debut_planifie?: string | null;
+  fin_planifiee?: string | null;
   duree_validee: number | null;
   close: boolean;
   /** Champs de 6c, présents pour qui écrit sur le projet (D-149 (4)). */
@@ -64,6 +69,26 @@ export function useChargeVendue(initiale: number | null | undefined) {
   const [texte, setTexte] = useState(texteCharge(initiale));
   const analyse = analyserChargeVendue(texte);
   return { texte, setTexte, analyse, valide: analyse.ok };
+}
+
+/** Date planifiée en lecture seule : texte JJ/MM/AAAA, « — » avant tout calcul (D-218 (3)). */
+function DatePlanifiee({
+  libelle,
+  cle,
+  date,
+}: {
+  libelle: string;
+  cle: string;
+  date: string | null;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-semibold text-gray-800">{libelle}</span>
+      <span data-planifie={cle} className="flex h-8 items-center text-gray-900">
+        {formaterDate(date)}
+      </span>
+    </div>
+  );
 }
 
 export function FormulaireActivite({ activite, ...commun }: { activite: ActiviteDetail } & Commun) {
@@ -134,6 +159,8 @@ export function FormulaireActivite({ activite, ...commun }: { activite: Activite
         onChange={(e) => setDebut(e.target.value)}
       />
       <Field label="Fin validée" type="date" value={fin} onChange={(e) => setFin(e.target.value)} />
+      <DatePlanifiee libelle="Début planifié" cle="debut" date={activite.debut_planifie ?? null} />
+      <DatePlanifiee libelle="Fin planifiée" cle="fin" date={activite.fin_planifiee ?? null} />
       <Field
         label="Durée validée (jours ouvrés)"
         type="number"
@@ -265,12 +292,7 @@ export function FormulaireModifDependance({
       }
       {...commun}
     >
-      <Select
-        label="Type"
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        options={['FD', 'DD', 'FF'].map((t) => ({ value: t, label: t }))}
-      />
+      <SelectTypeDependance valeur={type} onChange={setType} />
       <Field
         label="Délai (jours ouvrés)"
         type="number"

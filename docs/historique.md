@@ -62,3 +62,10 @@ Lots antérieurs faits (détail dans git et docs/decisions.md) : 4a (D-118, D-11
 - @ui-designer : espacement du bouton de la Validation, docs/ui.md complété. @reviewer : aucun bloquant, non-bloquants dans docs/non-bloquants.md.
 - Règle D-163 (3) : un test e2e ne modifie jamais le calendrier par défaut.
 - Derniers identifiants : D-160 à D-163, CSV-1 à CSV-20 (CSV-14-r1), GEO-53 à GEO-55 (GEO-54-r1), E2E-383 à E2E-387 (E2E-383-r1), E2E-371-r1.
+
+## Extrait de docs/state.md du 2026-11-23 (ligne retirée par f88bfc8)
+- Correctif E2E-457 fait (D-195) : second Échap absorbé pendant la bascule des écouteurs de Radix ; `Dialog` ignore toute demande de fermeture pendant la confirmation, Échap sur la confirmation focalisée = « Rester » ; E2E-464 à E2E-466, E2E-457-r2.
+
+## Extrait de docs/state.md du 2026-11-24 (lignes retirées à la clôture de gantt-colonnes)
+- Lot correctif-inverse fait et clos (D-209, domaine gantt, ouverture ffa8e20) : défaut D-208 (4) corrigé. Cause prouvée : réponse `GET …/gantt` partie avant un geste et reçue après sa réponse, qui remettait l'élément d'origine (`useListe`, screens/projet/commun.tsx) ; correction : réponse périmée ignorée, chargement relancé. E2E-518 à E2E-520, rouge 15 sur 15, tag `tests-correctif-inverse`. 3 passes à 3 workers : 544 sur 544 vertes (docs/mesure-tests.md, section 18). Suite : journal docs/journal-suites.jsonl, lignes 25 et 26 (commit 64bf694, vitest 225,6 s, e2e 554,3 s, vert). @reviewer : aucun bloquant.
+- Lot gantt-colonnes (D-212), tranche 1 faite et close (gantt-colonnes-1, D-213, D-214, ouverture 3f6c29a) : séparateur du tableau, défilement vertical commun, en-têtes figés, hauteur limitée à la fenêtre, largeur gardée dans le navigateur ; composant commun `gantt/DispositionGantt.tsx`. E2E-521 à E2E-539, GCO-1 à 4 ; rouge 51 sur 51. Séparateur dans l'ordre de focus (D-213, 7 révisions) ; révisions D-212 (7) : E2E-289-r1, E2E-366-r2, E2E-209-r1. Suite : journal docs/journal-suites.jsonl, lignes 27 et 28 (commit 0716f94, vitest 228,5 s, 1239 verts ; e2e 603 s, 563 verts). @reviewer : 2 bloquants corrigés, non bloquants en D-214 (3). Tranche 2 : D-217.

@@ -22,6 +22,7 @@ import {
   projetPret,
   remettreAdminSeul,
 } from './lot3c-helpers.js';
+import { replierTout } from './retouches-rex6-helpers.js';
 
 test.beforeEach(async ({ page }) => {
   await remettreAdminSeul();
@@ -85,7 +86,7 @@ test('E2E-102 administrateur : bouton visible, dialogue avec les racines où il 
   await page.screenshot({ path: cheminCapture('accueil-calcul.png') });
 });
 
-test('E2E-103 calcul réussi : dialogue fermé, notification, barres de synthèse, dépliage conservé et rechargé', async ({
+test('E2E-103-r1 calcul réussi : dialogue fermé, notification, barres de synthèse, dépliage conservé et rechargé', async ({
   page,
   request,
 }) => {
@@ -101,6 +102,7 @@ test('E2E-103 calcul réussi : dialogue fermé, notification, barres de synthès
     if (Number(m[1]) === b.projet.id) lecturesB++;
   });
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await deplier(page, 'Projet G4-103A').click();
   await expect(page.getByRole('button', { name: 'Replier Projet G4-103A' })).toBeVisible();
   await expect(zoneTableau(page).getByText('Activité G4-103A')).toBeVisible();
@@ -127,7 +129,8 @@ test('E2E-103 calcul réussi : dialogue fermé, notification, barres de synthès
   await expect(barres.first()).toHaveAttribute('data-fin', '2027-01-07');
   await expect(deplier(page, 'Projet G4-103B')).toHaveAttribute('aria-expanded', 'false');
   expect(lecturesA).toBe(2);
-  expect(lecturesB).toBe(0);
+  // D-218 (4) : B, replié, n'a été lu qu'au chargement initial, pas au rechargement.
+  expect(lecturesB).toBe(1);
   const gantt = await lireGantt(request, b.projet.id);
   expect(gantt.elements[0]).toMatchObject({ debut_planifie: '2027-01-06' });
 });
@@ -262,13 +265,17 @@ test('E2E-107 refus 409 simulé : message, dialogue ouvert, rien calculé', asyn
   await expect(bandeauNonCalcule(page)).toBeVisible();
 });
 
-test('E2E-108 refus 422 cycle simulé : noms résolus parmi les éléments chargés, « élément <id> » sinon', async ({
+test('E2E-108-r1 refus 422 cycle simulé : noms résolus parmi les éléments chargés, « élément <id> » sinon', async ({
   page,
   request,
 }) => {
   const { api, chef } = await base3c(request);
   const a = await projetPret(api, chef.id, 'G4-108A');
   const b = await projetPret(api, chef.id, 'G4-108B');
+  // D-218 (4) : B ne doit pas être chargé (l'Accueil se déplie au chargement) : sa lecture est refusée.
+  await page.route(`**/api/projets/${b.projet.id}/gantt`, (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: '{"erreur":"boum"}' }),
+  );
   await page.route('**/api/calcul', (route) =>
     route.fulfill({
       status: 422,
@@ -280,6 +287,7 @@ test('E2E-108 refus 422 cycle simulé : noms résolus parmi les éléments charg
     }),
   );
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await deplier(page, 'Projet G4-108A').click();
   await expect(zoneTableau(page).getByText('Activité G4-108A')).toBeVisible();
   const dialogue = await ouvrirDialogue(page);
@@ -295,13 +303,14 @@ test('E2E-108 refus 422 cycle simulé : noms résolus parmi les éléments charg
   }
 });
 
-test('E2E-109-r2 ordre de tabulation : zoom, « Calculer », « Tout déplier », tableau, calendrier', async ({
+test('E2E-109-r5 ordre de tabulation : zoom, « Calculer », « Tout déplier », tableau, calendrier', async ({
   page,
   request,
 }) => {
   const { api, chef } = await base3c(request);
   await api.projet('P109', 'Projet109', chef.id);
   await loginAsAdmin(page);
+  await replierTout(page); // D-218 (4), (9)
   await expect(zoneTableau(page)).toHaveAttribute('tabindex', '0');
 
   await page.getByRole('button', { name: 'Jour', exact: true }).focus();
@@ -318,7 +327,10 @@ test('E2E-109-r2 ordre de tabulation : zoom, « Calculer », « Tout déplier »
   // Révision -r1 (D-031, D-091) : la case « Initiales » s'insère après « Mois ».
   const ordre: string[] = [await libelle()];
   // Révision -r2 (D-031, D-127 (6), (7)) : le crayon « Modifier le projet <nom> » suit le lien du projet.
-  for (let i = 0; i < 10; i++) {
+  // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
+  // Révision -r4 (D-216 (3)) : « Colonnes » après « Initiales » ; poignées de largeur des colonnes après la
+  // zone du tableau, dans l'ordre des en-têtes, avant le contenu des lignes.
+  for (let i = 0; i < 17; i++) {
     await page.keyboard.press('Tab');
     ordre.push(await libelle());
   }
@@ -327,17 +339,24 @@ test('E2E-109-r2 ordre de tabulation : zoom, « Calculer », « Tout déplier »
     'Semaine',
     'Mois',
     'Initiales',
+    'Colonnes',
     'Calculer',
     'Tout déplier',
     'Tableau du Gantt global',
+    'Largeur de la colonne Code',
+    'Largeur de la colonne Nom',
+    'Largeur de la colonne Début',
+    'Largeur de la colonne Fin',
+    'Largeur de la colonne Drapeaux',
     'Déplier Projet109',
     'Projet109',
     'Modifier le projet Projet109',
+    'Largeur du tableau',
     'Calendrier du Gantt global',
   ]);
 });
 
-test('E2E-110-r1 parcours complet à l’écran jusqu’au calcul lancé depuis l’Accueil', async ({
+test('E2E-110-r2 parcours complet à l’écran jusqu’au calcul lancé depuis l’Accueil', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -376,6 +395,7 @@ test('E2E-110-r1 parcours complet à l’écran jusqu’au calcul lancé depuis 
   await expect(page.getByRole('row', { name: /Activité G4-110.*Ressource G4-110/ })).toBeVisible();
 
   await allerA(page, 'Accueil');
+  await replierTout(page); // D-218 (4), (9)
   await expect(bandeauNonCalcule(page)).toBeVisible();
   const dialogue = await ouvrirDialogue(page);
   expect(await libellesCases(dialogue)).toEqual(['G4-110 — Projet G4-110']);

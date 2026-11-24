@@ -1,12 +1,17 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { creerBaseWorker } from '../../../scripts/lib/bases-worker.mjs';
+import { exigerBaseTest } from '../../../scripts/lib/garde-base-test.mjs';
 
 const envFile = fileURLToPath(new URL('../../../.env', import.meta.url));
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
-const url = process.env.TEST_DATABASE_URL;
-if (!url) throw new Error('TEST_DATABASE_URL est requis pour les tests de l’API');
-const dbName = new URL(url).pathname.slice(1);
-if (!dbName.endsWith('_test')) {
-  throw new Error(`Base de test refusée : « ${dbName} » ne finit pas par _test`);
-}
+// Garde-fou unique (D-193) : refus avant toute connexion.
+const maintenance = exigerBaseTest(process.env);
+
+// Base du worker (D-196 (3)) : créée depuis le modèle au premier fichier du worker ; le processus de
+// test travaille ensuite sur elle (testDbUrl(), pools, serveurs lancés par les tests).
+const urlWorker = await creerBaseWorker(maintenance, {
+  worker: process.env.VITEST_POOL_ID ?? '',
+});
+process.env.TEST_DATABASE_URL = exigerBaseTest({ TEST_DATABASE_URL: urlWorker });

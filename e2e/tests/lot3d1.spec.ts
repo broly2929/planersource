@@ -144,27 +144,29 @@ test('E2E-128 : activité non calculée (sans dates planifiées) : aucun texte ;
   await expect(textes(page)).toHaveCount(1);
 });
 
-test('E2E-129 : Accueil : case « Initiales », projet déplié, adresse initiales=1, conservé au rechargement', async ({
+test('E2E-129-r1 : Accueil : case « Initiales » cochée par défaut, texte visible sur le projet déplié, adresse initiales=0 une fois décochée, conservé au rechargement', async ({
   page,
   request,
 }) => {
+  // D-218 (4) : sur l'Accueil, projets dépliés et initiales affichées par défaut.
   const m = await baseAB(request, 'E2E129');
   await loginAsAdmin(page);
   await page.goto('/');
-  await expect(caseInitiales(page)).not.toBeChecked();
-  await expect(textes(page)).toHaveCount(0);
-
-  await caseInitiales(page).check();
-  await expect(page).toHaveURL(/initiales=1/);
-  await expect(textes(page)).toHaveCount(0); // projet replié : aucun texte
-
-  await page.getByRole('button', { name: 'Déplier Projet E2E129', exact: true }).click();
+  await expect(caseInitiales(page)).toBeChecked();
   await expect(texteDe(page, m.a.id)).toHaveText('AB, CD');
 
-  await page.reload();
-  await expect(caseInitiales(page)).toBeChecked();
+  await caseInitiales(page).uncheck();
+  await expect(page).toHaveURL(/initiales=0/);
   await expect(textes(page)).toHaveCount(0);
-  await page.getByRole('button', { name: 'Déplier Projet E2E129', exact: true }).click();
+
+  await page.reload();
+  await expect(caseInitiales(page)).not.toBeChecked();
+  await expect(
+    page.getByRole('button', { name: 'Replier Projet E2E129', exact: true }),
+  ).toBeVisible();
+  await expect(textes(page)).toHaveCount(0);
+  await caseInitiales(page).check();
+  await expect(page).not.toHaveURL(/initiales/);
   await expect(texteDe(page, m.a.id)).toHaveText('AB, CD');
 });
 

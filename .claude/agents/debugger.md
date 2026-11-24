@@ -15,7 +15,11 @@ Méthode, dans cet ordre :
    Vérifie-la par une expérience (log, assertion, bisect git), pas par
    intuition.
 4. Corriger : le plus petit changement qui traite la cause, pas le symptôme.
-5. Prouver : le test de reproduction passe, la suite complète passe.
+5. Prouver : le test de reproduction passe, ainsi que les fichiers de tests voisins (passes
+   ciblées : `npm run tests-cibles -- --depuis <commit> --domaine <domaine>`). Tu ne lances jamais la suite complète : elle est lancée une seule fois par lot par
+   l'agent principal, avec `npm run suite-complete` (D-193). Tout lancement qui touche une base
+   passe par `npm run avec-base-test -- <commande>`.
+   Un changement de configuration de test (vitest, Playwright, base, workers) se valide par le point d'entrée réel (`npm run suite-complete` ou `npm run tests-cibles`), jamais seulement par des options en ligne de commande (leçon des deux suites de vitest-parallele, D-196).
 
 Interdits :
 - Modifier, affaiblir, ignorer ou supprimer un test existant. Si un test
