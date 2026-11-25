@@ -219,7 +219,7 @@ test('E2E-130 : parcours IHM : initiales saisies à l’écran Utilisateurs, vis
   await expect(texteDe(page, a.id)).toHaveText('RP');
 });
 
-test('E2E-131-r1 : extension du parcours complet : initiales « RC » saisies à l’écran, case cochée, texte rattaché à « Tâche »', async ({
+test('E2E-131-r2 : extension du parcours complet : initiales « RC » saisies à l’écran, case cochée, texte rattaché à « Tâche »', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -265,7 +265,7 @@ test('E2E-131-r1 : extension du parcours complet : initiales « RC » saisies à
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 3D-131' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource 3D-131' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche 3D-131.*Ressource 3D-131/ })).toBeVisible();
 

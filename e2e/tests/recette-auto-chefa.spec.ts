@@ -2,6 +2,7 @@
 // 96 de docs/recette.md. E2E-477 à E2E-492. Valeurs attendues recopiées de la colonne Attendu ; données par l'API.
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { connecterAvec, preparer } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { libelleCase, lireSaisies, monde } from './lot2e-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b } from './lot3b-helpers.js';
 import { H14, S, SP, agirApi, sessionDe } from './lot4b-helpers.js';
@@ -122,10 +123,11 @@ async function mondeVueRessource(request: Parameters<typeof preparer>[0]) {
 const listeRessource = (page: Page) => page.getByLabel('Planning de', { exact: true });
 const bouton = (page: Page, nom: string) => page.getByRole('button', { name: nom, exact: true });
 
-test('E2E-480 : ligne 62 : chef, « Planning de » Alice : adresse, colonnes, lignes des deux projets, boutons et case masqués', async ({
+test('E2E-480-r1 : ligne 62 : chef, « Planning de » Alice : adresse, colonnes, lignes des deux projets, boutons et case masqués', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await mondeVueRessource(request);
   await connecterAvec(page, m.email);
   await page.goto('/');
@@ -167,10 +169,11 @@ test('E2E-481 : ligne 63 : chef, « Tous les projets » après « Planning de »
   await expect(bouton(page, 'Mois')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('E2E-482-r1 : ligne 64 : chef, Accueil, « Tout déplier » : badge « Retard » sur l’activité en retard, cellule vide sur la ligne de projet', async ({
+test('E2E-482-r2 : ligne 64 : chef, Accueil, « Tout déplier » : badge « Retard » sur l’activité en retard, cellule vide sur la ligne de projet', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   await page.clock.setFixedTime(J06);
   const m = await monde3b(request, 'E2E482', ['Alice']);
   const a = await activiteAvec(request, m.projet.id, 'Livraison', {
@@ -209,10 +212,11 @@ async function ouvrirGantt(page: Page, projetId: number): Promise<void> {
   await page.locator('svg[data-zoom]').waitFor();
 }
 
-test('E2E-483 : ligne 73 : chef, Gantt du projet, colonnes Vendu et Marge (Cadrage 4 et +1, Conception 2 et −1 en couleur flag, Phase 1 vendu 6, jalon vide)', async ({
+test('E2E-483-r1 : ligne 73 : chef, Gantt du projet, colonnes Vendu et Marge (Cadrage 4 et +1, Conception 2 et −1 en couleur flag, Phase 1 vendu 6, jalon vide)', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde3b(request, 'E2E483', ['Alice']);
   const phase = await activiteAvec(request, m.projet.id, 'Phase 1');
   const cadrage = await activiteAvec(request, m.projet.id, 'Cadrage', {
@@ -240,7 +244,7 @@ test('E2E-483 : ligne 73 : chef, Gantt du projet, colonnes Vendu et Marge (Cadra
   await expect(await cellule(page, 'Fin de phase 1', 'Marge')).toHaveText('');
 });
 
-test('E2E-484 : ligne 74 : chef, région « Totaux du projet » : « Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j », marge négative en couleur flag', async ({
+test('E2E-484-r1 : ligne 74 : chef, région « Totaux du projet » : « Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j », marge négative en couleur flag', async ({
   page,
   request,
 }) => {
@@ -253,14 +257,17 @@ test('E2E-484 : ligne 74 : chef, région « Totaux du projet » : « Vendu 6 j �
   await connecterAvec(page, m.emailChef);
   await ouvrirGantt(page, m.projet.id);
   const region = page.getByRole('region', { name: 'Totaux du projet' });
-  await expect(region).toHaveText('Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j');
+  await expect(region).toHaveText(
+    'Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+  );
   await expect(region.getByText('Marge −1 j', { exact: false })).toHaveCSS('color', FLAG);
 });
 
-test('E2E-485 : ligne 77 : chef, jalon à date client dépassée : badge « Client », title « Engagement client dépassé »', async ({
+test('E2E-485-r1 : ligne 77 : chef, jalon à date client dépassée : badge « Client », title « Engagement client dépassé »', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde3b(request, 'E2E485', []);
   await jalonAvec(request, m.projet.id, 'Fin de phase 1', {
     type: 'fixe',

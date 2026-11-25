@@ -12,7 +12,7 @@ Statut : version 0.3, à modifier de façon incrémentale (ne jamais réécrire 
 
 ### Hors périmètre V1
 
-Tickets, RH, environnements, documents, réunions, pools de ressources, capacité variable dans le temps, chemin critique, planning de référence, coûts (prévus en V2), import de données d'un autre logiciel. Une équipe (6a) n'est pas un pool de ressources : elle regroupe des utilisateurs pour l'affichage et les filtres, et n'est jamais affectée ni assignée.
+Tickets, RH, environnements, documents, réunions, pools de ressources, capacité variable dans le temps, chemin critique, planning de référence, coûts : voir §12 (D-225), import de données d'un autre logiciel. Une équipe (6a) n'est pas un pool de ressources : elle regroupe des utilisateurs pour l'affichage et les filtres, et n'est jamais affectée ni assignée.
 
 Modes de planification écartés : travail en commun, régulier en jours entiers, en demi-journées, en quarts de journée, récurrent hebdomadaire.
 
@@ -60,9 +60,10 @@ Un utilisateur peut être ressource (planifiable) ou non. Authentification par i
 | Utilisateur | nom, login, email (facultatif), initiales (facultatives), mot de passe haché, rôle, est_ressource, capacité (j/jour, défaut 1), calendrier, équipe (facultative, D-147), actif |
 | Équipe | nom (1 à 100 caractères, unique sans tenir compte de la casse ; D-147) |
 | Calendrier | nom, jours travaillés de la semaine (défaut lun–ven), jours fériés ou chômés (liste de dates) |
-| Projet | nom, code (unique, sans tenir compte de la casse), parent (sous-projet), priorité (défaut 500, plus petit = plus prioritaire), chef de projet, date de début, clos, est_modele (booléen, défaut faux) |
+| Projet | nom, code (unique, sans tenir compte de la casse), parent (sous-projet), priorité (défaut 500, plus petit = plus prioritaire), chef de projet, date de début, clos, est_modele (booléen, défaut faux), otp (facultatif, 1 à 50 caractères ; §12.2, D-225) |
 | Affectation projet | projet, ressource, taux (%), date de début et de fin facultatives |
-| Activité | projet, parent (activité), ordre WBS, nom, mode de planification, priorité (défaut 500), début validé, fin validée, durée validée (jours ouvrés), début planifié, fin planifiée, drapeaux (voir 5.9), close, charge vendue (facultative, ≥ 0, 2 décimales, feuilles seulement ; lot 6c, D-149) |
+| Activité | projet, parent (activité), ordre WBS, nom, mode de planification, priorité (défaut 500), début validé, fin validée, durée validée (jours ouvrés), début planifié, fin planifiée, drapeaux (voir 5.9), close, charge vendue (facultative, ≥ 0, 2 décimales, feuilles seulement ; lot 6c, D-149), otp (facultatif, 1 à 50 caractères ; §12.2, D-225) |
+| Taux journalier | ressource (utilisateur `est_ressource`), début, fin (facultative), montant en euros (> 0, au plus 999999,99, 2 décimales) ; périodes sans chevauchement (§12.1, D-225) |
 | Jalon | projet, parent, ordre WBS, nom, type (flottant ou fixe), date validée, date planifiée, date client (facultative ; lot 6c, D-149) |
 | Dépendance | prédécesseur, successeur (activité ou jalon), type (FD, DD, FF), délai (jours ouvrés, peut être négatif) |
 | Assignation | activité, ressource, taux (%, défaut 100), charge assignée, charge réelle, reste à faire |
@@ -88,6 +89,8 @@ Règles de structure :
 - Le chef d'un projet est un administrateur ou un chef de projet actif. Seule une ressource active peut être affectée à un projet. Un utilisateur qui a des affectations ne peut pas cesser d'être ressource (409).
 - Rattacher un projet à un parent exige le droit d'écriture sur ce parent. Seul l'administrateur désigne ou change le chef d'un projet ; un chef de projet qui crée un projet en est le chef.
 - Activité : mode ASAP par défaut ; la fin validée n'est pas antérieure au début validé ; la durée validée vaut au moins 1. Jalon flottant : date validée facultative. Le délai d'une dépendance est un entier.
+- Activité, champs affichés selon le mode, charge assignée et marge en lecture seule : voir §6, « Charge lisible (charge-lisible, D-220) ».
+- Activité parente, dépendances et déplacement depuis le dialogue d'une activité ou d'un jalon : voir §6, « Saisie des activités (saisie-activites, D-222) ».
 - Une charge n'est jamais négative. Tant que la charge réelle vaut 0, modifier la charge assignée recale le reste à faire sur la charge assignée.
 - Les calendriers sont historisés comme les entités de planning. Un déplacement dans le WBS historise l'élément déplacé, pas les rangs décalés de ses frères.
 - Une date validée (début et fin validés d'une activité, date validée d'un jalon) n'est pas postérieure au 31/12/2099 : sinon refus 400, en création comme en modification (lot 2e, D-056).
@@ -155,7 +158,7 @@ Règles de structure :
 
 - Migration 014 : `activite.charge_vendue numeric(10,2)` nullable, CHECK ≥ 0 ; `jalon.date_client date` nullable. Champs historisés comme les autres champs de saisie ; une valeur inchangée n'est pas historisée. Le moteur est inchangé ; aucune route nouvelle.
 - Saisie. POST et PATCH des activités : `charge_vendue`, nombre ≥ 0, au plus 2 décimales, au plus 999999,99, ou null ; sinon 400. Feuilles seulement : PATCH d'une activité parente avec une valeur non null → 422 { erreur: 'Règle de planning non respectée', code: 'activite_parente' } (null accepté) ; créer ou déplacer un élément sous une activité dont `charge_vendue` n'est pas null → 422, code 'parent_vendu'. POST et PATCH des jalons : `date_client`, AAAA-MM-JJ, au plus le 31/12/2099, ou null, jalons flottants et fixes ; sinon 400. Modèles compris. Un refus n'écrit rien.
-- Visibilité. `charge_vendue`, `marge`, `date_client`, `ecart_client`, `engagement_depasse` et `projet.totaux` ne sont renvoyés que si `peut_ecrire` ; sinon les clés sont absentes (pas null). Le rôle ressource n'y accède jamais. Concerne GET …/gantt, GET …/planning, les réponses des POST et PATCH d'activités et de jalons, et toute route de même nature. Inchangés : Gantt global de l'Accueil, /api/mes-taches, /api/feuilles, /api/validations, …/travail.
+- Visibilité. `charge_vendue`, `marge`, `charge_assignee` (vue d'une activité : GET, POST et PATCH, D-220 (6) ; somme des charges assignées, calculée à la lecture), `date_client`, `ecart_client`, `engagement_depasse` et `projet.totaux` ne sont renvoyés que si `peut_ecrire` ; sinon les clés sont absentes (pas null). Le rôle ressource n'y accède jamais. Concerne GET …/gantt, GET …/planning, les réponses des POST et PATCH d'activités et de jalons, et toute route de même nature. Inchangés : Gantt global de l'Accueil, /api/mes-taches, /api/feuilles, /api/validations, …/travail.
 - Calculs à la lecture, rien de stocké. Feuille : `marge` = charge_vendue − charge_assignee, null si charge_vendue est null. Parent : `charge_vendue` = somme des feuilles descendantes renseignées, `marge` = somme de leurs marges, null sans feuille renseignée. `projet.totaux` (GET …/gantt) = { charge_vendue, charge_assignee, marge, charge_reelle } sur les feuilles du projet seul, sans sous-projets, activités closes comprises ; charges assignée et réelle à 0 sans activité. Deux décimales ; marge négative possible. Jalon : `ecart_client` = date_planifiee − date_client en jours calendaires (entier signé), null si une date manque ; `engagement_depasse` = ecart_client > 0 ; hors de `drapeaux`.
 - Dialogues de l'onglet Planning. Activité feuille : champ « Charge vendue (j) » (texte, virgule ou point, vide = null), absent pour une activité parente ; invalide : `aria-invalid`, « Charge vendue invalide. », enregistrement désactivé ; en modification, envoyée seulement si elle a changé. Jalon : champ « Date client » (date), vide = null. Refus : 'activite_parente' « Une activité parente ne porte pas de charge vendue. » ; 'parent_vendu' « Cette activité porte une charge vendue : elle ne peut pas recevoir d'enfant. » ; dialogue laissé ouvert.
 - Gantt du projet, si `peut_ecrire` seulement. (a) Région « Totaux du projet » au-dessus du tableau : « Vendu X j · Assigné Y j · Marge Z j · Réel W j » (virgule décimale, « — » si null, marge < 0 en couleur flag). (b) Colonnes « Vendu » et « Marge » après « Charge » (activité « — » si null, jalon vide, marge < 0 en couleur flag ; critère D-069 (a) à (d) à 1440 et 1024 px). (c) Jalon avec date client : losange en contour à la date client sur la même ligne (`data-date-client` = id, aria-hidden, pointer-events none ; neutre, flag si engagement dépassé) ; texte d'écart « +N j », « −N j » ou « 0 j » à droite du losange le plus à droite (`data-ecart-client` = id, aria-hidden) ; la plage (3b point 4) inclut la date client. (d) Badge « Client » (couleur flag) dans la colonne Drapeaux si `engagement_depasse`, `title` « Engagement client dépassé ». (e) Nom accessible du jalon et annonce de l'élément actif (D-098) : « <nom>, le JJ/MM/AAAA[, retard], date client JJ/MM/AAAA, écart +N j[, engagement client dépassé] ». Accueil inchangé.
@@ -458,6 +461,7 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 - `projet` : { id, code, nom, date_debut, debut_planifie, fin_planifiee, clos, peut_ecrire }.
 - `elements` : éléments du projet dans l'ordre WBS (celui de GET …/planning), chacun { id, type ('activite' | 'jalon'), parent_id, rang, wbs, nom, drapeaux }.
   - activité, en plus : mode, priorite, debut_valide, fin_valide, duree_validee, debut_planifie, fin_planifiee, close, est_parent, charge_assignee, charge_reelle, reste_a_faire, avancement ; feuille : `initiales` (lot 3d, D-088).
+    - feuille, en plus (colonne-ressources, D-238) : `assignations`, liste de { id, ressource_id, nom, initiales, charge_assignee, taux }, une entrée par assignation ; `nom` et `initiales` viennent de l'utilisateur, `initiales` vaut null si la ressource n'en a pas ; tri par nom sans tenir compte de la casse, puis par id ; feuille sans assignation : `[]` ; parents et jalons : clé absente ; `initiales` (D-088) inchangé ; visible pour tout lecteur du projet, comme `charge_assignee`.
   - jalon, en plus : type_jalon ('flottant' | 'fixe'), date_validee, date_planifiee.
 - Charges d'une feuille : sommes de ses assignations (0 sans assignation). Charges d'un parent : sommes de ses feuilles descendantes (SPEC 5.8). Dates planifiées et drapeaux : tels que stockés par le dernier calcul.
 - `avancement` : réel ÷ (réel + reste) × 100, arrondi à 2 décimales ; null si réel + reste = 0.
@@ -546,11 +550,21 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 2. Séparateur (tranche 1) : poignée verticale entre le tableau et le calendrier ; `role="separator"`, `aria-orientation="vertical"`, `aria-label` « Largeur du tableau », `aria-valuenow` = largeur du tableau en pixels ; focalisable, anneau de focus de docs/ui.md. Souris : glisser. Clavier : flèches gauche et droite, 16 px par appui. Double-clic ou Entrée : largeur par défaut.
 3. Largeur du tableau (tranche 1) : par défaut 40 % de la largeur de la vue, sans descendre sous la largeur qui satisfait 3b point 15 (a) et (b) (D-069 révisé par D-086), à 1440 et à 1024 px. Bornes : au moins 200 px, au plus 80 % de la vue. Le tableau garde son défilement horizontal propre quand ses colonnes dépassent sa largeur ; la colonne Drapeaux reste fixée à droite.
 4. Défilement (tranche 1) : la hauteur de la vue est limitée à la fenêtre (de son bord haut au bas de la fenêtre, au moins 320 px) ; tableau et calendrier défilent verticalement ensemble, à la même position ; en-têtes du tableau et du calendrier figés en haut ; la barre de défilement horizontale du calendrier reste visible en bas de la fenêtre, quel que soit le nombre de lignes. La page ne défile pas horizontalement (critère 3b point 15 (c) inchangé). Ordre de focus et zones focalisables de 3b point 12 et Accueil point 9 inchangés, sauf le séparateur du point 2, inséré entre la zone du tableau (et ses liens) et la zone du calendrier (D-213) ; une flèche haut ou bas dans l'une des zones fait défiler les deux. Gestes (barres, liens, poignées, glisser de ligne) inchangés.
-5. Colonnes (tranche 2) : poignée au bord droit de chaque en-tête (`role="separator"`, `aria-label` « Largeur de la colonne <en-tête> », flèches 16 px, double-clic ou Entrée = largeur par défaut), minimum 48 px, 120 px pour Nom ; troncature et `title` inchangés. Bouton « Colonnes » après les boutons de zoom (et après la case « Initiales » là où elle existe) : menu déroulant à cases à cocher (pas un dialogue : aucune garde, audit des dialogues inchangé), ordre fixe. Toujours affichées : WBS et Nom (Gantt d'un projet, planning d'une ressource) ; Code et Nom (Accueil). Gantt d'un projet : Planification, Début, Fin, Charge, Avancement, Vendu et Marge (si `peut_ecrire`), Drapeaux. Accueil : Début, Fin, Drapeaux, plus Charge, Avancement, Réel, Vendu, Marge ; valeurs sur les lignes d'activités et de jalons seulement (Vendu et Marge si `peut_ecrire` sur leur projet), lignes de projet vides ; marge négative en couleur flag. Planning d'une ressource : colonnes existantes, choix au même modèle. Par défaut : colonnes actuelles. Dernier élément du menu : « Rétablir l'affichage par défaut » (colonnes, largeurs et séparateur). Ordre non modifiable ; pas de lien partageable.
+5. Colonnes (tranche 2) : poignée au bord droit de chaque en-tête (`role="separator"`, `aria-label` « Largeur de la colonne <en-tête> », flèches 16 px, double-clic ou Entrée = largeur par défaut), minimum 48 px, 120 px pour Nom ; troncature et `title` inchangés. Bouton « Colonnes » après les boutons de zoom (et après la case « Initiales » là où elle existe) : menu déroulant à cases à cocher (pas un dialogue : aucune garde, audit des dialogues inchangé), ordre fixe. Toujours affichées : WBS et Nom (Gantt d'un projet, planning d'une ressource) ; Code et Nom (Accueil). Gantt d'un projet : Planification, Début, Fin, Ressources, Charge, Avancement, Vendu et Marge (si `peut_ecrire`), Drapeaux. Accueil : Début, Fin, Ressources, Drapeaux, plus Charge, Avancement, Réel, Vendu, Marge ; valeurs sur les lignes d'activités et de jalons seulement (Vendu et Marge si `peut_ecrire` sur leur projet), lignes de projet vides ; marge négative en couleur flag. Planning d'une ressource : colonnes existantes, choix au même modèle. Par défaut (D-227, révise D-212 (4) et D-216 (9) (a)) : Gantt d'un projet WBS, Nom, Début, Fin, Ressources ; Accueil Code, Nom, Début, Fin, Ressources (D-238 révise D-227) ; planning d'une ressource Projet, Activité, Début, Fin ; toutes les autres colonnes, Drapeaux comprise, décochées par défaut et proposées au menu dans l'ordre fixe ; un choix enregistré dans le navigateur prime ; une clé `ressources` absente du choix enregistré vaut le défaut (cochée, D-238). Dernier élément du menu : « Rétablir l'affichage par défaut » (colonnes, largeurs et séparateur). Ordre non modifiable ; pas de lien partageable.
 6. Mémorisation (tranche 1 pour le séparateur, tranche 2 pour le reste) : stockage du navigateur, une clé par vue (Gantt de projet, commune à tous les projets ; Accueil ; planning d'une ressource), sans API ni migration. Stockage indisponible ou valeur illisible : valeurs par défaut, aucune erreur affichée ; identifiant de colonne inconnu ignoré.
 7. Apparence : @ui-designer, captures à 1440 et 1024 px, docs/ui.md mis à jour.
 8. Découpage : tranche 1 = points 2, 3, 4 et 6 pour le séparateur (sous-lot gantt-colonnes-1) ; tranche 2 = points 5 et 6 pour le reste (sous-lot gantt-colonnes-2) ; une clôture et une suite complète par tranche.
-9. Précisions de la tranche 2 (D-216) : (a) planning d'une ressource : toujours affichées Projet et Activité (au lieu de WBS et Nom du point 5) ; au choix : Début, Fin, Assigné, Réel, Reste, Drapeaux. (b) Menu `@radix-ui/react-dropdown-menu`, éléments à case à cocher ; le menu reste ouvert après un cochage ; Échap ou clic hors du menu le ferme, focus rendu au bouton ; nom accessible du bouton « Colonnes ». (c) Ordre de focus : bouton « Colonnes » après les boutons de zoom, ou après la case « Initiales » là où elle existe ; poignées de largeur dans la zone du tableau, dans l'ordre des en-têtes, avant le contenu des lignes. Un glisser de poignée qui revient à son point de départ laisse la largeur enregistrée, sans largeur intermédiaire affichée (D-218 (8)). (d) Colonne masquée : en-tête et cellules absents du DOM ; Drapeaux masquable, fixée à droite quand elle est affichée ; critère 3b point 15 (a) et (b) vérifié avec les colonnes et la largeur par défaut. (e) La largeur réglée d'une colonne est gardée quand elle est masquée puis réaffichée. (f) Accueil, colonnes ajoutées : valeurs lues dans les éléments déjà chargés par GET …/gantt (charge_assignee, avancement, charge_reelle, charge_vendue, marge), aucune route nouvelle ; lignes de projet vides ; formats de 3b point 2 et de « Charge vendue et date client ». (g) Ordre du menu = ordre des colonnes à l'écran ; Gantt d'un projet : ordre actuel (Vendu et Marge après Charge) ; Accueil : Code, Nom, Début, Fin, Charge, Avancement, Réel, Vendu, Marge, Drapeaux (D-218 (7), révise D-216 (7)) ; planning d'une ressource : ordre actuel.
+9. Précisions de la tranche 2 (D-216) : (a) planning d'une ressource : toujours affichées Projet et Activité (au lieu de WBS et Nom du point 5) ; au choix : Début, Fin, Assigné, Réel, Reste, Drapeaux. (b) Menu `@radix-ui/react-dropdown-menu`, éléments à case à cocher ; le menu reste ouvert après un cochage ; Échap ou clic hors du menu le ferme, focus rendu au bouton ; nom accessible du bouton « Colonnes ». (c) Ordre de focus : bouton « Colonnes » après les boutons de zoom, ou après la case « Initiales » là où elle existe ; poignées de largeur dans la zone du tableau, dans l'ordre des en-têtes, avant le contenu des lignes. Un glisser de poignée qui revient à son point de départ laisse la largeur enregistrée, sans largeur intermédiaire affichée (D-218 (8)). (d) Colonne masquée : en-tête et cellules absents du DOM ; Drapeaux masquable, fixée à droite quand elle est affichée ; critère 3b point 15 (a) et (b) vérifié avec les colonnes et la largeur par défaut. (e) La largeur réglée d'une colonne est gardée quand elle est masquée puis réaffichée. (f) Accueil, colonnes ajoutées : valeurs lues dans les éléments déjà chargés par GET …/gantt (charge_assignee, avancement, charge_reelle, charge_vendue, marge), aucune route nouvelle ; lignes de projet vides ; formats de 3b point 2 et de « Charge vendue et date client ». (g) Ordre du menu = ordre des colonnes à l'écran ; Gantt d'un projet : ordre actuel (Vendu et Marge après Charge), Ressources juste après Fin (D-238) ; Accueil : Code, Nom, Début, Fin, Ressources, Charge, Avancement, Réel, Vendu, Marge, Drapeaux (D-218 (7), révise D-216 (7)) ; planning d'une ressource : ordre actuel.
+
+### Colonne Ressources (colonne-ressources, D-238)
+
+1. Colonne « Ressources » (id `ressources`), au choix, dans le Gantt d'un projet et dans le Gantt global de l'Accueil, placée juste après « Fin » (colonnes et menu). Absente du planning d'une ressource.
+2. Contenu, lignes d'activité feuille seulement : un élément par assignation, dans l'ordre de l'API (`assignations`, §6 « Lecture »), séparés par « , ». Texte : initiales de la ressource, ou son nom si elle n'a pas d'initiales. Feuille sans assignation, activité parente, jalon, ligne de projet ou de sous-projet : cellule vide. Cellule tronquée par ellipsis.
+3. Infobulle (`title`) de chaque élément : « <nom> — <charge> j », charge au format de la colonne Charge (`formaterNombre` : « 5 », « 2,5 »).
+4. Si `peut_ecrire` sur le projet de la ligne : chaque élément est un bouton (apparence de lien), de nom accessible « Modifier l'assignation de <nom> à <nom de l'activité> » (libellé du Planning). Il ouvre le dialogue « Modifier l'assignation » du Planning (même titre, même description, charge et taux préremplis). Sinon : texte avec infobulle, aucun bouton.
+5. Après enregistrement : Gantt d'un projet, comme un dialogue ouvert depuis le Gantt (3d : Gantt rechargé, bandeau « Planning à recalculer », recalcul automatique si la case est cochée) ; Accueil, rechargement de l'écran comme au point 18. Refus : dialogue ouvert (comportement actuel). Garde des dialogues inchangée (D-188).
+6. Ordre de focus : boutons dans la zone du tableau, dans l'ordre des lignes puis des éléments. Barre active, gestes et annonce du Gantt inchangés.
+7. Largeur par défaut 96 px, minimum 48 px. Critère 3b point 15 (a) à (c) vérifié à 1440 et 1024 px avec les nouvelles colonnes par défaut, dans les deux vues. S'il ne tient pas : s'arrêter et proposer 2 options. Toutes colonnes cochées, Ressources comprise, le tableau peut défiler horizontalement dans sa zone (« Colonnes et défilement » point 3) ; la page ne défile pas horizontalement (3b point 15 (c) inchangé).
 
 ### Édition (lot 3d, D-088)
 
@@ -633,6 +647,47 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 6. Logo (D-175) : le logo « PlanerSource » de la barre latérale est un lien vers « / » (nom accessible « PlanerSource », sans le mot « Accueil » pour ne pas doubler l'entrée de menu « Accueil » ; amendé par la décision du porteur du 2026-11-24) ; la navigation passe par la garde de D-172 ; le rôle ressource arrive sur /mes-taches par la redirection existante.
 7. Accueil, ordre fixe des colonnes (révise D-216 (7)) : Code, Nom, Début, Fin, Charge, Avancement, Réel, Vendu, Marge, Drapeaux.
 8. Poignée de largeur : un glisser qui revient à son point de départ laisse la largeur enregistrée, sans largeur intermédiaire affichée (non bloquant de D-217 (4)).
+
+### Charge lisible (charge-lisible, D-220)
+
+1. Champs selon le mode (REX-6 point 6). Dialogues « Nouvelle activité » et « Modifier l'activité » d'une activité feuille (Planning, Gantt du projet, Accueil), même composant et même table mode → champs, mise à jour dès que le mode change :
+   - Début validé : START, STARR, FDUR, DDUR, REGUL.
+   - Fin validée : ALAP, REGUL.
+   - Durée validée (jours ouvrés ; libellé « Durée validée (j) » et aides révisés au point 5) : ASAP, START, STARR, ALAP, FDUR, DDUR. Pour ASAP, START, STARR et ALAP, aide sous le champ (`aria-describedby`) : « Utilisée seulement sans ressource assignée : longueur de la barre. »
+   - MAN : aucun des trois champs.
+   - Un champ masqué n'est pas envoyé à l'API ; sa valeur reste en base et réapparaît si le mode y revient. Les règles de validation des champs visibles sont inchangées. Garde de fermeture (D-188) : un champ masqué ne compte pas comme modifié.
+   - Création : « Mode de planification » (ASAP par défaut) et les trois champs selon le mode ; durée par défaut : celle de l'API (1 pour FDUR et DDUR), sans valeur calculée côté web ; ni « Charge assignée » ni « Marge » (aucune assignation) ; parent et dépendances à la création : lot saisie-activites.
+2. Charge et marge (REX-6 point 6), modification d'une activité feuille : « Charge assignée (somme des ressources) » en lecture seule (texte, pas de champ), format « X j » à virgule décimale ; « Marge » en lecture seule à côté de « Charge vendue (j) », pour qui écrit sur le projet seulement : « — » si la charge vendue est vide, couleur flag si négative (comme sur l'Accueil). Valeurs lues dans l'API (`charge_assignee`, `marge`, D-220 (6)), sans calcul côté web, à l'ouverture du dialogue.
+3. Aides des taux (REX-6 point 7), sous « Taux (%) » (`aria-describedby`), textes dans un module partagé : assignation (dialogues « Assigner » et « Modifier l'assignation ») : « Plafond par jour sur cette activité : taux × capacité de la ressource. » ; affectation au projet (création et modification) : « Plafond par semaine sur ce projet : taux × capacité × jours ouvrés. »
+4. Guide utilisateur : `docs/guide-utilisateur.md` (rôles, projets, activités et modes, charges et taux, calcul, imputations et validation, plan de charge, Gantt) ; chaque règle y est reprise de la présente spec avec son renvoi §, sans règle nouvelle.
+5. Unités et aides (retours-deploiement-2, D-235 (A) ; complète et remplace les libellés et l'aide du point 1) :
+   - Libellés : « Durée validée (j) », « Charge vendue (j) », « Charge assignée (j) » (dialogues d'assignation du Planning et des formulaires d'édition), « Délai (j) » (dépendances : Planning, formulaires d'édition, section Prédécesseurs et Successeurs du dialogue d'une activité), « Total du mois (j) » (Planning manuel). Aucun libellé « (jours) » ni « (jours ouvrés) ».
+   - Aides d'une ligne sous le champ, reliées par `aria-describedby` :
+     - Durée validée, modes FDUR et DDUR : « Effet sur le planning : oui (jours ouvrés). »
+     - Durée validée, modes ASAP, START, STARR, ALAP : « Effet sur le planning : seulement sans ressource assignée (longueur de la barre, jours ouvrés). » (remplace l'aide du point 1)
+     - Charge vendue : « Effet sur le planning : non (sert à la marge). »
+     - Charge assignée, champ modifiable des assignations : « Effet sur le planning : oui. »
+     - Délai d'une dépendance : « Effet sur le planning : oui (jours ouvrés). »
+   - Champs en lecture seule (charge assignée et marge du dialogue d'une activité) : sans aide. Aucun champ grisé selon le mode : la charge vendue ne dépend d'aucun mode.
+6. Empilement des dialogues (retours-deploiement-2, D-235 (B)) : un dialogue et son voile passent au-dessus de tout le contenu de la page, y compris l'en-tête collant des colonnes du Gantt d'un projet et de l'Accueil ; aucun champ du dialogue n'est masqué par le Gantt.
+
+### Saisie des activités (saisie-activites, D-222)
+
+1. Activité parente (REX-6 point 2). Dialogues « Nouvelle activité », « Modifier l'activité », « Nouveau jalon » et « Modifier le jalon » (Planning, Gantt du projet, Accueil) : champ « Activité parente ».
+   - Liste : « Aucune (racine) », puis les activités du projet en ordre WBS, libellé « <WBS> <nom> », sans l'élément lui-même ni ses descendants. « Ajouter une sous-activité » préremplit le parent.
+   - Création : `parent_id` dans le POST existant ; l'élément est placé en dernier dans sa fratrie.
+   - Modification : si le parent change, `POST /api/elements/:id/deplacer` (position en dernier dans la nouvelle fratrie) est appelé avant le PATCH des champs. Déplacement refusé (`parent_assigne`, `dependance_hierarchie`, MAN à saisies, etc.) : rien n'est enregistré ; le texte de refus du glisser de ligne (§6, Édition, point 12) s'affiche dans le dialogue (`role="alert"`), qui reste ouvert. PATCH refusé après un déplacement réussi : message qui dit que le déplacement est fait et que les champs ne sont pas enregistrés.
+   - Aucune route ni migration nouvelle.
+2. Dépendances (REX-6 point 3), dialogue « Modifier l'activité » d'une activité feuille ou parente : sous-sections « Prédécesseurs » et « Successeurs », modifiables : ajout (élément, type, délai), modification du type et du délai, suppression.
+   - Chaque action est enregistrée tout de suite par les routes existantes ; « Enregistrer » ne porte que sur les champs de l'activité.
+   - Mêmes contrôles, confirmations, libellés et aides (§6, Retouches REX-6, point 2) que la section Dépendances de l'onglet Planning.
+   - Éléments proposés : activités et jalons du même projet, sauf l'activité, ses ancêtres et ses descendants (§3).
+   - Refus (doublon, cycle, hiérarchie) : message dans le dialogue (`role="alert"`), liste inchangée, dialogue ouvert.
+   - Garde de fermeture (D-188) : un ajout saisi mais non envoyé compte comme une modification.
+   - La section Dépendances de l'onglet Planning et les liens du Gantt sont à jour après la fermeture du dialogue.
+   - Ni dans le dialogue de création (l'activité n'a pas d'identifiant), ni dans celui d'un jalon (hors lot).
+3. Activité parente : « Mode de planification », « Début validé », « Fin validée » et « Durée validée » sont masqués et non envoyés ; leurs valeurs restent en base (§5.6). « Début planifié » et « Fin planifiée » restent en lecture seule.
+4. Guide utilisateur : section « Activités et modes » de `docs/guide-utilisateur.md`, règles reprises de la présente section avec leur renvoi §.
 
 ## 7. Imputations
 
@@ -754,6 +809,7 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 - Production : `npm run build` (web par vite, API par tsc vers dist), `npm start` (node sur l'API compilée). L'API sert le web compilé et renvoie index.html pour toute route hors /api ; une route /api inconnue reste 404 JSON. Port `PORT`, défaut 8080.
 - Compte initial : au démarrage, table utilisateur vide → administrateur admin/admin créé quel que soit `NODE_ENV`, sauf `INITIAL_ADMIN=0`. Tant que ce compte garde le mot de passe d'origine, la session le signale (sans exposer de hash) et l'écran affiche à l'administrateur le bandeau non bloquant « Le mot de passe de l'administrateur est celui d'origine : changez-le. ».
 - Docker : Dockerfile multi-étapes (image d'exécution node:22, utilisateur non root) ; docker-compose.yml avec `app` et `db` (postgres:18), volume nommé, healthcheck de la base, `app` attend `db` sain, port 8080, variables dans `.env` (modèle `.env.production.example`). Migrations appliquées au démarrage.
+- Cache du navigateur (D-227) : `index.html` et le repli des routes du front sont servis avec `Cache-Control: no-cache` (ETag gardé) ; les fichiers sous `/assets/` avec `Cache-Control: public, max-age=31536000, immutable` ; les routes /api et le 404 d'un fichier absent de `/assets/` sont inchangés. Après une mise à jour, le navigateur charge la nouvelle version sans vider son cache.
 - Manuel : `docs/installation.md`, lié depuis README.md.
 
 ## 9. Découpage en lots
@@ -853,6 +909,7 @@ Chaque question a une valeur par défaut, appliquée tant qu'elle n'est pas tran
 - La copie est toujours un projet racine.
 - La priorité du projet est copiée.
 - Une dépendance n'est copiée que si ses deux extrémités sont dans la copie.
+- OTP (D-225, §12.2) : l'OTP propre (`otp`) du projet, des sous-projets et des activités est copié, variantes de 11.3 comprises ; la valeur héritée n'est jamais écrite.
 - Charge vendue et date client (D-149) : `charge_vendue` est copiée ; `date_client` est décalée de delta comme la date validée ; décalée au-delà du 31/12/2099 : copie refusée, 422, rien n'est créé.
 
 ### 11.3 Variantes
@@ -879,3 +936,84 @@ Jeu de données : celui de 5.5. Projet P, début lun 04/01/2027.
 | COPIE-5r | P de COPIE-1 avec des entrées d'historique | L'historique de la copie ne contient que les créations dues à la copie ; celui de P est inchangé |
 | MOD-3 | « Créer depuis un modèle » M, début 01/02/2027 | Projet créé avec `est_modele` faux, contenu selon 11.2 |
 | MOD-4 | « Enregistrer comme modèle » sur P de COPIE-1 | Modèle créé avec `est_modele` vrai, réel 0, P inchangé |
+
+## 12. Coûts (D-225)
+
+Découpage : tranche 1 (sous-lot couts-1) = 12.1 et 12.2 ; tranche 2 (sous-lot couts-2) = 12.3, 12.4 et les colonnes « OTP » ; une clôture et une suite complète par tranche.
+
+### 12.1 Taux journalier
+
+1. **Donnée** : facultative. Seul un utilisateur `est_ressource` peut avoir un taux ; sinon 422 { erreur: 'Seule une ressource a un taux journalier' }, base inchangée. Une ressource a zéro, une ou plusieurs périodes. Pas de taux horaire ; pas de taux par équipe (D-211 (6) écarté).
+2. **Période** : `debut` (AAAA-MM-JJ) obligatoire, `fin` (AAAA-MM-JJ) facultative (null = période ouverte) ; `fin` antérieure à `debut` : 422 { erreur: 'La date de fin précède la date de début' } (comme une affectation). `montant` en euros : nombre > 0, au plus 999999,99, 2 décimales au plus exactement (comme la charge vendue, D-154 (12)) ; sinon 400.
+3. **Chevauchement** : les périodes d'une ressource ne se chevauchent pas, bornes comprises (une période qui finit le 10 et une qui commence le 10 se chevauchent ; une période ouverte s'étend sans fin). Refus : 409 { erreur: 'Période de taux qui chevauche une autre', code: 'taux_chevauchement' }, base inchangée. Contrôle dans la transaction de l'écriture, sous verrou de la ligne utilisateur (SELECT … FOR UPDATE), sans extension PostgreSQL. Les trous entre périodes sont permis.
+4. **Taux en vigueur** à une date d : le montant de la période telle que `debut` ≤ d ≤ `fin` (ou `fin` vide) ; aucun si d n'est dans aucune période.
+5. **Table** `taux_journalier` (id, utilisateur_id, debut, fin, montant numeric(8,2), CHECK montant > 0, CHECK fin ≥ debut), migration 015. Historisée comme les entités de planning (§3), entité `taux`, sans projet ; lue par `GET /api/historique?entite=taux` (administrateur).
+6. **Routes** :
+   - `GET /api/utilisateurs/:id/taux` → 200 `[{ id, utilisateur_id, debut, fin, montant }]`, triées par `debut` ; liste vide pour un utilisateur sans taux.
+   - `POST /api/utilisateurs/:id/taux` { debut, fin?, montant } (corps strict) → 201, la période créée.
+   - `PATCH /api/taux/:id` { debut?, fin?, montant? } (corps strict) → 200 ; la période résultante est contrôlée (points 2 et 3, sans compter la période elle-même).
+   - `DELETE /api/taux/:id` → 204.
+7. **Droits** : administrateur, lecture et écriture. Chef de projet : lecture seule (GET) des taux d'une ressource affectée à au moins un projet sur lequel il écrit. Tout autre cas : 403 { erreur: 'Interdit' } ; rôle ressource : 403, même pour ses propres taux. Utilisateur ou taux inconnu, identifiant mal formé ou hors plage : 404. Ordre des refus : écriture : 401, 403, 404, 400, 422, 409 ; lecture : 401, 403 (rôle ressource), 404, 403 (chef hors de sa portée). Tout refus laisse la base inchangée.
+8. **Ressource** : PATCH /api/utilisateurs/:id avec `est_ressource: false` sur un utilisateur qui a au moins un taux : 409 { erreur: 'Utilisateur avec des taux : il reste ressource' }, base inchangée (comme les affectations, §3). Écran : « Cet utilisateur a des taux journaliers : il reste ressource. », dialogue ouvert.
+9. **Écran Utilisateurs** : dans le dialogue « Modifier <nom> » d'un utilisateur ressource, pour l'administrateur, section « Taux journaliers » (h3), aide « Facultatif. Sert au calcul des coûts. ». Tableau : Du, Au (« — » si ouverte), Montant (« 600,00 € », deux décimales, virgule, espace insécable pour les milliers et avant « € », ex. « 1 234,50 € »), Actions. Ajout (champs Du, Au, Montant ; bouton « Ajouter le taux »), modification (bouton de ligne « Modifier le taux du <JJ/MM/AAAA> »), suppression (bouton de ligne « Supprimer le taux du <JJ/MM/AAAA> », confirmation) : enregistrés tout de suite, comme les dépendances du dialogue d'une activité (D-222) ; « Enregistrer » ne porte que sur les champs de l'utilisateur. Refus affiché dans le dialogue (`role="alert"`), liste inchangée : chevauchement « Cette période chevauche un autre taux. » ; fin antérieure « La date de fin précède la date de début. » ; montant invalide : `aria-invalid`, « Montant invalide. », bouton désactivé. Garde D-188 : un ajout saisi non envoyé compte comme une modification. Section absente pour un utilisateur non ressource et à la création.
+10. **Onglet Affectations d'un projet**, si `peut_ecrire` : colonne « Taux du jour » = taux en vigueur à la date du jour du navigateur (format du point 9), « — » sans taux en vigueur. Données : `GET /api/utilisateurs/:id/taux` de chaque ressource affectée. Colonne absente en lecture seule.
+
+### 12.2 OTP
+
+1. **Donnée** : champ facultatif `otp` d'un projet (modèles compris) et d'une activité ; pas sur un jalon (clé refusée, 400). Texte, espaces de bord retirés, 1 à 50 caractères ; chaîne vide (après retrait) ou null = aucun ; plus de 50 caractères : 400, base inchangée. La même valeur est permise sur plusieurs éléments.
+2. **Héritage** : sans valeur propre, un élément prend celle de l'ancêtre le plus proche qui en a une : activité parente (à tous les niveaux), puis projet, puis projet parent (à tous les niveaux). La valeur propre prime sur celle des ancêtres.
+3. **Lecture** : la vue d'un projet (GET /api/projets, GET /api/projets/:id, GET /api/modeles, réponses de POST et PATCH) et la vue d'une activité (GET /api/projets/:id/activites, réponses de POST et PATCH) portent `otp` (valeur propre ou null), `otp_effectif` (valeur propre ou héritée, ou null) et `otp_source` (null si valeur propre ou aucune ; sinon { type: 'projet' | 'activite', id, libelle } : libelle = code du projet, ou « <WBS> <nom> » de l'activité). Calculés à la lecture, rien de stocké.
+4. **Ancêtre illisible** : `otp_effectif` est toujours renvoyé, la même valeur pour tous les lecteurs. Si l'ancêtre source est un projet que l'utilisateur ne lit pas : `otp_source` = { type: 'projet', id: null, libelle: null } ; `otp_source` ne révèle ni l'id ni le code de ce projet, et son code n'apparaît nulle part dans la réponse ; `parent_id` d'un sous-projet reste renvoyé (D-079, inchangé ; décision du porteur, D-226).
+5. **Écriture** : par qui écrit sur l'élément, dans les POST et PATCH existants (projets, modèles, activités) ; lisible par qui le voit. Historisé comme les autres champs ; une valeur inchangée n'est pas historisée.
+6. **Table** : `projet.otp` et `activite.otp`, text nullable, CHECK longueur 1 à 50, migration 015.
+7. **Dialogues** de création et de modification d'un projet (et d'un modèle) et d'une activité : champ « OTP » (texte, au plus 50 caractères) ; vide = null ; en modification, envoyé seulement s'il a changé. Sans valeur propre mais avec une valeur héritée, aide : « Hérité de <code du projet | WBS et nom de l'activité> : <valeur> » ; ancêtre illisible : « Hérité d'un projet parent : <valeur> ». À la création, l'aide reprend la valeur effective du parent choisi (projet parent, ou activité parente et projet).
+8. **Copie** (§11.2, §11.3) : l'OTP propre est copié ; la valeur héritée n'est jamais écrite.
+
+### 12.3 Calcul des coûts (tranche 2)
+
+1. Coût d'une charge c (jours, décimales comprises : 0,5 j × 600 € = 300 €) = c × taux journalier.
+2. Coût planifié d'une assignation = charge assignée × taux en vigueur à la date du jour.
+3. Coût réel = coût imputé + coût du reste. Coût imputé = somme des imputations, chacune multipliée par le taux en vigueur à sa date. Coût du reste = reste à faire × taux en vigueur à la date du jour.
+4. Agrégats : activité feuille = somme de ses assignations ; activité parente = somme de ses descendants ; projet = même périmètre que `projet.totaux` (D-149 : feuilles du projet seul, sans sous-projets, activités closes comprises).
+5. Calculs à la lecture, rien de stocké ; fonctions pures testées par vitest.
+6. Taux manquant : ressource sans aucune période : coût 0, sans avertissement. Ressource avec au moins une période, mais date (imputation ou jour même) hors de toutes : 0 pour cette part et `taux_manquant: true` sur l'activité, ses parents et le projet.
+7. Visibilité : `cout_planifie`, `cout_impute`, `cout_reel`, `taux_manquant` renvoyés seulement si `peut_ecrire` (administrateur, chef du projet ou d'un projet parent) ; sinon les clés sont absentes (pas null), comme la charge vendue. Jamais visibles pour le rôle ressource.
+
+**Cas** (D-229). Données communes : Alice : 600 € du 01/01/2027 au 31/01/2027, puis 700 € à partir du 01/02/2027 (période ouverte) ; Bob : aucun taux ; Carol : 500 € du 01/03/2027 au 31/03/2027. « Jour » = date du jour passée en paramètre.
+
+| Cas | Données | Résultat attendu |
+|---|---|---|
+| COUT-1 | Alice assignée 5 j, aucune imputation, reste 5 j ; jour 15/01/2027 | planifié 3000 ; imputé 0 ; réel 3000 ; taux manquant non |
+| COUT-2 | Alice assignée 5 j, imputations 1 j le 31/01/2027 et 1 j le 01/02/2027, reste 3 j ; jour 02/02/2027 | planifié 3500 ; imputé 1300 ; réel 3400 ; taux manquant non |
+| COUT-3 | Alice assignée 0,5 j, reste 0,5 j ; jour 15/01/2027 | planifié 300 ; imputé 0 ; réel 300 ; taux manquant non |
+| COUT-4 | Bob assigné 4 j, imputation 1 j le 10/01/2027, reste 3 j ; jour 15/01/2027 | planifié 0 ; imputé 0 ; réel 0 ; taux manquant non |
+| COUT-5 | Carol assignée 2 j, imputation 1 j le 15/03/2027, reste 1 j ; jour 02/04/2027 | planifié 0 ; imputé 500 ; réel 500 ; taux manquant oui |
+| COUT-6 | Projet (OTP « OTP-A »), parent P (WBS 1) ; F1 (1.1) : Alice assignée 5 j, reste 5 j ; F2 (1.2) : Carol assignée 2 j, reste 2 j ; jour 15/01/2027 | F1 : planifié 3000, réel 3000, taux manquant non ; F2 : planifié 0, réel 0, taux manquant oui ; P et projet : planifié 3000, imputé 0, réel 3000, taux manquant oui |
+| COUT-7 | Une activité : Alice assignée 2 j, reste 2 j, et Bob assigné 3 j, reste 3 j ; jour 15/01/2027 | planifié 1200 ; imputé 0 ; réel 1200 ; taux manquant non |
+
+### 12.4 Affichage et export (tranche 2)
+
+1. Gantt d'un projet et Accueil : colonnes au choix « Coût planifié », « Coût réel » (si `peut_ecrire`) et « OTP » (valeur effective), masquées par défaut (menu « Colonnes », D-212). Montants au format « 1 234,50 € » ; si `taux_manquant`, marque « incomplet » avec `title` « Taux manquant ».
+2. Région « Totaux du projet » : « · Coût planifié X € · Coût réel Y € » ajouté.
+3. Export : `GET /api/projets/:id/couts/export`. Droits : si `peut_ecrire` ; sinon 403 ; projet illisible : 404. Fichier `couts-<code>-AAAA-MM-JJ.csv`, format commun de §7 (Exports CSV, point 2). Colonnes : WBS;Activité;OTP;Charge assignée;Charge réelle;Reste;Coût planifié;Coût imputé;Coût réel;Taux manquant. Une ligne par activité (feuilles et parents) dans l'ordre WBS, puis une ligne « Total ». Montants sans symbole. Bouton « Exporter les coûts » dans le Gantt d'un projet si `peut_ecrire`. La règle « La charge vendue n'est jamais exportée » (§7) est inchangée.
+4. Parcours complet e2e étendu en tranche 2.
+5. Porteurs des clés de coût (D-233 (f)) : `cout_planifie`, `cout_impute`, `cout_reel`, `taux_manquant` et `projet.totaux` ne sont portées que par `GET /api/projets/:id/gantt` (l'Accueil le lit). Les routes de liste (activités, jalons, projets) et les POST et PATCH d'activités ne les portent pas. L'onglet Planning n'affiche aucun coût.
+
+**Exemple d'export** (D-229) : export du projet de COUT-6.
+
+```
+WBS;Activité;OTP;Charge assignée;Charge réelle;Reste;Coût planifié;Coût imputé;Coût réel;Taux manquant
+1;P;OTP-A;7;0;7;3000;0;3000;oui
+1.1;F1;OTP-A;5;0;5;3000;0;3000;non
+1.2;F2;OTP-A;2;0;2;0;0;0;oui
+Total;;;7;0;7;3000;0;3000;oui
+```
+
+## 13. Version de l'application (D-231)
+
+1. **Numérotation.** `X.Y.Z` dans le `package.json` racine (et la racine de `package-lock.json`), seule source. La version monte une fois par clôture de journée : Y+1 (Z remis à 0) si la journée apporte au moins un lot fonctionnel, sinon Z+1. Le numéro est donné dans le prompt de clôture. Tag git `vX.Y.Z` sur le commit de `main` de la clôture. Départ : 1.0.0.
+2. **Commit court.** Variable `COMMIT`. Dockerfile : `ARG COMMIT=inconnu` dans l'étape de construction (inscrit dans le front) et dans l'image d'exécution (`ENV COMMIT` pour l'API). docker-compose.yml : `build` avec `args: COMMIT: ${COMMIT:-inconnu}`. Hors Docker (dev, tests) : `COMMIT` de l'environnement, sinon « inconnu ». Aucune lecture de `.git` à l'exécution ni à la construction de l'image.
+3. **API.** `GET /api/version`, sans session, renvoie 200 `{ version, commit }`. Toute réponse sous `/api` (succès, 401, 404, erreurs) porte l'en-tête `X-PlanerSource-Version: <version>`. Version lue une fois au démarrage dans le `package.json` racine (même chemin en dev, en tests et dans l'image).
+4. **Front.** Version et commit inscrits à la compilation par Vite (`define`). En bas de la barre latérale, pour tous les rôles (vue restreinte de la ressource comprise) : « v<version> · <commit> ».
+5. **Bandeau.** Le client API compare l'en-tête `X-PlanerSource-Version` de chaque réponse à la version du front. S'ils diffèrent (version seule, pas le commit), un bandeau non bloquant s'affiche en haut de page : « Nouvelle version disponible » et un bouton « Recharger ». Pas de bandeau si l'en-tête est absent. Le bouton recharge la page en passant par la garde des modifications non enregistrées (D-172, `sortir`).
+6. Aucune migration, aucune dépendance nouvelle.

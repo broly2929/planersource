@@ -14,6 +14,7 @@ import { assignationsRoutes } from './routes/assignations.js';
 import { calculRoutes } from './routes/calcul.js';
 import { calendriersRoutes } from './routes/calendriers.js';
 import { dependancesRoutes } from './routes/dependances.js';
+import { tauxRoutes } from './routes/taux.js';
 import { equipesRoutes } from './routes/equipes.js';
 import { elementsRoutes } from './routes/elements.js';
 import { feuillesRoutes } from './routes/feuilles.js';
@@ -22,11 +23,13 @@ import { travailRoutes } from './routes/travail.js';
 import { historiqueRoutes } from './routes/historique.js';
 import { mesTachesRoutes } from './routes/mes-taches.js';
 import { exportImputationsRoutes } from './routes/export-imputations.js';
+import { exportCoutsRoutes } from './routes/export-couts.js';
 import { planDeChargeRoutes } from './routes/plan-de-charge.js';
 import { ressourcePlanningRoutes } from './routes/ressource-planning.js';
 import { projetsRoutes } from './routes/projets.js';
 import { saisiesRoutes } from './routes/saisies.js';
 import { utilisateursRoutes } from './routes/utilisateurs.js';
+import { lireVersion } from './version.js';
 
 export interface AppDeps {
   pool: pg.Pool;
@@ -47,9 +50,18 @@ export interface AppDeps {
 
 /** Sert le web compilé par sirv ; index.html pour toute route hors /api ; /api inconnue → 404 JSON. */
 function servirWeb(app: FastifyInstance, dossier: string): void {
-  const servir = sirv(dossier, { single: true, etag: true });
+  // Cache (D-227 (A)) : index.html et le repli du front sont revalidés (ETag) à chaque affichage ;
+  // les fichiers de /assets/, au nom empreint, sont immuables.
+  const servir = sirv(dossier, {
+    single: true,
+    etag: true,
+    setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
+  });
   // Sous /assets/, jamais de repli sur index.html (D-140 (5) (b)) : fichier absent → 404.
-  const servirAssets = sirv(dossier, { etag: true });
+  const servirAssets = sirv(dossier, {
+    etag: true,
+    setHeaders: (res) => res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'),
+  });
   app.setNotFoundHandler((request, reply) => {
     const chemin = request.url.split('?')[0] ?? '';
     const estApi = chemin === '/api' || chemin.startsWith('/api/');
@@ -71,6 +83,15 @@ function servirWeb(app: FastifyInstance, dossier: string): void {
 export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({ trustProxy: deps.config.trustProxy === true });
   const sessionsOrigine: SessionsOrigine = deps.sessionsOrigine ?? new Set();
+  // Version lue une fois au démarrage (D-231) ; en-tête sur toute réponse /api, erreurs comprises.
+  const info = lireVersion();
+  app.addHook('onRequest', async (request, reply) => {
+    const chemin = request.url.split('?')[0] ?? '';
+    if (chemin === '/api' || chemin.startsWith('/api/')) {
+      reply.header('X-PlanerSource-Version', info.version);
+    }
+  });
+  app.get('/api/version', async () => info);
   app.register(cookie, { secret: deps.config.sessionSecret });
   app.decorateRequest('user', null);
   app.addHook('preHandler', async (request) => {
@@ -86,6 +107,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => annuaireRoutes(instance, deps));
   app.register(async (instance) => calendriersRoutes(instance, deps));
   app.register(async (instance) => equipesRoutes(instance, deps));
+  app.register(async (instance) => tauxRoutes(instance, deps));
   app.register(async (instance) => projetsRoutes(instance, deps));
   app.register(async (instance) => affectationsRoutes(instance, deps));
   app.register(async (instance) => elementsRoutes(instance, deps));
@@ -100,6 +122,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => mesTachesRoutes(instance, deps));
   app.register(async (instance) => planDeChargeRoutes(instance, deps));
   app.register(async (instance) => exportImputationsRoutes(instance, deps));
+  app.register(async (instance) => exportCoutsRoutes(instance, deps));
   app.register(async (instance) => ressourcePlanningRoutes(instance, deps));
   if (deps.dossierWeb) servirWeb(app, deps.dossierWeb);
   return app;

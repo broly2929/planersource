@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Pencil } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CelluleCout } from '../gantt/CelluleCout';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from '../auth';
 import { DialogueCalcul, type ReponseCalcul } from '../calcul/DialogueCalcul';
 import { lignesAvertissements } from '../calcul/logique';
@@ -38,9 +39,12 @@ import {
   GanttSvg,
   datesLigne,
   type DependanceGantt,
+  type AssignationGantt,
   type ElementGantt,
   type LigneSvg,
 } from '../gantt/GanttSvg';
+import { CelluleRessources } from '../gantt/CelluleRessources';
+import { DialogueModifAssignation } from './projet/DialogueModifAssignation';
 import { formaterAvancement, formaterDate, formaterNombre, VIDE } from '../gantt/libelles';
 import { formaterJours } from '../gantt/vendu';
 import { calculerPlage, etendrePlage } from '../gantt/plage';
@@ -61,9 +65,10 @@ import {
 
 /** Dialogue de modification ouvert depuis le tableau (D-127 (6)). */
 type Edition =
-  | { kind: 'activite'; activite: ActiviteDetail }
-  | { kind: 'jalon'; jalon: JalonDetail }
-  | { kind: 'projet'; id: number };
+  | { kind: 'activite'; activite: ActiviteDetail; projetId: number }
+  | { kind: 'jalon'; jalon: JalonDetail; projetId: number }
+  | { kind: 'projet'; id: number }
+  | { kind: 'assignation'; assignation: AssignationGantt; activite: string };
 
 type Contenu =
   | { statut: 'chargement' }
@@ -208,12 +213,12 @@ function GanttGlobal() {
       if (element.type === 'jalon') {
         const liste = await api<JalonDetail[]>(`/api/projets/${projetId}/jalons`);
         const jalon = liste.find((j) => j.id === element.id);
-        if (jalon) setEdition({ kind: 'jalon', jalon });
+        if (jalon) setEdition({ kind: 'jalon', jalon, projetId });
         else setErreurEdition('absent');
       } else {
         const liste = await api<ActiviteDetail[]>(`/api/projets/${projetId}/activites`);
         const activite = liste.find((a) => a.id === element.id);
-        if (activite) setEdition({ kind: 'activite', activite });
+        if (activite) setEdition({ kind: 'activite', activite, projetId });
         else setErreurEdition('absent');
       }
     } catch {
@@ -276,8 +281,8 @@ function GanttGlobal() {
 
   /** Valeur d'une colonne ajoutée (D-216 (6)) : lignes d'éléments seulement, lignes de projet vides. */
   const valeurElement =
-    (f: (e: ElementGantt) => string) =>
-    (l: LigneEcran): string =>
+    <R extends ReactNode = string>(f: (e: ElementGantt) => R) =>
+    (l: LigneEcran): R | string =>
       l.type === 'element' ? f(l.element) : '';
   /** Charge, avancement, réel : activité, valeur ; jalon, « — » (3b point 2). */
   const chargeActivite = (f: (e: ElementGantt) => string) =>
@@ -314,6 +319,33 @@ function GanttGlobal() {
       // Clé absente sur un projet en lecture (D-149 (4)) : jamais en couleur flag.
       classeCelluleLigne: (l) =>
         l.type === 'element' && (l.element.marge ?? 0) < 0 ? 'text-flag' : '',
+    },
+    {
+      id: 'otp',
+      titre: 'OTP',
+      cellule: valeurElement((e) => (e.type === 'activite' ? (e.otp_effectif ?? VIDE) : '')),
+    },
+    {
+      id: 'cout_planifie',
+      titre: 'Coût planifié',
+      cellule: valeurElement((e) =>
+        e.type === 'activite' ? (
+          <CelluleCout montant={e.cout_planifie} manquant={e.taux_manquant} />
+        ) : (
+          ''
+        ),
+      ),
+    },
+    {
+      id: 'cout_reel',
+      titre: 'Coût réel',
+      cellule: valeurElement((e) =>
+        e.type === 'activite' ? (
+          <CelluleCout montant={e.cout_reel} manquant={e.taux_manquant} />
+        ) : (
+          ''
+        ),
+      ),
     },
   ];
   const colonnes = disposition.colonnes<LigneEcran>([
@@ -421,6 +453,24 @@ function GanttGlobal() {
             ? formaterDate(datesElement(l)?.fin ?? null)
             : null,
     },
+    {
+      id: 'ressources',
+      titre: 'Ressources',
+      cellule: (l) =>
+        l.type === 'element' && l.element.type === 'activite' ? (
+          <CelluleRessources
+            assignations={l.element.assignations}
+            nomActivite={l.element.nom}
+            modifier={
+              peutEcrire.has(projetDeElement.get(l.element.id) ?? -1)
+                ? (a) =>
+                    !edition &&
+                    setEdition({ kind: 'assignation', assignation: a, activite: l.element.nom })
+                : null
+            }
+          />
+        ) : null,
+    },
     ...colonnesAjoutees,
     {
       id: 'drapeaux',
@@ -478,6 +528,17 @@ function GanttGlobal() {
           onFermer={() => setCalcul(false)}
         />
       )}
+      {edition?.kind === 'assignation' && (
+        <DialogueModifAssignation
+          id={edition.assignation.id}
+          charge={edition.assignation.charge_assignee}
+          taux={edition.assignation.taux}
+          nomRessource={edition.assignation.nom}
+          nomActivite={edition.activite}
+          onSucces={apresEdition}
+          onFermer={fermerEdition}
+        />
+      )}
       {edition?.kind === 'activite' && (
         <Dialog
           ouvert
@@ -487,6 +548,11 @@ function GanttGlobal() {
         >
           <FormulaireActivite
             activite={edition.activite}
+            projetId={edition.projetId}
+            onChangement={() => {
+              rechargerProjets();
+              rechargerContenus();
+            }}
             onSucces={apresEdition}
             onAnnuler={fermerEdition}
           />
@@ -501,6 +567,11 @@ function GanttGlobal() {
         >
           <FormulaireJalon
             jalon={edition.jalon}
+            projetId={edition.projetId}
+            onChangement={() => {
+              rechargerProjets();
+              rechargerContenus();
+            }}
             onSucces={apresEdition}
             onAnnuler={fermerEdition}
           />

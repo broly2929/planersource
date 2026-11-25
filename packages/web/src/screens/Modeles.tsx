@@ -1,5 +1,7 @@
 import { FilePlus, Pencil, Plus } from 'lucide-react';
 import { useId, useState } from 'react';
+import { ChampOtp } from '../components/ChampOtp';
+import { otpSaisi } from '../couts';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { BoutonIcone } from '../components/BoutonIcone';
@@ -75,11 +77,15 @@ function FormulaireModele({ onCree, onAnnuler }: { onCree: () => void; onAnnuler
   // D-218 (1) : préremplie à la date du jour du navigateur ; référence du décalage à la copie.
   const [debut, setDebut] = useState(() => dateLocale(new Date()));
   const idAide = useId();
+  const [otp, setOtp] = useState('');
   return (
     <FormulaireDialogue
       libelle="Créer"
       envoyer={() =>
-        api('/api/modeles', { method: 'POST', body: { code, nom, date_debut: debut } })
+        api('/api/modeles', {
+          method: 'POST',
+          body: { code, nom, date_debut: debut, ...(otpSaisi(otp) ? { otp: otpSaisi(otp) } : {}) },
+        })
       }
       onSucces={onCree}
       onAnnuler={onAnnuler}
@@ -101,6 +107,7 @@ function FormulaireModele({ onCree, onAnnuler }: { onCree: () => void; onAnnuler
           date et la date de début du nouveau projet.
         </p>
       </div>
+      <ChampOtp valeur={otp} onChange={setOtp} aide={null} />
     </FormulaireDialogue>
   );
 }

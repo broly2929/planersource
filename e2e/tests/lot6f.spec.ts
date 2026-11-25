@@ -228,7 +228,7 @@ test('E2E-386 : chef de projet : « Autres projets » et imputations de son proj
   }
 });
 
-test('E2E-387-r1 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran, imputation saisie, exports du plan de charge et des imputations', async ({
+test('E2E-387-r2 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran, imputation saisie, exports du plan de charge et des imputations', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6F';
@@ -295,7 +295,7 @@ test('E2E-387-r1 : parcours complet à l’écran (administrateur seul) : entit�
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 6F' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: RESSOURCE });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 6F.*${RESSOURCE}`) })).toBeVisible();
   await page.getByRole('button', { name: 'Se déconnecter' }).click();

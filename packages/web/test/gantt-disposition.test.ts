@@ -121,43 +121,91 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
     ).toEqual({});
   });
 
-  it('GCO-6-r1 : colonnes affichées, défauts et réglages, ordre fixe', () => {
+  it('GCO-6-r3 : colonnes affichées, défauts et réglages, ordre fixe', () => {
+    // Défauts de D-227 (B) : Début et Fin seulement parmi les colonnes au choix.
+    const toutes = {
+      planification: true,
+      charge: true,
+      vendu: true,
+      marge: true,
+      avancement: true,
+      drapeaux: true,
+    };
     expect(colonnesAffichees('projet', {}, { vendu: true })).toEqual([
+      'wbs',
+      'nom',
+      'debut',
+      'fin',
+      'ressources',
+    ]);
+    expect(colonnesAffichees('projet', {}, { vendu: false })).toEqual([
+      'wbs',
+      'nom',
+      'debut',
+      'fin',
+      'ressources',
+    ]);
+    expect(colonnesAffichees('projet', { colonnes: toutes }, { vendu: true })).toEqual([
       'wbs',
       'nom',
       'planification',
       'debut',
       'fin',
+      'ressources',
       'charge',
       'vendu',
       'marge',
       'avancement',
       'drapeaux',
     ]);
-    expect(colonnesAffichees('projet', {}, { vendu: false })).toEqual([
+    expect(colonnesAffichees('projet', { colonnes: toutes }, { vendu: false })).toEqual([
       'wbs',
       'nom',
       'planification',
       'debut',
       'fin',
+      'ressources',
       'charge',
       'avancement',
       'drapeaux',
     ]);
     expect(
-      colonnesAffichees('projet', { colonnes: { debut: false, drapeaux: false } }, { vendu: true }),
-    ).toEqual(['wbs', 'nom', 'planification', 'fin', 'charge', 'vendu', 'marge', 'avancement']);
+      colonnesAffichees(
+        'projet',
+        { colonnes: { ...toutes, debut: false, drapeaux: false } },
+        { vendu: true },
+      ),
+    ).toEqual([
+      'wbs',
+      'nom',
+      'planification',
+      'fin',
+      'ressources',
+      'charge',
+      'vendu',
+      'marge',
+      'avancement',
+    ]);
     expect(colonnesAffichees('accueil', {}, { vendu: true })).toEqual([
       'code',
       'nom',
       'debut',
       'fin',
-      'drapeaux',
+      'ressources',
     ]);
     expect(
       colonnesAffichees(
         'accueil',
-        { colonnes: { marge: true, charge: true, reel: true, avancement: true, vendu: true } },
+        {
+          colonnes: {
+            marge: true,
+            charge: true,
+            reel: true,
+            avancement: true,
+            vendu: true,
+            drapeaux: true,
+          },
+        },
         { vendu: true },
       ),
     ).toEqual([
@@ -165,6 +213,7 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
       'nom',
       'debut',
       'fin',
+      'ressources',
       'charge',
       'avancement',
       'reel',
@@ -172,40 +221,60 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
       'marge',
       'drapeaux',
     ]);
+    expect(colonnesAffichees('ressource', {}, { vendu: false })).toEqual([
+      'projet',
+      'activite',
+      'debut',
+      'fin',
+    ]);
     expect(
-      colonnesAffichees('ressource', { colonnes: { assigne: false } }, { vendu: false }),
+      colonnesAffichees(
+        'ressource',
+        { colonnes: { assigne: false, reel: true, reste: true, drapeaux: true } },
+        { vendu: false },
+      ),
     ).toEqual(['projet', 'activite', 'debut', 'fin', 'reel', 'reste', 'drapeaux']);
   });
 
-  it('GCO-7-r1 : colonnes du menu, ordre fixe, sans les colonnes toujours affichées', () => {
+  it('GCO-7-r3 : colonnes du menu, ordre fixe, sans les colonnes toujours affichées', () => {
     const titres = (v: Parameters<typeof colonnesDuMenu>[0], vendu: boolean) =>
       colonnesDuMenu(v, { vendu }).map((c) => c.titre);
     expect(titres('projet', true)).toEqual([
       'Planification',
       'Début',
       'Fin',
+      'Ressources',
       'Charge',
       'Vendu',
       'Marge',
       'Avancement',
+      'OTP',
+      'Coût planifié',
+      'Coût réel',
       'Drapeaux',
     ]);
     expect(titres('projet', false)).toEqual([
       'Planification',
       'Début',
       'Fin',
+      'Ressources',
       'Charge',
       'Avancement',
+      'OTP',
       'Drapeaux',
     ]);
     expect(titres('accueil', true)).toEqual([
       'Début',
       'Fin',
+      'Ressources',
       'Charge',
       'Avancement',
       'Réel',
       'Vendu',
       'Marge',
+      'OTP',
+      'Coût planifié',
+      'Coût réel',
       'Drapeaux',
     ]);
     expect(titres('ressource', false)).toEqual([
@@ -247,5 +316,68 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
     const d4 = avecLargeur(d3, 'debut', undefined);
     expect(d4).toEqual({ tableau: 300, colonnes: { debut: true }, largeurs: {} });
     expect(d3.largeurs).toEqual({ debut: 96 });
+  });
+});
+
+/*
+ * colonne-ressources (D-238, SPEC §6 « Colonne Ressources » points 1 et 7, « Colonnes et défilement »
+ * point 5) : colonne `ressources` juste après `fin`, cochée par défaut dans le Gantt d'un projet et
+ * l'Accueil, absente du planning d'une ressource ; une clé absente du choix enregistré vaut le défaut.
+ */
+describe('Colonne Ressources (CRS-4)', () => {
+  it('CRS-4 : défauts des deux vues, planning d’une ressource sans la colonne, choix enregistré', () => {
+    expect(colonnesAffichees('projet', {}, { vendu: true })).toEqual([
+      'wbs',
+      'nom',
+      'debut',
+      'fin',
+      'ressources',
+    ]);
+    expect(colonnesAffichees('accueil', {}, { vendu: true })).toEqual([
+      'code',
+      'nom',
+      'debut',
+      'fin',
+      'ressources',
+    ]);
+    expect(colonnesAffichees('ressource', {}, { vendu: true })).not.toContain('ressources');
+    expect(colonnesDuMenu('ressource', { vendu: true }).map((c) => c.id)).not.toContain(
+      'ressources',
+    );
+    // Menu : « Ressources » juste après « Fin ».
+    for (const vue of ['projet', 'accueil'] as const) {
+      const ids = colonnesDuMenu(vue, { vendu: true }).map((c) => c.id);
+      expect(ids[ids.indexOf('fin') + 1]).toBe('ressources');
+      expect(colonnesDuMenu(vue, { vendu: true }).find((c) => c.id === 'ressources')?.titre).toBe(
+        'Ressources',
+      );
+    }
+    // Choix enregistré sans clé `ressources` : affichée ; `ressources: false` : masquée.
+    const sansCle = lireDisposition(
+      stockage({ 'planersource.gantt.projet': '{"colonnes":{"charge":true}}' }),
+      'projet',
+    );
+    expect(colonnesAffichees('projet', sansCle, { vendu: true })).toEqual([
+      'wbs',
+      'nom',
+      'debut',
+      'fin',
+      'ressources',
+      'charge',
+    ]);
+    const masquee = lireDisposition(
+      stockage({ 'planersource.gantt.accueil': '{"colonnes":{"ressources":false}}' }),
+      'accueil',
+    );
+    expect(masquee).toEqual({ colonnes: { ressources: false } });
+    expect(colonnesAffichees('accueil', masquee, { vendu: true })).toEqual([
+      'code',
+      'nom',
+      'debut',
+      'fin',
+    ]);
+    // Largeur par défaut 96 px, minimum 48 px (point 7).
+    expect(bornerColonne('projet', 'ressources', 10)).toBe(48);
+    expect(bornerColonne('projet', 'ressources', 96)).toBe(96);
   });
 });

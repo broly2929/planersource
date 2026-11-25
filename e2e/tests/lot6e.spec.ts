@@ -3,6 +3,7 @@
 // Dates attendues lues dans GET /api/projets/:id/gantt (calcul de l'API, D0 = 2027-01-04), jamais recalculées.
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { MOT_DE_PASSE, connecterAvec, preparer } from './lot1-helpers.js';
 import { activiteAvec, calculer } from './lot3b-helpers.js';
 import { allerA, lireGantt, ouvrirCalendriers, ouvrirEquipes } from './lot3c-helpers.js';
@@ -116,10 +117,11 @@ test('E2E-377-r2 : liste « Planning de » avant le zoom : « Tous les projets �
   await expect(listeRessource(page)).toHaveCount(0);
 });
 
-test('E2E-378 : vue d’une ressource : colonnes, lignes, lien, boutons masqués, barres accent, nom accessible, lecture seule', async ({
+test('E2E-378-r1 : vue d’une ressource : colonnes, lignes, lien, boutons masqués, barres accent, nom accessible, lecture seule', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde(request);
   const d1 = await dates(request, m.p1.id, 'Analyse');
   const d2 = await dates(request, m.p2.id, 'Secrète');
@@ -248,10 +250,11 @@ test('E2E-380 : états : « Aucune tâche pour cette ressource. », bandeau « P
   await expect(lignes(page)).toHaveCount(0);
 });
 
-test('E2E-381-r2 : adresse (zoom conservé, valeurs invalides corrigées sans rechargement, retour à « Tous les projets ») et ordre de focus', async ({
+test('E2E-381-r3 : adresse (zoom conservé, valeurs invalides corrigées sans rechargement, retour à « Tous les projets ») et ordre de focus', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde(request);
   await loginAsAdmin(page);
   await page.goto(`/?ressource=${m.alice.id}&zoom=jour`);
@@ -323,7 +326,7 @@ test('E2E-381-r2 : adresse (zoom conservé, valeurs invalides corrigées sans re
   ]);
 });
 
-test('E2E-382-r1 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran ; Accueil : choix de la ressource, sa barre, retour à « Tous les projets »', async ({
+test('E2E-382-r2 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran ; Accueil : choix de la ressource, sa barre, retour à « Tous les projets »', async ({
   page,
   request,
 }) => {
@@ -391,7 +394,7 @@ test('E2E-382-r1 : parcours complet à l’écran (administrateur seul) : entit�
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 6E' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: RESSOURCE });
-  await assignation.getByLabel('Charge assignée (jours)').fill('4');
+  await assignation.getByLabel('Charge assignée (j)').fill('4');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 6E.*${RESSOURCE}`) })).toBeVisible();
 

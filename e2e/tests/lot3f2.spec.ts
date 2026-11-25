@@ -447,7 +447,7 @@ test('E2E-198-r1 : Échap ferme le menu et rend le focus à la zone d’origine,
   expect(await ordre(page)).toEqual(ORDRE_INITIAL);
 });
 
-test('E2E-199 : « Nouvelle activité » : POST de corps exact (rang de la ligne + 1), ordre, bandeau sans contour, barre active gardée, focus rendu', async ({
+test('E2E-199-r1 : « Nouvelle activité » : POST de corps exact (rang de la ligne + 1), ordre, bandeau sans contour, barre active gardée, focus rendu', async ({
   page,
   request,
 }) => {
@@ -463,7 +463,7 @@ test('E2E-199 : « Nouvelle activité » : POST de corps exact (rang de la ligne
   await expect.poll(() => r.creations.length).toBe(1);
   expect(r.creations[0]).toEqual({
     chemin: 'activites',
-    corps: { nom: 'Nouvelle A', parent_id: m.p.id, rang: 2 },
+    corps: { mode: 'ASAP', nom: 'Nouvelle A', parent_id: m.p.id, rang: 2 },
   });
   await expect
     .poll(() => ordre(page))
@@ -490,7 +490,7 @@ test('E2E-199 : « Nouvelle activité » : POST de corps exact (rang de la ligne
   await expect.poll(() => r.creations.length).toBe(2);
   expect(r.creations[1]).toEqual({
     chemin: 'activites',
-    corps: { nom: 'Nouvelle B', parent_id: null, rang: 3 },
+    corps: { mode: 'ASAP', nom: 'Nouvelle B', parent_id: null, rang: 3 },
   });
   await expect
     .poll(() => ordre(page))
@@ -513,7 +513,7 @@ test('E2E-199 : « Nouvelle activité » : POST de corps exact (rang de la ligne
   expect(r.calculs.length).toBe(0);
 });
 
-test('E2E-200 : « Nouveau jalon » depuis le tableau et « Nouvelle activité » depuis un losange : corps exacts, ordre', async ({
+test('E2E-200-r1 : « Nouveau jalon » depuis le tableau et « Nouvelle activité » depuis un losange : corps exacts, ordre', async ({
   page,
   request,
 }) => {
@@ -548,7 +548,7 @@ test('E2E-200 : « Nouveau jalon » depuis le tableau et « Nouvelle activité �
   await expect.poll(() => r.creations.length).toBe(2);
   expect(r.creations[1]).toEqual({
     chemin: 'activites',
-    corps: { nom: 'Act M', parent_id: null, rang: 6 },
+    corps: { mode: 'ASAP', nom: 'Act M', parent_id: null, rang: 6 },
   });
   await expect
     .poll(() => ordre(page))
@@ -567,7 +567,7 @@ test('E2E-200 : « Nouveau jalon » depuis le tableau et « Nouvelle activité �
   await expect(calendrier(page)).toBeFocused();
 });
 
-test('E2E-201 : « Nouvelle sous-activité » : dernier enfant, corps sans rang, retrait d’un niveau', async ({
+test('E2E-201-r1 : « Nouvelle sous-activité » : dernier enfant, corps sans rang, retrait d’un niveau', async ({
   page,
   request,
 }) => {
@@ -579,7 +579,7 @@ test('E2E-201 : « Nouvelle sous-activité » : dernier enfant, corps sans rang,
   await expect.poll(() => r.creations.length).toBe(1);
   expect(r.creations[0]).toEqual({
     chemin: 'activites',
-    corps: { nom: 'Fille P', parent_id: m.p.id },
+    corps: { mode: 'ASAP', nom: 'Fille P', parent_id: m.p.id },
   });
   expect(Object.keys(r.creations[0]!.corps as object)).not.toContain('rang');
   await expect
@@ -603,7 +603,7 @@ test('E2E-201 : « Nouvelle sous-activité » : dernier enfant, corps sans rang,
   await expect.poll(() => r.creations.length).toBe(2);
   expect(r.creations[1]).toEqual({
     chemin: 'activites',
-    corps: { nom: 'Fille R', parent_id: m.r.id },
+    corps: { mode: 'ASAP', nom: 'Fille R', parent_id: m.r.id },
   });
   await expect
     .poll(() => ordre(page))
@@ -657,7 +657,7 @@ test('E2E-202 : « Recalcul automatique » cochée : une création par le menu, 
   expect(r.ordre.length).toBe(2);
 });
 
-test('E2E-203-r2 : refus réels dans le dialogue laissé ouvert (parent assigné, parent clos), base inchangée ; témoin positif', async ({
+test('E2E-203-r3 : refus réels dans le dialogue laissé ouvert (parent assigné, parent clos), base inchangée ; témoin positif', async ({
   page,
   request,
 }) => {
@@ -673,7 +673,7 @@ test('E2E-203-r2 : refus réels dans le dialogue laissé ouvert (parent assigné
   await expect.poll(() => r.creations.length).toBe(1);
   expect(r.creations[0]).toEqual({
     chemin: 'activites',
-    corps: { nom: 'Fille Q', parent_id: m.q.id },
+    corps: { mode: 'ASAP', nom: 'Fille Q', parent_id: m.q.id },
   });
   await expect(d.getByText(T_PARENT_ASSIGNE)).toBeVisible();
   await expect(d).toBeVisible();
@@ -686,7 +686,7 @@ test('E2E-203-r2 : refus réels dans le dialogue laissé ouvert (parent assigné
   await expect.poll(() => r.creations.length).toBe(2);
   expect(r.creations[1]).toEqual({
     chemin: 'activites',
-    corps: { nom: 'Fille K', parent_id: m.k.id },
+    corps: { mode: 'ASAP', nom: 'Fille K', parent_id: m.k.id },
   });
   await expect(d2.getByText(T_PARENT_CLOS)).toBeVisible();
   await expect(d2.getByText(T_PARENT_ASSIGNE)).toHaveCount(0);
@@ -867,7 +867,7 @@ test('E2E-207 : copie « Enregistrer comme modèle » depuis le Gantt (administr
   await expect(page.getByRole('row', { name: /Copie de Projet E2E207/ })).toBeVisible();
 });
 
-test('E2E-208-r1 : parcours complet à l’écran (chaîne d’E2E-192), puis création par le menu contextuel et copie depuis le Gantt', async ({
+test('E2E-208-r2 : parcours complet à l’écran (chaîne d’E2E-192), puis création par le menu contextuel et copie depuis le Gantt', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -912,7 +912,7 @@ test('E2E-208-r1 : parcours complet à l’écran (chaîne d’E2E-192), puis cr
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 3F-208' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource 3F-208' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche 3F-208.*Ressource 3F-208/ })).toBeVisible();
 
@@ -941,7 +941,7 @@ test('E2E-208-r1 : parcours complet à l’écran (chaîne d’E2E-192), puis cr
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche bis 3F-208' }).click();
   const assignation2 = page.getByRole('dialog');
   await assignation2.getByLabel('Ressource').selectOption({ label: 'Ressource 3F-208' });
-  await assignation2.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation2.getByLabel('Charge assignée (j)').fill('2');
   await assignation2.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche bis 3F-208.*Ressource 3F-208/ })).toBeVisible();
   await page.getByRole('button', { name: 'Modifier Tâche bis 3F-208', exact: true }).click();

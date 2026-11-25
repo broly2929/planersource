@@ -413,7 +413,7 @@ for (const largeur of [1440, 1024]) {
   });
 }
 
-test('E2E-376-r1 : parcours complet à l’écran (administrateur seul) : équipe, ressource et chef créés à l’écran, assignation ; Plan de charge filtré sur l’équipe, ligne de la ressource et dépliage du projet', async ({
+test('E2E-376-r2 : parcours complet à l’écran (administrateur seul) : équipe, ressource et chef créés à l’écran, assignation ; Plan de charge filtré sur l’équipe, ligne de la ressource et dépliage du projet', async ({
   page,
   request,
 }) => {
@@ -482,7 +482,7 @@ test('E2E-376-r1 : parcours complet à l’écran (administrateur seul) : équip
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 6D' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: RESSOURCE });
-  await assignation.getByLabel('Charge assignée (jours)').fill('4');
+  await assignation.getByLabel('Charge assignée (j)').fill('4');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 6D.*${RESSOURCE}`) })).toBeVisible();
 

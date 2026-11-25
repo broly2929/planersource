@@ -30,16 +30,16 @@ import { cliquerDansConfirmation } from './stabilite-helpers.js';
  *
  * Planning (lignes) :
  * - « Modifier <nom> » → activité : champs « Nom », liste « Mode », champ « Priorité », « Début
- *   validé », « Fin validée », « Durée validée (jours ouvrés) », case « Close », bouton
+ *   validé », « Fin validée », « Durée validée (j) », case « Close », bouton
  *   « Enregistrer ». Jalon : « Nom », liste « Type » (Flottant, Fixe), « Date validée »,
  *   « Enregistrer ».
  * - « Supprimer <nom> », « Monter <nom> », « Descendre <nom> » (rang ± 1 parmi les frères ; bouton
  *   désactivé en première ou dernière position).
  * - Colonne « Ressources », par ressource assignée : « Modifier l'assignation de <ressource> à
- *   <activité> » (champs « Charge assignée (jours) », « Taux (%) », « Enregistrer ») et « Retirer
+ *   <activité> » (champs « Charge assignée (j) », « Taux (%) », « Enregistrer ») et « Retirer
  *   <ressource> de <activité> » (confirmation, bouton « Supprimer »).
  * - Dépendances : « Modifier la dépendance <prédécesseur> → <successeur> » (liste « Type », champ
- *   « Délai (jours ouvrés) », « Enregistrer ») et « Supprimer la dépendance <prédécesseur> →
+ *   « Délai (j) », « Enregistrer ») et « Supprimer la dépendance <prédécesseur> →
  *   <successeur> ».
  *
  * Affectations : « Modifier l'affectation de <ressource> » (champs « Taux (%) », « Date de
@@ -194,7 +194,7 @@ test('E2E-17 : un chef modifie puis supprime une activité', async ({ page, requ
   await expect(page.getByRole('row', { name: /Étude révisée E2E17/ })).toHaveCount(0);
 });
 
-test('E2E-18-r1 : un chef modifie puis supprime un jalon et une dépendance', async ({
+test('E2E-18-r2 : un chef modifie puis supprime un jalon et une dépendance', async ({
   page,
   request,
 }) => {
@@ -230,7 +230,7 @@ test('E2E-18-r1 : un chef modifie puis supprime un jalon et une dépendance', as
     .click();
   dialog = page.getByRole('dialog');
   await dialog.getByLabel('Type').selectOption('DD');
-  await dialog.getByLabel('Délai (jours ouvrés)').fill('2');
+  await dialog.getByLabel('Délai (j)').fill('2');
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(
     dependances.getByRole('row', { name: /Amont E2E18.*Aval E2E18.*DD.*2/ }),
@@ -249,7 +249,7 @@ test('E2E-18-r1 : un chef modifie puis supprime un jalon et une dépendance', as
   await expect(dependances.getByText('Aucune dépendance définie.')).toBeVisible();
 });
 
-test('E2E-19-r1 : un chef modifie une affectation et une assignation, retire l’assignation, supprime l’affectation', async ({
+test('E2E-19-r2 : un chef modifie une affectation et une assignation, retire l’assignation, supprime l’affectation', async ({
   page,
   request,
 }) => {
@@ -280,12 +280,12 @@ test('E2E-19-r1 : un chef modifie une affectation et une assignation, retire l�
     .getByRole('button', { name: "Modifier l'assignation de Alice E2E19 à Étude E2E19" })
     .click();
   dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Charge assignée (jours)').fill('3');
+  await dialog.getByLabel('Charge assignée (j)').fill('3');
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
   await page
     .getByRole('button', { name: "Modifier l'assignation de Alice E2E19 à Étude E2E19" })
     .click();
-  await expect(page.getByRole('dialog').getByLabel('Charge assignée (jours)')).toHaveValue('3');
+  await expect(page.getByRole('dialog').getByLabel('Charge assignée (j)')).toHaveValue('3');
   await page.getByRole('dialog').getByRole('button', { name: 'Annuler' }).click();
 
   await page.getByRole('button', { name: 'Retirer Alice E2E19 de Étude E2E19' }).click();

@@ -70,6 +70,7 @@ async function copierContenu(
         fin_valide: decalerValidee(a.fin_valide, delta),
         duree_validee: a.duree_validee,
         charge_vendue: a.charge_vendue,
+        otp: a.otp,
       });
       nouveaux.set(a.id, creee.id);
     } else if (j) {
@@ -130,11 +131,12 @@ async function copierArbre(
     chef_id: c.par,
     date_debut: decaler(source.date_debut, c.delta)!,
     est_modele: c.options.est_modele,
+    otp: source.otp,
   });
   await copierContenu(c, source, cible, new Set());
   if (c.options.sous_projets) {
     const { rows } = await c.db.query<Projet>(
-      `SELECT id, code, nom, parent_id, est_modele, priorite, chef_id, date_debut, clos
+      `SELECT id, code, nom, parent_id, est_modele, priorite, chef_id, date_debut, clos, otp
          FROM projet WHERE parent_id = $1 ORDER BY id`,
       [source.id],
     );

@@ -3,6 +3,7 @@
 // (parcours complet, tout à l'écran).
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { connecterAvec } from './lot1-helpers.js';
 import { sousProjet } from './lot3b-helpers.js';
 import { cheminCapture } from './captures.js';
@@ -303,10 +304,11 @@ test('E2E-108-r1 refus 422 cycle simulé : noms résolus parmi les éléments ch
   }
 });
 
-test('E2E-109-r5 ordre de tabulation : zoom, « Calculer », « Tout déplier », tableau, calendrier', async ({
+test('E2E-109-r7 ordre de tabulation : zoom, « Calculer », « Tout déplier », tableau, calendrier', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const { api, chef } = await base3c(request);
   await api.projet('P109', 'Projet109', chef.id);
   await loginAsAdmin(page);
@@ -330,7 +332,7 @@ test('E2E-109-r5 ordre de tabulation : zoom, « Calculer », « Tout déplier »
   // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
   // Révision -r4 (D-216 (3)) : « Colonnes » après « Initiales » ; poignées de largeur des colonnes après la
   // zone du tableau, dans l'ordre des en-têtes, avant le contenu des lignes.
-  for (let i = 0; i < 17; i++) {
+  for (let i = 0; i < 18; i++) {
     await page.keyboard.press('Tab');
     ordre.push(await libelle());
   }
@@ -347,6 +349,7 @@ test('E2E-109-r5 ordre de tabulation : zoom, « Calculer », « Tout déplier »
     'Largeur de la colonne Nom',
     'Largeur de la colonne Début',
     'Largeur de la colonne Fin',
+    'Largeur de la colonne Ressources',
     'Largeur de la colonne Drapeaux',
     'Déplier Projet109',
     'Projet109',
@@ -356,7 +359,7 @@ test('E2E-109-r5 ordre de tabulation : zoom, « Calculer », « Tout déplier »
   ]);
 });
 
-test('E2E-110-r2 parcours complet à l’écran jusqu’au calcul lancé depuis l’Accueil', async ({
+test('E2E-110-r3 parcours complet à l’écran jusqu’au calcul lancé depuis l’Accueil', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -390,7 +393,7 @@ test('E2E-110-r2 parcours complet à l’écran jusqu’au calcul lancé depuis 
   await page.getByRole('button', { name: 'Assigner une ressource à Activité G4-110' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource G4-110' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Activité G4-110.*Ressource G4-110/ })).toBeVisible();
 

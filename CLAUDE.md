@@ -30,6 +30,7 @@
 - `git add` ciblé, fichier par fichier. Jamais `git add .` ni `-A`.
 - Preuve après chaque commit : `git log -3 --oneline && git status -sb`.
 - Tout commit qui touche la documentation exécute `npx vitest run scripts/test/aucune-reference-externe.test.ts` (PUB-1, PUB-2) avant le push (D-179).
+- Chaque push vers archive pousse aussi les tags : `git push archive travail` puis `git push archive --tags` (D-237). Preuve : aucun tag local absent de `git ls-remote --tags archive`.
 
 ## Fin de lot
 
@@ -38,14 +39,16 @@
 3. Suite complète unique, après la relecture : `npm run suite-complete -- --lot <nom>` (D-193).
 4. Mettre à jour `docs/state.md`, qui cite les lignes du journal du lot.
 5. Commit docs (journal compris), puis `git push`.
+6. Arrêter les processus lancés pendant le lot ou la session (API, front, piles e2e, commandes en arrière-plan) ; preuve : liste des processus restants affichée (D-220).
 
 Vérifications proportionnées (D-128) : phase rouge = vitest et e2e des seuls fichiers touchés, plus lint et typecheck ; suite complète une seule fois, en fin de phase verte ; 3 exécutions ciblées réservées aux nouveaux e2e en phase verte ; la CI exécute la suite complète à chaque push.
 
-Suite complète et base de test (D-193) : une seule suite complète par lot, après les corrections du reviewer, lancée par `npm run suite-complete -- --lot <nom>` (point d'entrée unique, journal `docs/journal-suites.jsonl`) ; une suite de plus pour le même lot exige `--justification`. Pendant le développement : passes ciblées seulement, par `npm run tests-cibles -- --depuis <commit d'ouverture> [--domaine <nom>…]` (le prompt d'ouverture du lot déclare ses domaines, `e2e/domaines.json` ; `--lister` pour voir la sélection) ou `npx vitest run <fichier>`, `cd e2e && npx playwright test -g <ID>`. Le rapport de clôture cite les lignes du journal du lot (`npm run suite-complete -- --lister <lot>`). Tout lancement ad hoc qui touche une base passe par `npm run avec-base-test -- <commande>` ; une base de test a un nom qui finit par `_test`. Règle complète : docs/tests.md. Commande longue (suite complète, passes multiples, au-delà du délai d'une commande) : lancée en arrière-plan, sortie dans un fichier ; ne jamais terminer le tour en l'attendant : boucle de `sleep 240` suivi de la lecture de la fin du fichier, jusqu'à la fin de la commande, puis enchaîner l'étape suivante.
+Suite complète et base de test (D-193) : une seule suite complète par lot, après les corrections du reviewer, lancée par `npm run suite-complete -- --lot <nom>` (point d'entrée unique, journal `docs/journal-suites.jsonl`) ; une suite de plus pour le même lot exige `--justification`. Pendant le développement : passes ciblées seulement, par `npm run tests-cibles -- --depuis <commit d'ouverture> [--domaine <nom>…]` (le prompt d'ouverture du lot déclare ses domaines, `e2e/domaines.json` ; `--lister` pour voir la sélection) ou `npx vitest run <fichier>`, `cd e2e && npx playwright test -g <ID>`. Le rapport de clôture cite les lignes du journal du lot (`npm run suite-complete -- --lister <lot>`). Tout lancement ad hoc qui touche une base passe par `npm run avec-base-test -- <commande>` ; une base de test a un nom qui finit par `_test`. Règle complète : docs/tests.md. Commande longue (suite complète, passes multiples, au-delà du délai d'une commande) : lancée en arrière-plan, sortie dans un fichier. Lancement : `nohup <commande> > <fichier>.log 2>&1 & echo $! > <fichier>.pid`. Attente par tranches de 60 s au plus, avec sortie dès la fin : `timeout 60 sh -c 'while kill -0 $(cat <fichier>.pid) 2>/dev/null; do sleep 10; done'; tail -n 15 <fichier>.log` ; répéter jusqu'à la fin, puis enchaîner l'étape suivante dans le même tour. Ne jamais terminer le tour pendant l'attente ; si le porteur écrit, répondre en une ligne (avancement lu dans la fin du fichier), puis reprendre l'attente. Fin constatée : code de sortie et fin du fichier affichés (D-237).
 
 ## Fin de session (même si le lot n'est pas fini)
 
 - Mettre à jour `docs/state.md`, commit, `git push`. Le dépôt distant doit toujours refléter l'état réel : c'est lui qui est lu depuis claude.ai.
+- Arrêter les processus lancés pendant le lot ou la session (API, front, piles e2e, commandes en arrière-plan) ; preuve : liste des processus restants affichée (D-220).
 
 ## Communication
 

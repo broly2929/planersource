@@ -14,6 +14,7 @@ import { useAuth } from '../auth';
 import { Link, sortir, usePath } from '../router';
 import { Button } from './Button';
 import { Notification } from './Notification';
+import { COMMIT, VERSION, useNouvelleVersion } from '../version';
 
 function NavLink({
   to,
@@ -58,6 +59,7 @@ export function Layout({
   const { etat, logout } = useAuth();
   const [erreur, setErreur] = useState(false);
   const user = etat.statut === 'connecte' ? etat.user : null;
+  const nouvelleVersion = useNouvelleVersion();
 
   const deconnecter = () => {
     setErreur(false);
@@ -126,9 +128,21 @@ export function Layout({
             <LogOut aria-hidden className="size-4" />
             Se déconnecter
           </Button>
+          <p className="text-petit text-gray-600">{`v${VERSION} · ${COMMIT}`}</p>
         </div>
       </aside>
       <main className="flex min-w-0 flex-1 flex-col">
+        {nouvelleVersion && (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-4 border-b border-warning bg-warning-bg px-6 py-2 text-warning"
+          >
+            <span>Nouvelle version disponible</span>
+            <Button variante="secondaire" onClick={() => sortir(() => window.location.reload())}>
+              Recharger
+            </Button>
+          </div>
+        )}
         <header className="flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3">
           <h1 className="text-titre font-semibold">{titre}</h1>
           <div className="flex items-center gap-2">{actions}</div>

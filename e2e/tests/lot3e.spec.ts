@@ -18,6 +18,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { connecterAvec } from './lot1-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, monde3b, sousProjet } from './lot3b-helpers.js';
@@ -455,10 +456,11 @@ test('E2E-178-r2 : clic sur un lien au zoom mois ouvre le dialogue ; sans droit 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('E2E-179-r5 : liens et connecteurs hors tabulation, ordre de tabulation de la fiche inchangé', async ({
+test('E2E-179-r7 : liens et connecteurs hors tabulation, ordre de tabulation de la fiche inchangé', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await mondeLiens(request, 'E2E179');
   await lier(request, m.projet.id, m.a.id, m.b.id);
   await ouvrirLiens(page, m);
@@ -505,6 +507,7 @@ test('E2E-179-r5 : liens et connecteurs hors tabulation, ordre de tabulation de 
     'Planification',
     'Début',
     'Fin',
+    'Ressources',
     'Charge',
     'Vendu',
     'Marge',
@@ -517,9 +520,24 @@ test('E2E-179-r5 : liens et connecteurs hors tabulation, ordre de tabulation de 
     ).toBeFocused();
   }
   // Révision -r3 (D-031, D-127 (6), (7)) : boutons-noms des éléments en ordre WBS, puis lien et crayon.
-  for (const nom of ['Tâche A', 'Tâche B', 'Jalon J', 'Tâche C']) {
+  // Révision -r7 (D-031, D-238 (6)) : le bouton d'assignation de la colonne Ressources suit le nom de sa ligne.
+  const assignation = (activite: string) =>
+    new RegExp(`^Modifier l'assignation de .* à ${activite}$`);
+  for (const nom of [
+    'Tâche A',
+    assignation('Tâche A'),
+    'Tâche B',
+    assignation('Tâche B'),
+    'Jalon J',
+    'Tâche C',
+  ]) {
     await page.keyboard.press('Tab');
-    await expect(tableau.getByRole('button', { name: nom, exact: true })).toBeFocused();
+    await expect(
+      tableau.getByRole(
+        'button',
+        typeof nom === 'string' ? { name: nom, exact: true } : { name: nom },
+      ),
+    ).toBeFocused();
     expect(await horsLiens()).toBe(true);
   }
   await page.keyboard.press('Tab');
@@ -542,7 +560,7 @@ test('E2E-179-r5 : liens et connecteurs hors tabulation, ordre de tabulation de 
   expect(await horsLiens()).toBe(true);
 });
 
-test('E2E-180-r1 : parcours complet à l’écran, puis lien par le connecteur avec recalcul automatique : la première activité commence après la seconde', async ({
+test('E2E-180-r2 : parcours complet à l’écran, puis lien par le connecteur avec recalcul automatique : la première activité commence après la seconde', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -587,7 +605,7 @@ test('E2E-180-r1 : parcours complet à l’écran, puis lien par le connecteur a
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 3E-180' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource 3E-180' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche 3E-180.*Ressource 3E-180/ })).toBeVisible();
 
@@ -616,7 +634,7 @@ test('E2E-180-r1 : parcours complet à l’écran, puis lien par le connecteur a
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche bis 3E-180' }).click();
   const assignation2 = page.getByRole('dialog');
   await assignation2.getByLabel('Ressource').selectOption({ label: 'Ressource 3E-180' });
-  await assignation2.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation2.getByLabel('Charge assignée (j)').fill('2');
   await assignation2.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche bis 3E-180.*Ressource 3E-180/ })).toBeVisible();
   await page.getByRole('button', { name: 'Modifier Tâche bis 3E-180', exact: true }).click();

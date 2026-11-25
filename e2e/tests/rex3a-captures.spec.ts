@@ -2,6 +2,7 @@
 // rex3a-{planning,dialogue,gantt,manuel}-{1440,1024}.png.
 import { expect, test, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { cheminCapture } from './captures.js';
 import { libelleCase, monde } from './lot2e-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b, sousProjet } from './lot3b-helpers.js';
@@ -25,7 +26,11 @@ async function photographier(page: Page, nom: string) {
   }
 }
 
-test('E2E-255 : captures de REX-3a (sans assertion fonctionnelle)', async ({ page, request }) => {
+test('E2E-255-r1 : captures de REX-3a (sans assertion fonctionnelle)', async ({
+  page,
+  request,
+}) => {
+  await colonnesCompletes(page);
   const m = await monde3b(request, 'E2E255', ['Alice', 'Bob']);
   const tache = await activiteAvec(request, m.projet.id, 'Tâche 255');
   await m.api.assignation(tache.id, m.gens.Alice!.id, 2);

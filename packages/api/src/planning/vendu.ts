@@ -42,6 +42,25 @@ export async function lireVendu(db: Db, projetId: number): Promise<Map<number, V
   return new Map(rows.map((r) => [r.id, { charge_vendue: r.charge_vendue, marge: r.marge }]));
 }
 
+/**
+ * Charge assignée de chaque activité du projet (D-220 (6)) : feuille = somme de ses assignations, parent = somme
+ * des feuilles descendantes. Absent = 0. Calculée à la lecture, jamais stockée.
+ */
+export async function lireAssignees(db: Db, projetId: number): Promise<Map<number, number>> {
+  const { rows } = await db.query<{ id: number; charge_assignee: number }>(
+    `WITH RECURSIVE lignee (racine, descendant) AS (
+       SELECT id, id FROM element WHERE projet_id = $1 AND type = 'activite'
+       UNION ALL
+       SELECT l.racine, e.id FROM lignee l JOIN element e ON e.parent_id = l.descendant
+     )
+     SELECT l.racine AS id, sum(s.charge_assignee) AS charge_assignee
+       FROM lignee l JOIN assignation s ON s.activite_id = l.descendant
+      GROUP BY l.racine`,
+    [projetId],
+  );
+  return new Map(rows.map((r) => [r.id, r.charge_assignee]));
+}
+
 export const AUCUN: Vendu = { charge_vendue: null, marge: null };
 
 /** Champs de 6c d'une activité, pour qui écrit sur le projet. */
@@ -63,10 +82,13 @@ export function vueActivite(
   a: Activite,
   vendu: Map<number, Vendu>,
   peutEcrire: boolean,
+  assignees: Map<number, number> = new Map(),
 ): Record<string, unknown> {
   const reste: Record<string, unknown> = { ...a };
   delete reste.charge_vendue;
-  return peutEcrire ? { ...reste, ...champsActivite(vendu, a.id) } : reste;
+  return peutEcrire
+    ? { ...reste, ...champsActivite(vendu, a.id), charge_assignee: assignees.get(a.id) ?? 0 }
+    : reste;
 }
 
 /** Jalon tel que renvoyé par l'API : sans les champs de 6c si l'utilisateur n'écrit pas. */

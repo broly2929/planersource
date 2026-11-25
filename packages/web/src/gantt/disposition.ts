@@ -28,7 +28,7 @@ export interface DefinitionColonne {
   defaut?: boolean;
   /** Colonne du nom : minimum de 120 px (D-212 (4)). */
   nom?: boolean;
-  /** Vendu et Marge : seulement si l'utilisateur écrit le projet (D-149 (8)). */
+  /** Vendu, Marge, Coût planifié et Coût réel : seulement si l'utilisateur écrit le projet (D-149 (8)). */
   vendu?: boolean;
 }
 
@@ -38,50 +38,61 @@ const toujours = (id: string, titre: string, nom = false): DefinitionColonne => 
   toujours: true,
   nom,
 });
-const choix = (id: string, titre: string, defaut = true, vendu = false): DefinitionColonne => ({
+const choix = (id: string, titre: string, defaut = false, vendu = false): DefinitionColonne => ({
   id,
   titre,
   defaut,
   vendu,
 });
 
-/** Colonnes de chaque vue, dans l'ordre fixe de l'écran et du menu (D-212 (4), D-216 (1), (7)). */
+/** Colonnes de chaque vue, dans l'ordre fixe de l'écran et du menu (D-212 (4), D-216 (1), (7)) ; défauts de D-227 (B) : seules Début et Fin sont au choix cochées. */
 export const COLONNES_GANTT: Record<VueGantt, DefinitionColonne[]> = {
   projet: [
     toujours('wbs', 'WBS'),
     toujours('nom', 'Nom', true),
-    choix('planification', 'Planification'),
-    choix('debut', 'Début'),
-    choix('fin', 'Fin'),
-    choix('charge', 'Charge'),
-    choix('vendu', 'Vendu', true, true),
-    choix('marge', 'Marge', true, true),
-    choix('avancement', 'Avancement'),
-    choix('drapeaux', 'Drapeaux'),
+    choix('planification', 'Planification', false),
+    choix('debut', 'Début', true),
+    choix('fin', 'Fin', true),
+    choix('ressources', 'Ressources', true),
+    choix('charge', 'Charge', false),
+    choix('vendu', 'Vendu', false, true),
+    choix('marge', 'Marge', false, true),
+    choix('avancement', 'Avancement', false),
+    choix('otp', 'OTP', false),
+    choix('cout_planifie', 'Coût planifié', false, true),
+    choix('cout_reel', 'Coût réel', false, true),
+    choix('drapeaux', 'Drapeaux', false),
   ],
   accueil: [
     toujours('code', 'Code'),
     toujours('nom', 'Nom', true),
-    choix('debut', 'Début'),
-    choix('fin', 'Fin'),
+    choix('debut', 'Début', true),
+    choix('fin', 'Fin', true),
+    choix('ressources', 'Ressources', true),
     choix('charge', 'Charge', false),
     choix('avancement', 'Avancement', false),
     choix('reel', 'Réel', false),
     choix('vendu', 'Vendu', false),
     choix('marge', 'Marge', false),
-    choix('drapeaux', 'Drapeaux'),
+    choix('otp', 'OTP', false),
+    choix('cout_planifie', 'Coût planifié', false),
+    choix('cout_reel', 'Coût réel', false),
+    choix('drapeaux', 'Drapeaux', false),
   ],
   ressource: [
     toujours('projet', 'Projet'),
     toujours('activite', 'Activité', true),
-    choix('debut', 'Début'),
-    choix('fin', 'Fin'),
-    choix('assigne', 'Assigné'),
-    choix('reel', 'Réel'),
-    choix('reste', 'Reste'),
-    choix('drapeaux', 'Drapeaux'),
+    choix('debut', 'Début', true),
+    choix('fin', 'Fin', true),
+    choix('assigne', 'Assigné', false),
+    choix('reel', 'Réel', false),
+    choix('reste', 'Reste', false),
+    choix('drapeaux', 'Drapeaux', false),
   ],
 };
+
+/** Largeur par défaut de colonnes à contenu variable (D-238 (7)) ; absente : largeur naturelle. */
+export const LARGEUR_DEFAUT_COLONNE: Record<string, number> = { ressources: 96 };
 
 /** Colonnes disponibles pour l'utilisateur : `vendu` faux retire Vendu et Marge du Gantt d'un projet. */
 export interface Disponibles {

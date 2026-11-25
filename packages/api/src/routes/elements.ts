@@ -27,7 +27,9 @@ import {
   RefusCloture,
   verrouillerRacines,
 } from '../planning/cloture.js';
-import { lireVendu, vueActivite, vueJalon } from '../planning/vendu.js';
+import { lireAssignees, lireVendu, vueActivite, vueJalon } from '../planning/vendu.js';
+import { avecOtp, lireOtpActivites } from '../planning/otp.js';
+import { otpCorps } from './otp.js';
 import type { AppDeps } from '../app.js';
 import { requireUser } from './acces.js';
 import { invalide, traduireErreur } from './erreurs-planning.js';
@@ -60,6 +62,7 @@ const creationActivite = z.strictObject({
   fin_valide: date.default(null),
   duree_validee: int4Corps.nullable().default(null),
   charge_vendue: chargeVendue.default(null),
+  otp: otpCorps.default(null),
 });
 const modificationActivite = z
   .strictObject({
@@ -71,6 +74,7 @@ const modificationActivite = z
     duree_validee: int4Corps.nullable(),
     close: z.boolean(),
     charge_vendue: chargeVendue,
+    otp: otpCorps,
   })
   .partial();
 const creationJalon = z.strictObject({
@@ -113,8 +117,10 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     const acces = await verdictProjet(pool, request.user!, identifiant(request.params.id), false);
     if (acces.verdict) return refuser(reply, acces.verdict);
     const vendu = await lireVendu(pool, acces.projet.id);
+    const assignees = acces.peutEcrire ? await lireAssignees(pool, acces.projet.id) : undefined;
+    const herite = await lireOtpActivites(pool, request.user!, acces.projet.id);
     return (await lireActivites(pool, acces.projet.id)).map((a) =>
-      vueActivite(a, vendu, acces.peutEcrire),
+      avecOtp(vueActivite(a, vendu, acces.peutEcrire, assignees), a.id, herite),
     );
   });
 
@@ -132,7 +138,16 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
           duree_validee: dureeParDefaut(d.mode, d.duree_validee),
         });
         await controlerDestination(db, acces.projet.id, d.parent_id);
-        return vueActivite(creee, await lireVendu(db, acces.projet.id), true);
+        return avecOtp(
+          vueActivite(
+            creee,
+            await lireVendu(db, acces.projet.id),
+            true,
+            await lireAssignees(db, acces.projet.id),
+          ),
+          creee.id,
+          await lireOtpActivites(db, request.user!, acces.projet.id),
+        );
       });
       return reply.code(201).send(activite);
     } catch (err) {
@@ -165,6 +180,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
           fin_valide: fusion.fin_valide,
           duree_validee: dureeParDefaut(fusion.mode, fusion.duree_validee),
           charge_vendue: fusion.charge_vendue,
+          otp: fusion.otp,
           ...(close === undefined ? {} : { close }),
         });
         // D-083 (2), (3) : seules les transitions de clôture sont contrôlées (D-083 (7)).
@@ -179,7 +195,16 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
             (await projetOuAncetreClos(db, activite.projet_id, true));
           if (parentClos) throw new RefusCloture('parent_clos');
         }
-        return vueActivite(apres, await lireVendu(db, apres.projet_id), true);
+        return avecOtp(
+          vueActivite(
+            apres,
+            await lireVendu(db, apres.projet_id),
+            true,
+            await lireAssignees(db, apres.projet_id),
+          ),
+          apres.id,
+          await lireOtpActivites(db, request.user!, apres.projet_id),
+        );
       });
       return resultat ?? refuser(reply, 'introuvable');
     } catch (err) {

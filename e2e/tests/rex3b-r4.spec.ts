@@ -2,6 +2,7 @@
 // E2E-290 (captures, sans assertion fonctionnelle).
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes, sansColonneRessources } from './colonnes-completes.js';
 import { cheminCapture } from './captures.js';
 import { activiteAvec, calculer, monde3b } from './lot3b-helpers.js';
 
@@ -80,10 +81,11 @@ async function verifierOmbre(tableau: Locator, quoi: string) {
   );
 }
 
-test('E2E-288-r1 : 1024 px, ombre portée sur l’en-tête et la cellule Drapeaux (Gantt du projet, Accueil), largeur inchangée', async ({
+test('E2E-288-r2 : 1024 px, ombre portée sur l’en-tête et la cellule Drapeaux (Gantt du projet, Accueil), largeur inchangée', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await mondeRetard(request, 'E2E288');
   await verifierOmbre(await ouvrirGantt(page, m, 1024), 'Gantt');
   await verifierOmbre(await ouvrirAccueil(page, m, 'Projet E2E288', 1024), 'Accueil');
@@ -101,10 +103,12 @@ async function separateurAuMaximum(page: Page) {
   await expect(sep).toHaveAttribute('aria-valuenow', String(max));
 }
 
-test('E2E-289-r1 : 1440 px, aucun en-tête de WBS à Avancement recouvert par Drapeaux ; la zone du tableau ne défile pas', async ({
+test('E2E-289-r3 : 1440 px, aucun en-tête de WBS à Avancement recouvert par Drapeaux ; la zone du tableau ne défile pas', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
+  await sansColonneRessources(page); // D-238 (1)
   const m = await monde3b(request, 'E2E289', ['Alice']);
   const a = await activiteAvec(request, m.projet.id, 'Pas avant 289', {
     mode: 'START',

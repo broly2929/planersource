@@ -37,7 +37,7 @@ Légende : « async » = le formulaire n'est pas monté à l'ouverture ou ses op
 | 18 | Nouvelle dépendance | `FormulaireDependance`, PlanningProjet.tsx:687 | Selects Prédécesseur, Successeur, Type ; Délai (nombre) | non | non |
 | 19 | Modifier l'activité | `FormulaireActivite` : PlanningProjet.tsx:702, GanttProjet.tsx:1044, Accueil.tsx:413 | Nom, Select Mode (conditionnel), Priorité, Début/Fin validée (dates), Durée (nombre), Charge vendue (nombre, conditionnelle), Case Close | non (lu avant l'ouverture, `modifier`) | non |
 | 20 | Modifier le jalon | `FormulaireJalon` : PlanningProjet.tsx:712, GanttProjet.tsx:1106, Accueil.tsx:427 | Nom, Select Type, Date validée, Date client (conditionnelle) | non | non |
-| 21 | Modifier l'assignation | `FormulaireModifAssignation`, PlanningProjet.tsx:722 | Charge assignée (nombre), Taux (nombre) | non | non |
+| 21 | Modifier l'assignation | `DialogueModifAssignation` (enveloppe de `FormulaireModifAssignation`, D-238) : PlanningProjet.tsx, GanttProjet.tsx et Accueil.tsx (boutons de la colonne Ressources) | Charge assignée (nombre), Taux (nombre) | non | non |
 | 22 | Modifier la dépendance | `FormulaireModifDependance` : PlanningProjet.tsx:738, GanttProjet.tsx:1058 | Select Type, Délai (nombre) | non | non |
 | 23 bis | Rejeter la feuille de <ressource> (déplacé depuis B) | Validation.tsx:424 | textarea Commentaire (1 à 500 caractères) | non | non |
 
@@ -53,7 +53,7 @@ Soupape nécessaire : aucune à ce jour. La propriété `modifie` reste disponib
 | 26 | Feuille de <ressource>, semaine … (Voir) | Validation.tsx:355 | tableau en lecture seule | aucun champ modifiable |
 | 27 | Confirmations (suppression, Valider, Dévalider, « Abandonner les modifications ? ») | `Confirmation`, une dizaine d'emplacements | aucun champ | aucun formulaire ; jamais de confirmation de confirmation |
 
-Au total : 23 dialogues gardés (22 de création ou de modification, 38 emplacements d'appel, plus Rejeter) et 5 dialogues sans garde (D-188 (10)).
+Au total : 23 dialogues gardés (22 de création ou de modification, 40 emplacements d'appel dont les deux ouvertures du dialogue 21 depuis la colonne Ressources du Gantt et de l'Accueil, D-238, plus Rejeter) et 5 dialogues sans garde (D-188 (10)).
 
 ## Couverture des types de champ (pour les E2E de non-régression, D-188 (8))
 
@@ -68,3 +68,12 @@ Au total : 23 dialogues gardés (22 de création ou de modification, 38 emplacem
 | Case (checkbox) | Modifier le calendrier (2) |
 | chargement asynchrone | Modifier le projet (8) ; options de l'annuaire : Nouveau projet (7) ; « prêt » défini en D-188 (10) b |
 | champ conditionnel | aucun champ n'est ajouté ou retiré par la saisie (les conditions portent sur le rôle ou le type, fixes à l'ouverture : 8, 9, 19, 20) ; le cas « clé ajoutée ou retirée » est couvert par le test unitaire de comparaison |
+
+## Mise à jour saisie-activites (D-222, 2026-11-24)
+
+Dialogues touchés (garde D-188 conservée, tous restent dans la catégorie A) :
+
+- 14, 15, 16 (Nouvelle activité, Nouveau jalon, Nouvelle sous-activité) : champ ajouté « Activité parente » (Select natif, options connues à l'ouverture) ; la sous-activité préremplit le parent.
+- 19 (Modifier l'activité) : champ « Activité parente » ; sous-sections « Prédécesseurs » et « Successeurs » (ajout, modification, suppression enregistrés tout de suite, avec confirmations) ; un ajout saisi non envoyé compte comme une modification (garde) ; activité parente : mode et dates validées absents. Dialogues imbriqués : les confirmations de suppression ouvrent une `Confirmation` (catégorie B, sans garde) au-dessus du dialogue.
+- 20 (Modifier le jalon) : champ « Activité parente » ; pas de dépendances.
+

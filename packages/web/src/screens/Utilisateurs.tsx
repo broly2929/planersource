@@ -17,6 +17,7 @@ import { navigate, usePath, useSearch } from '../router';
 import { FormulaireDialogue, messageErreur, ONGLET } from './projet/commun';
 import { OngletCalendriers, type Calendrier } from './Calendriers';
 import { OngletEquipes, type Equipe } from './Equipes';
+import { DialoguesTaux, SectionTaux, useTauxJournaliers } from './TauxJournaliers';
 
 const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({
   value: r,
@@ -35,6 +36,7 @@ const validerIdentite = (login: string, email: string) => () =>
 /** Texte d'un 409 de l'écran, distingué par le message d'erreur de l'API (D-073). */
 function conflitUtilisateur(err: ApiError): string {
   const m = (err.erreur ?? '').toLowerCase();
+  if (m.includes('taux')) return 'Cet utilisateur a des taux journaliers : il reste ressource.';
   if (m.includes('identifiant')) return LOGIN_UTILISE;
   if (m.includes('affecté'))
     return 'Cet utilisateur est affecté à des projets : il reste ressource.';
@@ -202,6 +204,8 @@ function FormulaireModification({
   const [equipe, setEquipe] = useState(u.equipe_id === null ? AUCUNE : String(u.equipe_id));
   const [actif, setActif] = useState(u.actif);
   const [motDePasse, setMotDePasse] = useState('');
+  // Taux journaliers (D-225, SPEC §12.1 point 9) : utilisateur ressource seulement.
+  const taux = useTauxJournaliers(u.id);
 
   // Seuls les champs modifiés partent dans le PATCH ; mot de passe vide = inchangé.
   const modifies = () => ({
@@ -225,77 +229,81 @@ function FormulaireModification({
   });
 
   return (
-    <FormulaireDialogue
-      libelle="Enregistrer"
-      valider={validerIdentite(login, email)}
-      envoyer={() => {
-        return api(`/api/utilisateurs/${u.id}`, { method: 'PATCH', body: modifies() });
-      }}
-      onSucces={onSucces}
-      onAnnuler={onAnnuler}
-      texteErreur={texteErreurUtilisateur}
-    >
-      <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
-      <Field
-        label="Identifiant"
-        autoComplete="off"
-        value={login}
-        onChange={(e) => setLogin(e.target.value)}
-      />
-      <Field
-        label="Initiales"
-        maxLength={4}
-        value={initiales}
-        onChange={(e) => setInitiales(e.target.value)}
-      />
-      <Field
-        label="Email"
-        type="email"
-        autoComplete="off"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <Select
-        label="Rôle"
-        options={ROLE_OPTIONS}
-        value={role}
-        onChange={(e) => setRole(e.target.value as Role)}
-      />
-      <Case
-        label="Ressource planifiable"
-        checked={ressource}
-        onChange={(e) => setRessource(e.target.checked)}
-      />
-      <Field
-        label="Capacité (j/jour)"
-        type="number"
-        required
-        min="0.01"
-        step="any"
-        value={capacite}
-        onChange={(e) => setCapacite(e.target.value)}
-      />
-      <Select
-        label="Calendrier"
-        options={optionsCalendrier(calendriers)}
-        value={calendrier}
-        onChange={(e) => setCalendrier(e.target.value)}
-      />
-      <Select
-        label="Équipe"
-        options={optionsEquipe(equipes)}
-        value={equipe}
-        onChange={(e) => setEquipe(e.target.value)}
-      />
-      <Case label="Actif" checked={actif} onChange={(e) => setActif(e.target.checked)} />
-      <Field
-        label="Nouveau mot de passe"
-        type="password"
-        autoComplete="new-password"
-        value={motDePasse}
-        onChange={(e) => setMotDePasse(e.target.value)}
-      />
-    </FormulaireDialogue>
+    <>
+      <FormulaireDialogue
+        libelle="Enregistrer"
+        valider={validerIdentite(login, email)}
+        envoyer={() => {
+          return api(`/api/utilisateurs/${u.id}`, { method: 'PATCH', body: modifies() });
+        }}
+        onSucces={onSucces}
+        onAnnuler={onAnnuler}
+        texteErreur={texteErreurUtilisateur}
+      >
+        <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
+        <Field
+          label="Identifiant"
+          autoComplete="off"
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
+        />
+        <Field
+          label="Initiales"
+          maxLength={4}
+          value={initiales}
+          onChange={(e) => setInitiales(e.target.value)}
+        />
+        <Field
+          label="Email"
+          type="email"
+          autoComplete="off"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Select
+          label="Rôle"
+          options={ROLE_OPTIONS}
+          value={role}
+          onChange={(e) => setRole(e.target.value as Role)}
+        />
+        <Case
+          label="Ressource planifiable"
+          checked={ressource}
+          onChange={(e) => setRessource(e.target.checked)}
+        />
+        <Field
+          label="Capacité (j/jour)"
+          type="number"
+          required
+          min="0.01"
+          step="any"
+          value={capacite}
+          onChange={(e) => setCapacite(e.target.value)}
+        />
+        <Select
+          label="Calendrier"
+          options={optionsCalendrier(calendriers)}
+          value={calendrier}
+          onChange={(e) => setCalendrier(e.target.value)}
+        />
+        <Select
+          label="Équipe"
+          options={optionsEquipe(equipes)}
+          value={equipe}
+          onChange={(e) => setEquipe(e.target.value)}
+        />
+        <Case label="Actif" checked={actif} onChange={(e) => setActif(e.target.checked)} />
+        <Field
+          label="Nouveau mot de passe"
+          type="password"
+          autoComplete="new-password"
+          value={motDePasse}
+          onChange={(e) => setMotDePasse(e.target.value)}
+        />
+        {u.est_ressource && <SectionTaux ctl={taux} />}
+      </FormulaireDialogue>
+      {u.est_ressource && <DialoguesTaux ctl={taux} />}
+    </>
   );
 }
 

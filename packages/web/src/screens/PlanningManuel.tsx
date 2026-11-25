@@ -301,7 +301,7 @@ function GrilleChargee({
                 scope="col"
                 className="sticky right-0 z-10 border-b border-l border-gray-200 bg-gray-100 px-3 py-2 text-right font-semibold whitespace-nowrap"
               >
-                Total du mois (jours)
+                Total du mois (j)
               </th>
             </tr>
           </thead>

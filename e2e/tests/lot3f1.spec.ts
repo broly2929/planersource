@@ -19,6 +19,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { connecterAvec } from './lot1-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, monde3b, sousProjet } from './lot3b-helpers.js';
@@ -730,10 +731,11 @@ test('E2E-190 : refus dans le dialogue « Déplacer » : texte affiché, dialogu
   await expect.poll(() => ordre(page)).toEqual(ORDRE_INITIAL);
 });
 
-test('E2E-191-r5 : poignées hors tabulation, ordre de tabulation de la fiche inchangé', async ({
+test('E2E-191-r7 : poignées hors tabulation, ordre de tabulation de la fiche inchangé', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await mondeArbo(request, 'E2E191');
   await ouvrir(page, m);
   // Témoin positif : il y a bien des poignées dans la page.
@@ -770,6 +772,7 @@ test('E2E-191-r5 : poignées hors tabulation, ordre de tabulation de la fiche in
     'Planification',
     'Début',
     'Fin',
+    'Ressources',
     'Charge',
     'Vendu',
     'Marge',
@@ -783,9 +786,24 @@ test('E2E-191-r5 : poignées hors tabulation, ordre de tabulation de la fiche in
   }
   expect(await surPoignee()).toBe(false);
   // Révision -r3 (D-031, D-127 (6), (7)) : boutons-noms des éléments en ordre WBS, puis lien et crayon.
-  for (const nom of ['Phase P', 'Sous P1', 'Sous P2', 'Tâche Q', 'Tâche R', 'Jalon J', 'Clos K']) {
+  // Révision -r7 (D-031, D-238 (6)) : le bouton d'assignation de la colonne Ressources suit le nom de sa ligne.
+  for (const nom of [
+    'Phase P',
+    'Sous P1',
+    'Sous P2',
+    'Tâche Q',
+    /^Modifier l'assignation de .* à Tâche Q$/,
+    'Tâche R',
+    'Jalon J',
+    'Clos K',
+  ]) {
     await page.keyboard.press('Tab');
-    await expect(region.getByRole('button', { name: nom, exact: true })).toBeFocused();
+    await expect(
+      region.getByRole(
+        'button',
+        typeof nom === 'string' ? { name: nom, exact: true } : { name: nom },
+      ),
+    ).toBeFocused();
     expect(await surPoignee()).toBe(false);
   }
   await page.keyboard.press('Tab');
@@ -808,7 +826,7 @@ test('E2E-191-r5 : poignées hors tabulation, ordre de tabulation de la fiche in
   expect(await surPoignee()).toBe(false);
 });
 
-test('E2E-192-r1 : parcours complet à l’écran (chaîne d’E2E-180), puis changement de parent par le glisser et par le dialogue', async ({
+test('E2E-192-r2 : parcours complet à l’écran (chaîne d’E2E-180), puis changement de parent par le glisser et par le dialogue', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -853,7 +871,7 @@ test('E2E-192-r1 : parcours complet à l’écran (chaîne d’E2E-180), puis ch
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 3F-192' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource 3F-192' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche 3F-192.*Ressource 3F-192/ })).toBeVisible();
 
@@ -882,7 +900,7 @@ test('E2E-192-r1 : parcours complet à l’écran (chaîne d’E2E-180), puis ch
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche bis 3F-192' }).click();
   const assignation2 = page.getByRole('dialog');
   await assignation2.getByLabel('Ressource').selectOption({ label: 'Ressource 3F-192' });
-  await assignation2.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation2.getByLabel('Charge assignée (j)').fill('2');
   await assignation2.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche bis 3F-192.*Ressource 3F-192/ })).toBeVisible();
   await page.getByRole('button', { name: 'Modifier Tâche bis 3F-192', exact: true }).click();

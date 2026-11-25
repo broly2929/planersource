@@ -129,7 +129,7 @@ async function pageNeuve(browser: Browser): Promise<Page> {
   return contexte.newPage();
 }
 
-test('E2E-46-r1 parcours complet à l’écran, base avec l’administrateur seul', async ({ page }) => {
+test('E2E-46-r2 parcours complet à l’écran, base avec l’administrateur seul', async ({ page }) => {
   await remettreAdminSeul();
   await loginAsAdmin(page);
 
@@ -168,7 +168,7 @@ test('E2E-46-r1 parcours complet à l’écran, base avec l’administrateur seu
   const assignation = page.getByRole('dialog');
   await expect(assignation.getByRole('option', { name: 'Ressource R1-46' })).toHaveCount(1);
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource R1-46' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Activité R1-46.*Ressource R1-46/ })).toBeVisible();
 });

@@ -3,6 +3,7 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import pg from 'pg';
 import { loginAsAdmin } from './helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { connecterAvec, preparer } from './lot1-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, sousProjet } from './lot3b-helpers.js';
@@ -127,7 +128,11 @@ test('E2E-86-r1 racines triées par code ; sous-projets, projet clos, sa descend
   await expect(page).toHaveURL(`/projets/${a.id}`);
 });
 
-test('E2E-87 colonnes, dates, barres de synthèse et trait du jour', async ({ page, request }) => {
+test('E2E-87-r2 colonnes, dates, barres de synthèse et trait du jour', async ({
+  page,
+  request,
+}) => {
+  await colonnesCompletes(page);
   const api = await preparer(request);
   const admin = await adminId(request);
   const res = await api.utilisateur('Ressource87', 'r87@g2.test', 'ressource', true);
@@ -143,6 +148,7 @@ test('E2E-87 colonnes, dates, barres de synthèse et trait du jour', async ({ pa
     'Nom',
     'Début',
     'Fin',
+    'Ressources',
     'Drapeaux',
   ]);
   for (const code of ['P87-1', 'P87-2']) {
@@ -239,7 +245,8 @@ test('E2E-91-r2 chef affecté à un sous-projet seulement (lecture seule) : il e
   );
 });
 
-test('E2E-92-r8 zones focalisables nommées et ordre de tabulation', async ({ page, request }) => {
+test('E2E-92-r10 zones focalisables nommées et ordre de tabulation', async ({ page, request }) => {
+  await colonnesCompletes(page);
   const api = await preparer(request);
   await api.projet('P92', 'Projet92', await adminId(request));
   await loginAsAdmin(page);
@@ -266,7 +273,7 @@ test('E2E-92-r8 zones focalisables nommées et ordre de tabulation', async ({ pa
   // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
   // Révision -r7 (D-216 (3)) : « Colonnes » après « Initiales » ; poignées de largeur des colonnes après la zone
   // du tableau, dans l'ordre des en-têtes, avant le contenu des lignes.
-  for (let i = 0; i < 17; i++) {
+  for (let i = 0; i < 18; i++) {
     await page.keyboard.press('Tab');
     ordre.push(await libelle());
   }
@@ -283,6 +290,7 @@ test('E2E-92-r8 zones focalisables nommées et ordre de tabulation', async ({ pa
     'Largeur de la colonne Nom',
     'Largeur de la colonne Début',
     'Largeur de la colonne Fin',
+    'Largeur de la colonne Ressources',
     'Largeur de la colonne Drapeaux',
     'Déplier Projet92',
     'Projet92',

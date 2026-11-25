@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { activiteAvec, calculer, jalonAvec, monde3b, sousProjet } from './lot3b-helpers.js';
 
 /*
@@ -41,10 +42,11 @@ async function ouvrir(
 }
 
 for (const largeur of LARGEURS) {
-  test(`E2E-43-r7 (${largeur} px) : zones à défilement en région focalisable, ordre de tabulation, barres et jalons hors tabulation`, async ({
+  test(`E2E-43-r9 (${largeur} px) : zones à défilement en région focalisable, ordre de tabulation, barres et jalons hors tabulation`, async ({
     page,
     request,
   }) => {
+    await colonnesCompletes(page);
     const m = await ouvrir(page, request, `E2E43-${largeur}`, largeur, 'semaine');
     const tableau = page.getByRole('region', { name: 'Tableau du Gantt', exact: true });
     const calendrier = page.getByRole('region', { name: 'Calendrier du Gantt', exact: true });
@@ -101,6 +103,7 @@ for (const largeur of LARGEURS) {
       'Planification',
       'Début',
       'Fin',
+      'Ressources',
       'Charge',
       'Vendu',
       'Marge',
@@ -114,9 +117,15 @@ for (const largeur of LARGEURS) {
     }
     // Révision -r5 (D-031, D-127 (6), (7)) : les boutons-noms des éléments, en ordre WBS, puis le lien et
     // le crayon du sous-projet.
-    for (const nom of ['Activité A', 'Jalon J']) {
+    // Révision -r9 (D-031, D-238 (6)) : le bouton d'assignation de la colonne Ressources suit le nom de sa ligne.
+    for (const nom of ['Activité A', /^Modifier l'assignation de .* à Activité A$/, 'Jalon J']) {
       await page.keyboard.press('Tab');
-      await expect(tableau.getByRole('button', { name: nom, exact: true })).toBeFocused();
+      await expect(
+        tableau.getByRole(
+          'button',
+          typeof nom === 'string' ? { name: nom, exact: true } : { name: nom },
+        ),
+      ).toBeFocused();
       expect(await horsBarre()).toBe(true);
     }
     await page.keyboard.press('Tab');

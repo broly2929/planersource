@@ -38,27 +38,42 @@ const REGIONS: Record<Vue, string> = {
   accueil: 'Tableau du Gantt global',
   ressource: 'Tableau du planning de la ressource',
 };
-/** En-têtes par défaut (colonnes actuelles, D-212 (4)), utilisateur qui écrit le projet. */
+/** En-têtes par défaut (D-227 (B), révise D-212 (4) et D-216 (9) (a)), utilisateur qui écrit le projet. */
 const ENTETES: Record<Vue, string[]> = {
+  projet: ['WBS', 'Nom', 'Début', 'Fin', 'Ressources'],
+  accueil: ['Code', 'Nom', 'Début', 'Fin', 'Ressources'],
+  ressource: ['Projet', 'Activité', 'Début', 'Fin'],
+};
+/** Éléments du menu, dans l'ordre fixe (D-212 (4), D-216 (1), (7)). */
+const MENUS: Record<Vue, string[]> = {
   projet: [
-    'WBS',
-    'Nom',
     'Planification',
     'Début',
     'Fin',
+    'Ressources',
     'Charge',
     'Vendu',
     'Marge',
     'Avancement',
+    'OTP',
+    'Coût planifié',
+    'Coût réel',
     'Drapeaux',
   ],
-  accueil: ['Code', 'Nom', 'Début', 'Fin', 'Drapeaux'],
-  ressource: ['Projet', 'Activité', 'Début', 'Fin', 'Assigné', 'Réel', 'Reste', 'Drapeaux'],
-};
-/** Éléments du menu, dans l'ordre fixe (D-212 (4), D-216 (1), (7)). */
-const MENUS: Record<Vue, string[]> = {
-  projet: ['Planification', 'Début', 'Fin', 'Charge', 'Vendu', 'Marge', 'Avancement', 'Drapeaux'],
-  accueil: ['Début', 'Fin', 'Charge', 'Avancement', 'Réel', 'Vendu', 'Marge', 'Drapeaux'],
+  accueil: [
+    'Début',
+    'Fin',
+    'Ressources',
+    'Charge',
+    'Avancement',
+    'Réel',
+    'Vendu',
+    'Marge',
+    'OTP',
+    'Coût planifié',
+    'Coût réel',
+    'Drapeaux',
+  ],
   ressource: ['Début', 'Fin', 'Assigné', 'Réel', 'Reste', 'Drapeaux'],
 };
 const TOUJOURS: Record<Vue, string[]> = {
@@ -212,14 +227,14 @@ function suivreErreurs(p: Page): string[] {
 }
 
 const numeros: Record<Vue, Record<'a' | 'b' | 'c' | 'd' | 'e', string>> = {
-  projet: { a: 'E2E-540-r2', b: 'E2E-543-r1', c: 'E2E-546-r1', d: 'E2E-549-r1', e: 'E2E-552-r1' },
-  accueil: { a: 'E2E-541-r3', b: 'E2E-544-r2', c: 'E2E-547-r2', d: 'E2E-550-r2', e: 'E2E-553-r2' },
+  projet: { a: 'E2E-540-r5', b: 'E2E-543-r1', c: 'E2E-546-r3', d: 'E2E-549-r3', e: 'E2E-552-r3' },
+  accueil: { a: 'E2E-541-r6', b: 'E2E-544-r2', c: 'E2E-547-r4', d: 'E2E-550-r4', e: 'E2E-553-r4' },
   ressource: {
-    a: 'E2E-542-r2',
+    a: 'E2E-542-r3',
     b: 'E2E-545-r1',
-    c: 'E2E-548-r1',
-    d: 'E2E-551-r1',
-    e: 'E2E-554-r1',
+    c: 'E2E-548-r2',
+    d: 'E2E-551-r2',
+    e: 'E2E-554-r2',
   },
 };
 
@@ -271,7 +286,7 @@ for (const v of VUES) {
       await element(page, 'Charge').click();
       await expect
         .poll(() => entetes(page, v))
-        .toEqual(['Code', 'Nom', 'Début', 'Fin', 'Charge', 'Drapeaux']);
+        .toEqual(['Code', 'Nom', 'Début', 'Fin', 'Ressources', 'Charge']);
       await cellulesAlignees(page, v);
       await element(page, 'Charge').click();
       await expect.poll(() => entetes(page, v)).toEqual(ENTETES[v]);
@@ -294,13 +309,15 @@ for (const v of VUES) {
       await expect(element(page, MENUS[v][i]!)).toBeFocused();
     }
     await expect(element(page, 'Drapeaux')).toBeFocused();
+    // Drapeaux est décochée par défaut (D-227 (B)) : Espace la coche, puis la décoche.
+    await expect(element(page, 'Drapeaux')).toHaveAttribute('aria-checked', 'false');
     await page.keyboard.press('Space');
     await expect(menu(page)).toBeVisible();
-    await expect(element(page, 'Drapeaux')).toHaveAttribute('aria-checked', 'false');
-    await expect(entete(page, v, 'Drapeaux')).toHaveCount(0);
+    await expect(element(page, 'Drapeaux')).toHaveAttribute('aria-checked', 'true');
+    await expect(entete(page, v, 'Drapeaux')).toHaveCount(1);
     await cellulesAlignees(page, v);
     await page.keyboard.press('Space');
-    await expect(element(page, 'Drapeaux')).toHaveAttribute('aria-checked', 'true');
+    await expect(element(page, 'Drapeaux')).toHaveAttribute('aria-checked', 'false');
     await expect.poll(() => entetes(page, v)).toEqual(ENTETES[v]);
     await page.keyboard.press('Escape');
     await expect(menu(page)).toHaveCount(0);
@@ -504,6 +521,8 @@ for (const v of VUES) {
     const m = await monde(request, suffixe(n.e));
     for (const largeur of [1440, 1024]) {
       await ouvrir(page, m, v, largeur, largeur === 1440);
+      // Drapeaux est décochée par défaut (D-227 (B)) : cochée par le menu, comme avant le critère.
+      await basculer(page, ['Drapeaux']);
       const zone = await boite(zoneTableau(page, v));
       const ths = zoneTableau(page, v).getByRole('columnheader');
       const premiere = await boite(ths.nth(0));
@@ -533,7 +552,7 @@ for (const v of VUES) {
       }
 
       // Toutes les colonnes affichées.
-      const decoches = MENUS[v].filter((t) => !ENTETES[v].includes(t));
+      const decoches = MENUS[v].filter((t) => !ENTETES[v].includes(t) && t !== 'Drapeaux');
       if (decoches.length > 0) await basculer(page, decoches);
       expect(await entetes(page, v)).toEqual([...TOUJOURS[v], ...MENUS[v]]);
       const pageLarge = await page.evaluate(() => ({
@@ -568,7 +587,7 @@ for (const v of VUES) {
   });
 }
 
-test('E2E-555-r1 : Gantt d’un projet, chef qui lit sans écrire : menu sans Vendu ni Marge', async ({
+test('E2E-555-r4 : Gantt d’un projet, chef qui lit sans écrire : menu sans Vendu ni Marge', async ({
   page,
   request,
 }) => {
@@ -584,11 +603,20 @@ test('E2E-555-r1 : Gantt d’un projet, chef qui lit sans écrire : menu sans Ve
   await ouvrirMenu(page);
   expect(
     (await menu(page).getByRole('menuitemcheckbox').allTextContents()).map((t) => t.trim()),
-  ).toEqual(['Planification', 'Début', 'Fin', 'Charge', 'Avancement', 'Drapeaux']);
+  ).toEqual([
+    'Planification',
+    'Début',
+    'Fin',
+    'Ressources',
+    'Charge',
+    'Avancement',
+    'OTP',
+    'Drapeaux',
+  ]);
   await fermerMenu(page);
 });
 
-test('E2E-556-r2 : Accueil, colonnes Charge, Avancement, Réel, Vendu, Marge : valeurs des éléments, lignes de projet vides, Vendu et Marge vides sur un projet en lecture, marge négative en couleur flag', async ({
+test('E2E-556-r4 : Accueil, colonnes Charge, Avancement, Réel, Vendu, Marge : valeurs des éléments, lignes de projet vides, Vendu et Marge vides sur un projet en lecture, marge négative en couleur flag', async ({
   page,
   request,
   playwright,
@@ -628,13 +656,14 @@ test('E2E-556-r2 : Accueil, colonnes Charge, Avancement, Réel, Vendu, Marge : v
   const zone = zoneTableau(page, 'accueil');
   await expect(zone.getByText('Tâche V', { exact: true })).toBeVisible();
   await expect(zone.getByText('Tâche L', { exact: true })).toBeVisible();
-  await basculer(page, ['Charge', 'Avancement', 'Réel', 'Vendu', 'Marge']);
+  await basculer(page, ['Charge', 'Avancement', 'Réel', 'Vendu', 'Marge', 'Drapeaux']);
   const titres = await entetes(page, 'accueil');
   expect(titres).toEqual([
     'Code',
     'Nom',
     'Début',
     'Fin',
+    'Ressources',
     'Charge',
     'Avancement',
     'Réel',

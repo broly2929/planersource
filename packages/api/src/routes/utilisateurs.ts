@@ -147,6 +147,15 @@ export function utilisateursRoutes(
             .code(409)
             .send({ erreur: 'Utilisateur affecté à des projets : il reste ressource' });
         }
+        // Seule une ressource a un taux journalier (SPEC §12.1 point 8, D-225 (F) (1)).
+        const taux = await client.query(
+          'SELECT 1 FROM taux_journalier WHERE utilisateur_id = $1 LIMIT 1',
+          [id],
+        );
+        if (taux.rowCount) {
+          await client.query('ROLLBACK');
+          return reply.code(409).send({ erreur: 'Utilisateur avec des taux : il reste ressource' });
+        }
       }
       const perdAdmin = avant.role === 'administrateur' && avant.actif && (desactive || roleChange);
       if (perdAdmin && (admins.rowCount ?? 0) <= 1) {

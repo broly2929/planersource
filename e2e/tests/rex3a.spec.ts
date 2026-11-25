@@ -15,6 +15,7 @@
 // Colonnes de l'onglet Planning : 0 WBS, 1 Nom, 2 Type, 3 Ressources, 4 Actions.
 import { expect, test, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { libelleCase, lireSaisies, monde } from './lot2e-helpers.js';
 import { activiteAvec, jalonAvec, monde3b, sousProjet } from './lot3b-helpers.js';
@@ -114,7 +115,7 @@ test('E2E-247 : onglet Planning, Monter et Descendre : focus conservé (ou sur l
   expect(await ordre()).toEqual(['Charlie 247', 'Bravo 247', 'Alpha 247']);
 });
 
-test('E2E-248 : onglet Planning : « Assigner une ressource à <nom> » à la fin de la colonne Ressources, absent de la colonne Actions ; assignation créée par l’écran ; aucun bouton sur un parent ni un jalon', async ({
+test('E2E-248-r1 : onglet Planning : « Assigner une ressource à <nom> » à la fin de la colonne Ressources, absent de la colonne Actions ; assignation créée par l’écran ; aucun bouton sur un parent ni un jalon', async ({
   page,
   request,
 }) => {
@@ -144,7 +145,7 @@ test('E2E-248 : onglet Planning : « Assigner une ressource à <nom> » à la fi
   await ressources.getByRole('button', { name: nomBouton, exact: true }).click();
   const dialogue = page.getByRole('dialog');
   await dialogue.getByLabel('Ressource').selectOption({ label: `Bob E2E248` });
-  await dialogue.getByLabel('Charge assignée (jours)').fill('3');
+  await dialogue.getByLabel('Charge assignée (j)').fill('3');
   await dialogue.getByRole('button', { name: 'Assigner' }).click();
   await expect(dialogue).toHaveCount(0);
   await expect(ressources).toContainText('Bob E2E248');
@@ -275,10 +276,11 @@ test('E2E-251 : dialogue de modification d’une activité : « Mode de planific
   expect(liste2.find((x) => x.id === a.id)?.mode).toBe('MAN');
 });
 
-test('E2E-252 : Gantt du projet : colonne « Planification », libellé des huit modes, badge « Sous-projet » et nom « <code> · <nom> » pour un sous-projet', async ({
+test('E2E-252-r1 : Gantt du projet : colonne « Planification », libellé des huit modes, badge « Sous-projet » et nom « <code> · <nom> » pour un sous-projet', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde3b(request, 'E2E252', []);
   const modes: [string, string, Record<string, unknown>][] = [
     ['ASAP', 'Dès que possible', {}],

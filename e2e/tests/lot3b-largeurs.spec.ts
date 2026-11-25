@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { activite, poserSaisies } from './lot2e-helpers.js';
 import { activiteAvec, calculer, monde3b } from './lot3b-helpers.js';
 
@@ -90,10 +91,11 @@ async function pret(
 }
 
 for (const largeur of LARGEURS) {
-  test(`E2E-41a (${largeur} px) : chaque badge de la colonne Drapeaux est entièrement visible, sans défilement`, async ({
+  test(`E2E-41a-r1 (${largeur} px) : chaque badge de la colonne Drapeaux est entièrement visible, sans défilement`, async ({
     page,
     request,
   }) => {
+    await colonnesCompletes(page);
     const { tableau, dedans } = await pret(page, request, `E2E41A${largeur}`, largeur);
     for (const libelle of ['Retard', 'Surcharge', 'Début non respecté']) {
       const badge = tableau.getByText(libelle, { exact: true });
@@ -102,10 +104,11 @@ for (const largeur of LARGEURS) {
     }
   });
 
-  test(`E2E-41b (${largeur} px) : WBS et Nom entièrement visibles sur toutes les lignes, dont le nom de 60 caractères`, async ({
+  test(`E2E-41b-r1 (${largeur} px) : WBS et Nom entièrement visibles sur toutes les lignes, dont le nom de 60 caractères`, async ({
     page,
     request,
   }) => {
+    await colonnesCompletes(page);
     const { tableau, dedans } = await pret(page, request, `E2E41B${largeur}`, largeur);
     const lignes = tableau.locator('tbody tr');
     expect(await lignes.count()).toBe(10);
@@ -167,10 +170,11 @@ const retardEtSurcharge = async (page: Page) => {
 };
 
 for (const largeur of LARGEURS) {
-  test(`E2E-41e (${largeur} px) : une ligne à deux badges (retard + surcharge) : badges visibles, hauteur de ligne inchangée`, async ({
+  test(`E2E-41e-r1 (${largeur} px) : une ligne à deux badges (retard + surcharge) : badges visibles, hauteur de ligne inchangée`, async ({
     page,
     request,
   }) => {
+    await colonnesCompletes(page);
     const { tableau, dedans } = await pret(
       page,
       request,

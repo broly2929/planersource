@@ -24,6 +24,7 @@ import {
   colonnesAffichees,
   colonnesDuMenu,
   ecrireDisposition,
+  LARGEUR_DEFAUT_COLONNE,
   largeurParDefaut,
   lireDisposition,
   stockageNavigateur,
@@ -128,7 +129,7 @@ export function useDispositionGantt(vue: VueGantt, disponibles: Disponibles) {
         colonnes
           .filter((c) => affichees.includes(c.id))
           .map((c) => {
-            const largeur = disposition.largeurs?.[c.id];
+            const largeur = disposition.largeurs?.[c.id] ?? LARGEUR_DEFAUT_COLONNE[c.id];
             return largeur === undefined ? c : { ...c, largeur: bornerColonne(vue, c.id, largeur) };
           }),
     };

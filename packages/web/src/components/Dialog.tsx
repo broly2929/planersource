@@ -151,7 +151,7 @@ export function Dialog({
       onOpenChange={(o) => (o ? onOuvertChange(true) : demanderFermeture())}
     >
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 bg-gray-900/40" />
+        <RadixDialog.Overlay className="fixed inset-0 z-50 bg-gray-900/40" />
         <RadixDialog.Content
           ref={contenu}
           onPointerDownCapture={prendreReference}
@@ -182,7 +182,7 @@ export function Dialog({
               cible.focus();
             }
           }}
-          className={`fixed top-1/2 left-1/2 max-h-screen w-11/12 ${large ? 'max-w-5xl' : 'max-w-md'} overflow-y-auto -translate-x-1/2 -translate-y-1/2 rounded-ui border border-gray-200 bg-white p-6 shadow-ui`}
+          className={`fixed z-50 top-1/2 left-1/2 max-h-screen w-11/12 ${large ? 'max-w-5xl' : 'max-w-md'} overflow-y-auto -translate-x-1/2 -translate-y-1/2 rounded-ui border border-gray-200 bg-white p-6 shadow-ui`}
         >
           <div className="mb-4 flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">

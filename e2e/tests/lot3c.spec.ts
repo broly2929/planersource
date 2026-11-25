@@ -38,7 +38,7 @@ async function pageConnectee(browser: Browser, email: string): Promise<Page> {
   return p;
 }
 
-test('E2E-59-r1 parcours complet à l’écran : de l’administrateur seul au planning calculé', async ({
+test('E2E-59-r2 parcours complet à l’écran : de l’administrateur seul au planning calculé', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -69,7 +69,7 @@ test('E2E-59-r1 parcours complet à l’écran : de l’administrateur seul au p
   await page.getByRole('button', { name: 'Assigner une ressource à Activité 3C-59' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource 3C-59' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Activité 3C-59.*Ressource 3C-59/ })).toBeVisible();
 

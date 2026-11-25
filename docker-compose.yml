@@ -16,7 +16,10 @@ services:
       retries: 12
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        COMMIT: ${COMMIT:-inconnu}
     restart: unless-stopped
     env_file: .env
     environment:

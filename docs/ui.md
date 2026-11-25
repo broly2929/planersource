@@ -179,3 +179,33 @@ Définis une seule fois dans `packages/web/src/index.css` (`@theme` Tailwind 4) 
 - Dates planifiées en lecture seule (`DatePlanifiee`, dialogue d'activité) : libellé `font-semibold text-gray-800` comme `Field`, valeur en texte `text-gray-900` sur une ligne de `h-8` (même rythme que les champs), sans cadre de champ ; `data-planifie` conservé.
 - Logo « PlanerSource » (lien vers l'Accueil) : `text-accent`, survol `text-accent-hover` plus soulignement (le changement de couleur seul est faible), focus par le contour global arrondi (`focus-visible:rounded-ui`).
 - Captures : `e2e/captures/retouches-rex6-*.png` (E2E-571).
+
+## Saisie des activités (D-222)
+
+- Dialogue « Modifier l'activité » : sections « Prédécesseurs » et « Successeurs » séparées par `border-t border-gray-200 pt-4`, titre `font-semibold text-gray-900`. Zone d'ajout dans un cadre `rounded-ui border-gray-200 bg-gray-50 p-3` distinct de la liste ; « Type » (avec son aide) et « Délai » (`w-44`, libellé sur une ligne) côte à côte, alignés en haut. Aucun composant créé. Captures : `e2e/captures/saisie-activites-*.png` (E2E-606).
+
+## Coûts (lot couts-1, D-225)
+
+- Section « Taux journaliers » (`screens/TauxJournaliers.tsx`, dialogue « Modifier <nom> » de l'écran Utilisateurs) : même gabarit que les dépendances de l'activité (D-222) : séparée par `border-t border-gray-200 pt-4`, titre `font-semibold text-gray-900`, aide `text-petit text-gray-600`, zone d'ajout `rounded-ui border-gray-200 bg-gray-50 p-3`. Tableau Du | Au | Montant | Actions : montant et « Actions » alignés à droite, `tabular-nums`, `BoutonIcone` `gap-1`. Champs Du et Au `w-40`, Montant `w-36`, à passer à la ligne à 1024 px (`flex-wrap`).
+- `ChampOtp` (`components/ChampOtp.tsx`) : `Field` « OTP » et aide d'héritage `text-petit text-gray-600` liée par `aria-describedby`, `gap-1` ; utilisé dans les dialogues de projet, modèle et activité.
+- Affectations : colonne « Taux du jour » alignée à droite (en-tête et cellule, `tabular-nums`), visible avec le droit d'écriture. Captures : `e2e/captures/couts-1-*.png`.
+
+## Coûts, lot couts-2 (D-229)
+
+- Colonnes « OTP », « Coût planifié » et « Coût réel » (Gantt du projet, Accueil) : alignées comme « Charge », « Vendu » et « Marge » (à gauche, sans `text-right` : aucune colonne numérique du Gantt n'est à droite) ; jalons et lignes de projet vides. `CelluleCout` : montant puis `MarqueIncomplet`.
+- Marque « incomplet » (`gantt/CelluleCout.tsx`) : `ml-1 text-petit font-semibold whitespace-nowrap text-flag`, `title` « Taux manquant » ; le mot porte l'information, pas la couleur seule. Dans « Totaux du projet », la région est en `items-baseline` pour aligner la marque sur le texte.
+- « Exporter les coûts » : `LienTelechargement` (même composant que « Exporter CSV »), entre « Recalcul automatique » et le zoom. Captures : `e2e/captures/couts-2-{gantt,accueil}-{1440,1024}.png`.
+
+## Version (lot version, D-231)
+
+- Pied de la barre latérale, sous « Se déconnecter » : « v<version> · <commit> » en `text-petit` gris, non cliquable, pour tous les rôles.
+- Bandeau « Nouvelle version disponible » + bouton « Recharger » en haut de `<main>`, `role="status"`, jetons `warning` (comme l'avertissement), non bloquant ; le rechargement passe par `sortir` (garde D-172).
+
+## Aides et empilement des dialogues (lot retours-deploiement-2, D-235)
+
+- Aide d'un champ : prop `aide` de `Field` ; paragraphe d'une ligne sous le champ, `text-petit text-gray-600`, `id` `<id>-aide`, relié par `aria-describedby` (combiné avec l'id d'erreur). Textes : SPEC §6 « Charge lisible » point 5. Champs en lecture seule : sans aide.
+- Empilement : voile et contenu de `Dialog` en `z-50`, au-dessus de l'en-tête collant du tableau du Gantt (`z-10`) ; Confirmation et menus Radix au même niveau, plus tard dans le DOM.
+
+## Colonne Ressources (D-238)
+
+- Colonne « Ressources » du Gantt du projet et de l'Accueil (`gantt/CelluleRessources.tsx`, largeur par défaut 96 px) : une entrée par assignation (initiales, ou nom sans initiales), séparées par « , » en texte simple. Avec droit d'écriture, chaque entrée est un `button` à l'apparence de lien, identique au bouton-nom de l'élément (`cursor-pointer text-left text-accent underline focus-visible:rounded-ui`, contour de focus global 2 px `accent`) ; sans droit, un `span` sans soulignement. `title` = « <nom> — <charge> j », nom accessible « Modifier l'assignation de <nom> à <activité> ». Troncature par ellipsis portée par le cadre de largeur de `Table` (`truncate`), pas par les boutons. Pas d'état de survol propre (comme le bouton-nom). Aucun composant ni jeton créé.

@@ -30,7 +30,7 @@ describe('Lot 6c : migration 014 (D-149 (2))', () => {
     await pool.end();
   });
 
-  it('MIG-10 : activite.charge_vendue numeric(10,2) et jalon.date_client date, nullables, null pour l’existant ; CHECK ≥ 0', async () => {
+  it('MIG-10-r1 : activite.charge_vendue numeric(10,2) et jalon.date_client date, nullables, null pour l’existant ; CHECK ≥ 0', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'ps-migrations-013-'));
     for (const f of readdirSync(MIGRATIONS_DIR).filter((n) => Number(n.slice(0, 3)) <= 13)) {
       copyFileSync(join(MIGRATIONS_DIR, f), join(dir, f));
@@ -55,11 +55,18 @@ describe('Lot 6c : migration 014 (D-149 (2))', () => {
     );
     await pool.query(`INSERT INTO jalon (id, type) VALUES ($1, 'flottant')`, [ej[0]!.id]);
 
-    expect((await migrate(pool)).applied).toEqual([14]);
+    // MIG-10-r1 (D-031, D-226) : les migrations postérieures à 014 (015, lot couts) s'appliquent aussi.
+    const versionsApres13 = readdirSync(MIGRATIONS_DIR)
+      .filter((n) => /^\d{3}_.+\.sql$/.test(n))
+      .map((n) => Number(n.slice(0, 3)))
+      .filter((n) => n > 13)
+      .sort((x, y) => x - y);
+    expect(versionsApres13[0]).toBe(14);
+    expect((await migrate(pool)).applied).toEqual(versionsApres13);
     const { rows: v } = await pool.query<{ version: number }>(
       'SELECT max(version) AS version FROM schema_version',
     );
-    expect(v[0]!.version).toBe(14);
+    expect(v[0]!.version).toBe(versionsApres13.at(-1));
 
     const cols = await pool.query<{
       table_name: string;
@@ -322,7 +329,7 @@ describe('Lot 6c : charge vendue (D-149 (3) à (5))', () => {
     }
   });
 
-  it('VND-8 : projet.totaux : feuilles du projet seul (close comprise), sous-projet exclu ; projet vide', async () => {
+  it('VND-8-r2 : projet.totaux : feuilles du projet seul (close comprise), sous-projet exclu ; projet vide', async () => {
     const m = await creerMonde(ctx);
     const vide = await lireGantt(ctx, m.admin, m.projet.id);
     expect(vide.projet.totaux).toEqual({
@@ -330,6 +337,10 @@ describe('Lot 6c : charge vendue (D-149 (3) à (5))', () => {
       charge_assignee: 0,
       marge: null,
       charge_reelle: 0,
+      cout_planifie: 0,
+      cout_impute: 0,
+      cout_reel: 0,
+      taux_manquant: false,
     });
 
     const a = await creerActivite(ctx, m.admin, m.projet.id, { charge_vendue: 10 });
@@ -364,10 +375,14 @@ describe('Lot 6c : charge vendue (D-149 (3) à (5))', () => {
       charge_assignee: 9,
       marge: 6,
       charge_reelle: 1,
+      cout_planifie: 0,
+      cout_impute: 0,
+      cout_reel: 0,
+      taux_manquant: false,
     });
   });
 
-  it('VND-10 : totaux avec une feuille non vendue assignée : { 10, 9, 6, 0 } (D-150 (2))', async () => {
+  it('VND-10-r1 : totaux avec une feuille non vendue assignée : { 10, 9, 6, 0 } (D-150 (2))', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.admin, m.projet.id, { charge_vendue: 10 });
     await creerAssignation(ctx, m.admin, a.id, m.alice.id, { charge_assignee: 4 });
@@ -379,6 +394,10 @@ describe('Lot 6c : charge vendue (D-149 (3) à (5))', () => {
       charge_assignee: 9,
       marge: 6,
       charge_reelle: 0,
+      cout_planifie: 0,
+      cout_impute: 0,
+      cout_reel: 0,
+      taux_manquant: false,
     });
   });
 

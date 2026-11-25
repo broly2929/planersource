@@ -5,7 +5,8 @@ import type { AppDeps } from '../app.js';
 import { requireUser } from './acces.js';
 
 /** Lecture du Gantt d'un projet (lot 3a, D-065) : lecture seule, droits de lecture du projet. */
-export function ganttRoutes(app: FastifyInstance, { pool }: AppDeps): void {
+export function ganttRoutes(app: FastifyInstance, { pool, aujourdhui }: AppDeps): void {
+  const jourDuServeur = aujourdhui ?? (() => new Date().toISOString().slice(0, 10));
   app.get<{ Params: { id: string } }>(
     '/api/projets/:id/gantt',
     { preHandler: requireUser },
@@ -16,7 +17,7 @@ export function ganttRoutes(app: FastifyInstance, { pool }: AppDeps): void {
       if (lecture.verdict) return refuser(reply, lecture.verdict);
       // « interdit » à l'écriture = projet lisible en lecture seule
       const ecriture = await verdictProjet(pool, user, id, true);
-      return lireGantt(pool, user, lecture.projet, ecriture.verdict === null);
+      return lireGantt(pool, user, lecture.projet, ecriture.verdict === null, jourDuServeur());
     },
   );
 }

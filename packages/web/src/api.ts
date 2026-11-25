@@ -1,3 +1,5 @@
+import { noterVersionServeur } from './version';
+
 export type Role = 'administrateur' | 'chef_de_projet' | 'ressource';
 
 export interface Utilisateur {
@@ -47,6 +49,7 @@ export async function api<T>(
       ? {}
       : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(init.body) }),
   });
+  noterVersionServeur(response.headers.get('X-PlanerSource-Version'));
   if (!response.ok) {
     const corps = (await response.json().catch(() => null)) as {
       erreur?: unknown;

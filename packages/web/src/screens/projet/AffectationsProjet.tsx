@@ -1,5 +1,5 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import { useAnnuaire } from '../../annuaire';
 import { BoutonIcone } from '../../components/BoutonIcone';
@@ -12,6 +12,9 @@ import { Notification } from '../../components/Notification';
 import { Select } from '../../components/Select';
 import { Table } from '../../components/Table';
 import { FormulaireDialogue, useListe, type Affectation } from './commun';
+import { ChampTaux } from '../../components/ChampTaux';
+import { AIDE_TAUX_AFFECTATION } from '../../aidesTaux';
+import { aujourdhui, formatMontant, tauxEnVigueur, type Taux } from '../../couts';
 
 function FormulaireAffectation({
   affectation,
@@ -37,16 +40,7 @@ function FormulaireAffectation({
       onSucces={onSucces}
       onAnnuler={onAnnuler}
     >
-      <Field
-        label="Taux (%)"
-        type="number"
-        required
-        min="1"
-        max="100"
-        step="any"
-        value={taux}
-        onChange={(e) => setTaux(e.target.value)}
-      />
+      <ChampTaux valeur={taux} onChange={setTaux} aide={AIDE_TAUX_AFFECTATION} />
       <Field
         label="Date de début"
         type="date"
@@ -56,6 +50,32 @@ function FormulaireAffectation({
       <Field label="Date de fin" type="date" value={fin} onChange={(e) => setFin(e.target.value)} />
     </FormulaireDialogue>
   );
+}
+
+/**
+ * Taux journaliers des ressources affectées (D-225, SPEC §12.1 point 10), lus seulement si l'utilisateur écrit sur le
+ * projet ; une lecture refusée ou en échec laisse la ressource sans taux (« — »).
+ */
+function useTauxRessources(ids: number[], actif: boolean): Map<number, Taux[]> {
+  const [taux, setTaux] = useState<Map<number, Taux[]>>(new Map());
+  const cle = [...new Set(ids)].sort((a, b) => a - b).join(',');
+  useEffect(() => {
+    if (!actif || cle === '') return;
+    let vivant = true;
+    void Promise.all(
+      cle.split(',').map(async (id) => {
+        try {
+          return [Number(id), await api<Taux[]>(`/api/utilisateurs/${id}/taux`)] as const;
+        } catch {
+          return [Number(id), [] as Taux[]] as const;
+        }
+      }),
+    ).then((paires) => vivant && setTaux(new Map(paires)));
+    return () => {
+      vivant = false;
+    };
+  }, [cle, actif]);
+  return taux;
 }
 
 /** Onglet « Affectations » : ressources affectées au projet et leur taux. */
@@ -76,6 +96,12 @@ export function AffectationsProjet({
 
   const nom = (id: number) => annuaire?.find((u) => u.id === id)?.nom ?? '…';
   const affectees = etat.statut === 'ok' ? etat.donnees.map((a) => a.ressource_id) : [];
+  const tauxRessources = useTauxRessources(affectees, peutEcrire);
+  const jour = aujourdhui();
+  const tauxDuJour = (id: number) => {
+    const montant = tauxEnVigueur(tauxRessources.get(id) ?? [], jour);
+    return montant === null ? '—' : formatMontant(montant);
+  };
   const candidates = (annuaire ?? []).filter(
     (u) => u.est_ressource && u.actif && !affectees.includes(u.id),
   );
@@ -116,6 +142,12 @@ export function AffectationsProjet({
             { titre: 'Fin', cellule: (a) => a.date_fin ?? '—' },
             ...(peutEcrire
               ? [
+                  {
+                    titre: 'Taux du jour',
+                    classeEntete: 'text-right',
+                    classeCellule: 'text-right tabular-nums',
+                    cellule: (a: Affectation) => tauxDuJour(a.ressource_id),
+                  },
                   {
                     titre: 'Actions',
                     cellule: (a: Affectation) => (
@@ -168,16 +200,7 @@ export function AffectationsProjet({
             onChange={(e) => setRessource(e.target.value)}
             options={options}
           />
-          <Field
-            label="Taux (%)"
-            type="number"
-            required
-            min="1"
-            max="100"
-            step="any"
-            value={taux}
-            onChange={(e) => setTaux(e.target.value)}
-          />
+          <ChampTaux valeur={taux} onChange={setTaux} aide={AIDE_TAUX_AFFECTATION} />
         </FormulaireDialogue>
       </Dialog>
       {edition && (

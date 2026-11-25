@@ -1,9 +1,21 @@
 import type { Db } from '../db/erreurs.js';
 import { WBS_CTE } from './elements.js';
 import { champsActivite, champsJalon, lireVendu } from './vendu.js';
+import { champsCout, lireCouts, type Cout } from './couts.js';
+import { lireOtpActivites, type Herite } from './otp.js';
 import { projetsVisibles, type Acteur, type Projet } from './projets.js';
 
 /** Lecture du Gantt d'un projet (SPEC §6, lot 3a, D-065). Aucune écriture. */
+
+/** Assignation d'une feuille, lue par la colonne Ressources (D-238 (a)). */
+interface Assignation {
+  id: number;
+  ressource_id: number;
+  nom: string;
+  initiales: string | null;
+  charge_assignee: number;
+  taux: number;
+}
 
 interface LigneElement {
   id: number;
@@ -28,6 +40,7 @@ interface LigneElement {
   reste_a_faire: number;
   avancement: number | null;
   initiales: string[];
+  assignations: Assignation[];
   type_jalon: string | null;
   date_validee: string | null;
   date_planifiee: string | null;
@@ -68,6 +81,13 @@ const ELEMENTS = `WITH RECURSIVE ${WBS_CTE},
                  JOIN utilisateur u ON u.id = s.ressource_id
                 WHERE s.activite_id = a.id AND u.initiales IS NOT NULL
                 ORDER BY s.id) AS initiales,
+         ARRAY(SELECT jsonb_build_object('id', s.id, 'ressource_id', s.ressource_id, 'nom', u.nom,
+                                         'initiales', u.initiales,
+                                         'charge_assignee', s.charge_assignee::float8,
+                                         'taux', s.taux::float8)
+                 FROM assignation s JOIN utilisateur u ON u.id = s.ressource_id
+                WHERE s.activite_id = a.id
+                ORDER BY lower(u.nom), s.id) AS assignations,
          j.type AS type_jalon, j.date_validee, j.date_planifiee, j.date_client
     FROM arbre a
     LEFT JOIN activite act ON act.id = a.id
@@ -78,6 +98,8 @@ const ELEMENTS = `WITH RECURSIVE ${WBS_CTE},
 function forme(
   l: LigneElement,
   vendu: Map<number, { charge_vendue: number | null; marge: number | null }> | null,
+  couts: Map<number, Cout> | null,
+  otp: Map<number, Herite>,
 ): Record<string, unknown> {
   const commun = {
     id: l.id,
@@ -113,7 +135,12 @@ function forme(
     reste_a_faire: l.reste_a_faire,
     avancement: l.avancement,
     ...(vendu ? champsActivite(vendu, l.id) : {}),
-    ...(l.est_parent ? {} : { initiales: l.initiales }),
+    otp_effectif: otp.get(l.id)?.otp_effectif ?? null,
+    otp_source: otp.get(l.id)?.otp_source ?? null,
+    ...(couts
+      ? champsCout(couts.get(l.id) ?? { planifie: 0, impute: 0, reel: 0, taux_manquant: false })
+      : {}),
+    ...(l.est_parent ? {} : { initiales: l.initiales, assignations: l.assignations }),
   };
 }
 
@@ -135,7 +162,13 @@ function totaux(elements: LigneElement[]) {
   };
 }
 
-export async function lireGantt(db: Db, user: Acteur, projet: Projet, peutEcrire: boolean) {
+export async function lireGantt(
+  db: Db,
+  user: Acteur,
+  projet: Projet,
+  peutEcrire: boolean,
+  jour: string,
+) {
   const { rows: dates } = await db.query<{
     debut_planifie: string | null;
     fin_planifiee: string | null;
@@ -143,6 +176,9 @@ export async function lireGantt(db: Db, user: Acteur, projet: Projet, peutEcrire
   const { rows: elements } = await db.query<LigneElement>(ELEMENTS, [projet.id]);
   // D-149 (4) : champs de 6c pour qui écrit sur le projet seulement.
   const vendu = peutEcrire ? await lireVendu(db, projet.id) : null;
+  // D-229 : coûts pour qui écrit sur le projet seulement ; OTP effectif pour tout lecteur.
+  const couts = peutEcrire ? await lireCouts(db, projet.id, jour) : null;
+  const otp = await lireOtpActivites(db, user, projet.id);
   const { rows: dependances } = await db.query(
     `SELECT id, predecesseur_id, successeur_id, type, delai, drapeaux
        FROM dependance WHERE projet_id = $1 ORDER BY id`,
@@ -166,9 +202,11 @@ export async function lireGantt(db: Db, user: Acteur, projet: Projet, peutEcrire
       fin_planifiee: dates[0]!.fin_planifiee,
       clos: projet.clos,
       peut_ecrire: peutEcrire,
-      ...(vendu ? { totaux: totaux(elements) } : {}),
+      ...(vendu
+        ? { totaux: { ...totaux(elements), ...(couts ? champsCout(couts.projet) : {}) } }
+        : {}),
     },
-    elements: elements.map((l) => forme(l, vendu)),
+    elements: elements.map((l) => forme(l, vendu, couts?.activites ?? null, otp)),
     dependances,
     sous_projets: sousProjets,
   };

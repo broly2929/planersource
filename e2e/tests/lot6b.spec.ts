@@ -194,7 +194,7 @@ test('E2E-352 : chef de projet ressource : « Mes tâches » en tête, Accueil, 
   await expect(nav(page).getByRole('link', { name: 'Mes tâches', exact: true })).toHaveCount(0);
 });
 
-test('E2E-353-r1 : parcours complet à l’écran : l’administrateur crée ressource, chef et projet ; le chef affecte et assigne ; la ressource voit sa tâche dans Mes tâches', async ({
+test('E2E-353-r2 : parcours complet à l’écran : l’administrateur crée ressource, chef et projet ; le chef affecte et assigne ; la ressource voit sa tâche dans Mes tâches', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6B';
@@ -247,7 +247,7 @@ test('E2E-353-r1 : parcours complet à l’écran : l’administrateur crée res
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 6B' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: RESSOURCE });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 6B.*${RESSOURCE}`) })).toBeVisible();
   await page.getByRole('button', { name: 'Se déconnecter' }).click();

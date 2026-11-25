@@ -3495,3 +3495,355 @@ Décision du porteur (2026-11-24) : logo (nom accessible « PlanerSource »), E2
 
 Retraits (D-218 (5), (9)) : E2E-396, E2E-397, E2E-398, E2E-399 (section « Mon calendrier », `e2e/tests/rex5.spec.ts`).
 
+
+## Charge lisible (D-220)
+
+Fichiers : `e2e/tests/charge-lisible.spec.ts` (domaines projets, gantt, dialogues, e2e/domaines.json) et `packages/web/test/charge-lisible.test.ts`. Données par l'API ; valeurs attendues recopiées de SPEC §6 « Charge lisible » et de D-220. Marge = charge vendue − charge assignée (SPEC §3, charge vendue et date client).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-572 | « Modifier l'activité », 8 modes × 3 champs : « Début validé », « Fin validée » et « Durée validée (jours ouvrés) » présents ou absents selon le mode (tableau de SPEC §6 « Charge lisible » 1) ; activité créée par l'API, dialogue ouvert depuis l'onglet Planning | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-573 | « Nouvelle activité », 8 modes × 3 champs : « Mode de planification » (ASAP par défaut), mêmes champs selon le mode ; création par l'écran en FDUR, durée par défaut de l'API lue en base (1) ; création en MAN : mode enregistré, dates et durée nulles | D-220 (4) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-574 | Aide de la durée « Utilisée seulement sans ressource assignée : longueur de la barre. » (`aria-describedby`) pour ASAP, START, STARR, ALAP ; absente pour FDUR et DDUR ; en modification et en création | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-575 | Changement de mode dans le dialogue : les champs apparaissent et disparaissent à chaque changement (ASAP → REGUL → ALAP → MAN → FDUR), en modification et en création | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-576 | Activité REGUL avec début et fin validés, passée en ASAP par l'écran et enregistrée : la requête n'envoie ni début ni fin, dates validées gardées en base (lecture API) ; retour en REGUL : champs préremplis des mêmes dates | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-577 | Garde de fermeture (D-188) : valeur saisie dans un champ puis masquée par un retour au mode d'ouverture : fermeture sans confirmation, rien en base ; champ visible modifié : confirmation, rien en base si « Abandonner » | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-578 | « Charge assignée (somme des ressources) » : texte, aucun champ, « 0 j » sans assignation ; après ajout d'une assignation de 2,5 j puis d'une de 1 j par l'écran, réouverture du dialogue : « 3,5 j » ; après suppression de l'une : « 1 j » | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-579 | « Marge » en lecture seule : positive (charge vendue 5, assignée 3 : « 2 j », pas de couleur flag), négative (vendue 1, assignée 3 : « −2 j », couleur flag), « — » sans charge vendue ; aucun champ ; enregistrement sans effet sur `charge_vendue` en base | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-580 | Utilisateur sans droit d'écriture sur le projet : aucun bouton « Modifier l'activité » ni double-clic qui ouvre le dialogue ; `charge_assignee` et `marge` absents de la réponse de GET /api/projets/:id/activites | D-220 (3), (6) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-581 | Aide « Plafond par jour sur cette activité : taux × capacité de la ressource. » sous « Taux (%) » (`aria-describedby`) des dialogues « Assigner » et « Modifier l'assignation » (onglet Planning) | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-582 | Aide « Plafond par semaine sur ce projet : taux × capacité × jours ouvrés. » sous « Taux (%) » de l'affectation au projet, en création et en modification (onglet Affectations) | D-220 (3) | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| E2E-583 | Captures sans assertion de valeur : `e2e/captures/charge-lisible-*.png` (dialogue d'une activité REGUL et ASAP, charge assignée et marge ; aide des taux) à 1440 et 1024 px | D-220 | charge-lisible | e2e/tests/charge-lisible.spec.ts |
+| CHL-1 | `champsDuMode` : table mode → champs (début, fin, durée) pour les 8 modes ; mode inconnu : aucun champ | D-220 (3) | charge-lisible | packages/web/test/charge-lisible.test.ts |
+| CHL-2 | `texteChargeAssignee` : « X j » à virgule décimale (3,5 → « 3,5 j », 0 → « 0 j », 1 → « 1 j ») ; `texteMarge` : null → « — », négatif → texte et indicateur flag | D-220 (3) | charge-lisible | packages/web/test/charge-lisible.test.ts |
+| CHA-1 | GET …/activites : `charge_assignee` = somme des charges assignées pour l'administrateur (0 sans assignation) ; clé absente (pas null) pour le chef lecteur, `marge` aussi | D-220 (6) | charge-lisible | packages/api/test/charge-lisible.test.ts |
+| CHA-2 | POST et PATCH d'une activité par l'administrateur : `charge_assignee` présent | D-220 (6) | charge-lisible | packages/api/test/charge-lisible.test.ts |
+| CHA-3 | PATCH par le chef lecteur refusé : rien de modifié, aucune divulgation de `charge_assignee` | D-220 (6) | charge-lisible | packages/api/test/charge-lisible.test.ts |
+
+### Couverture des champs, charge-lisible
+
+- Champs modifiables de l'API d'une activité, visibles selon le mode : `debut_valide` → « Début validé » (START, STARR, FDUR, DDUR, REGUL) ; `fin_valide` → « Fin validée » (ALAP, REGUL) ; `duree_validee` → « Durée validée (j) » (libellé « (jours ouvrés) » avant retours-deploiement-2, D-235) (ASAP, START, STARR, ALAP, FDUR, DDUR) ; aucun des trois en MAN. Création et modification : E2E-572 à E2E-577. Un champ masqué n'est pas envoyé et garde sa valeur en base (E2E-576).
+- `mode` à la création → « Mode de planification » du dialogue « Nouvelle activité » (E2E-573).
+- Lecture seule, hors champ d'API modifiable : `charge_assignee` (somme ; champ calculé à la lecture, hors saisie, clé absente sans droit d'écriture : CHA-1 à CHA-3) → « Charge assignée (somme des ressources) » (E2E-578) ; `marge` → « Marge » (E2E-579) ; absents sans droit d'écriture (E2E-580).
+- `taux` d'une assignation et d'une affectation : champs existants, aides ajoutées (E2E-581, E2E-582).
+
+### Révisions D-031 de charge-lisible (D-220 (5), tag `tests-charge-lisible-r1`)
+
+Sans décision préalable (D-220 (5)) ; intention et valeurs attendues inchangées, sauf mention.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-365-r1 | Lecture de chaque corps de réponse /gantt et /planning dès la réponse, avant toute navigation ; intention et valeurs inchangées | D-221 | charge-lisible | e2e/tests/lot6c.spec.ts |
+| E2E-199-r1, E2E-200-r1, E2E-201-r1, E2E-203-r3 | Corps exact du POST de création d'une activité : `mode: 'ASAP'` ajouté (le dialogue envoie le mode, D-220 (4)) ; les corps de jalons sont inchangés | D-220 (4), (5) | charge-lisible | e2e/tests/lot3f2.spec.ts |
+| E2E-562-r1 | Repère de position : « Début validé » au lieu de « Fin validée » (masquée en START) ; les dates planifiées restent après les champs de dates validées | D-220 (5) | charge-lisible | e2e/tests/retouches-rex6.spec.ts |
+
+E2E-365 : corps lus après une navigation (échec sous charge, passes ciblée et complète) ; révisé en E2E-365-r1 sur décision du porteur (D-031, D-221), tag `tests-lot6c-r11`.
+
+
+## Saisie des activités (D-222)
+
+Fichiers : `e2e/tests/saisie-activites.spec.ts` (domaines projets, gantt, dialogues, e2e/domaines.json) et `packages/web/test/saisie-activites.test.ts`. Données par l'API ; valeurs attendues recopiées de SPEC §6 « Saisie des activités » et de D-222. Colonne « Règle » : numéro de la règle de SPEC §6.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-584 | « Nouvelle activité » : « Activité parente » liste « Aucune (racine) » puis les activités du projet en ordre WBS « <WBS> <nom> » ; choix d'un parent à la création par l'écran : `parent_id` relu par l'API, élément placé en dernier de sa fratrie, WBS lu dans le tableau | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-585 | « Nouveau jalon » : même liste ; parent choisi à la création par l'écran : `parent_id` du jalon relu par l'API, dernier de sa fratrie, WBS lu dans le tableau | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-586 | « Ajouter une sous-activité » (Planning) : « Activité parente » préremplie avec l'activité ; création : `parent_id` relu par l'API | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-587 | « Modifier l'activité » : la liste « Activité parente » exclut l'activité et ses descendants (à tous les niveaux) ; « Modifier le jalon » : liste complète des activités du projet ; parent actuel présélectionné | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-588 | Parent changé en modification d'une activité : POST /api/elements/:id/deplacer puis PATCH (ordre des requêtes lu), WBS dans le tableau de l'onglet Planning et dans le tableau du Gantt, lignes du Gantt à jour, `parent_id` et position (dernier de la nouvelle fratrie) relus par l'API | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-589 | Retour à « Aucune (racine) » en modification d'une activité puis d'un jalon : `parent_id` null, élément en dernier de la fratrie racine, WBS à jour | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-590 | Parent inchangé en modification : aucun appel à /deplacer ; seul le PATCH part | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-591 | Refus `parent_assigne` (parent choisi portant une assignation) : texte « Une activité avec des ressources assignées ne peut pas avoir d’enfant. » en `role="alert"` dans le dialogue, dialogue ouvert, rien enregistré (nom saisi non écrit) ; `parent_id`, position et historique relus par l'API inchangés | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-592 | Refus `dependance_hierarchie` (déplacement sous un élément lié par dépendance) : texte du glisser de ligne en `role="alert"`, dialogue ouvert, base inchangée (parent, position, nom, historique) | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-593 | PATCH refusé après un déplacement réussi (422 simulé par interception du PATCH) : message qui dit que le déplacement est fait et que les champs ne sont pas enregistrés, dialogue ouvert ; `parent_id` relu par l'API = nouveau parent, nom inchangé | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-594 | Déplacement d'un jalon par « Modifier le jalon » : parent changé, WBS à jour ; refus `dependance_hierarchie` : alerte dans le dialogue, base inchangée | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-595 | Prédécesseur ajouté depuis « Modifier l'activité » (élément, type DD, délai 2) : enregistré tout de suite (dépendance relue par l'API alors que le dialogue est ouvert), section Dépendances du bas à jour après la fermeture, lien dans le Gantt | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-596 | Successeur ajouté depuis « Modifier l'activité » (type FF, délai −1) : mêmes effets | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-597 | Type et délai d'une dépendance modifiés depuis le dialogue (prédécesseur puis successeur) : enregistrés tout de suite, section du bas et Gantt à jour | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-598 | Dépendance supprimée depuis le dialogue, avec confirmation (« Annuler » : rien supprimé ; confirmer : supprimée), prédécesseur puis successeur : absente de la section du bas et du Gantt | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-599 | Libellés « Fin → début (FD) », « Début → début (DD) », « Fin → fin (FF) » et aides identiques à celles de l'onglet Planning, dans les deux sous-sections | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-600 | Éléments proposés : activités et jalons du projet, sans l'activité, ses ancêtres ni ses descendants ; activité parente : mêmes règles ; élément d'un autre projet jamais proposé | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-601 | Refus de cycle depuis le dialogue : `role="alert"`, liste inchangée, dialogue ouvert ; dépendances et historique relus par l'API inchangés. Refus de doublon : idem | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-602 | Garde D-188 : un ajout de dépendance saisi mais non envoyé compte comme modification : fermeture avec confirmation, rien en base si « Abandonner » ; sans saisie, fermeture sans confirmation | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-603 | Pas de sous-section de dépendances dans « Nouvelle activité » ni dans « Modifier le jalon » ; « Activité parente » présente dans les deux | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-604 | Activité parente : « Mode de planification », « Début validé », « Fin validée » et « Durée validée » absents du dialogue, « Début planifié » et « Fin planifiée » en lecture seule ; enregistrement d'un nom : le PATCH n'envoie aucun des quatre champs ; mode et dates validées relus par l'API inchangés. Feuille : champs présents | §6 Saisie des activités, règle 3 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-605 | Parcours complet étendu (base à l'administrateur seul, tout à l'écran) : sous-activité créée par le champ « Activité parente », puis dépendance ajoutée par le dialogue ; effets dans l'onglet Planning et dans le Gantt | §6 Saisie des activités, règle 1, 2 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| E2E-606 | Captures sans assertion de valeur : `e2e/captures/saisie-activites-*.png` (dialogue d'une activité avec parent et sous-sections de dépendances ; dialogue d'une activité parente) à 1440 et 1024 px | §6 Saisie des activités, règle 1, 2, 3 ; D-222 | saisie-activites | e2e/tests/saisie-activites.spec.ts |
+| SAA-1 | `optionsParent(elements, id)` : « Aucune (racine) » d'abord, activités en ordre WBS, libellé « <WBS> <nom> », sans l'élément ni ses descendants, jalons exclus | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | packages/web/test/saisie-activites.test.ts |
+| SAA-2 | `parentChange` : vrai si le parent diffère de l'initial, faux sinon ; racine = null | §6 Saisie des activités, règle 1 ; D-222 | saisie-activites | packages/web/test/saisie-activites.test.ts |
+| SAA-3 | `candidatsDependance(elements, id)` : activités et jalons, sauf l'activité, ses ancêtres et ses descendants | §6 Saisie des activités, règle 2 ; D-222 | saisie-activites | packages/web/test/saisie-activites.test.ts |
+| SAA-4 | `champsActivite(mode, estParent)`, activité parente : aucun des trois champs de dates ni le mode ; feuille inchangée | §6 Saisie des activités, règle 3 ; D-222 | saisie-activites | packages/web/test/saisie-activites.test.ts |
+
+### Couverture des champs, saisie-activites
+
+- `parent_id` (POST /api/projets/:id/activites et /jalons) → « Activité parente » des dialogues « Nouvelle activité » et « Nouveau jalon » (E2E-584, E2E-585), préremplie par « Ajouter une sous-activité » (E2E-586).
+- `parent_id` à la modification (POST /api/elements/:id/deplacer, dernier de la nouvelle fratrie ; le PATCH d'activité et de jalon n'accepte pas `parent_id`) → « Activité parente » des dialogues « Modifier l'activité » et « Modifier le jalon » (E2E-588, E2E-589, E2E-594) ; écran consommateur : WBS du tableau du Planning et du Gantt.
+- `rang` du déplacement : hors écran (toujours « dernier » depuis le dialogue ; le rang fin reste au glisser de ligne et à « Monter » et « Descendre »).
+- Dépendance (POST /api/projets/:id/dependances, PATCH et DELETE /api/dependances/:id) : `predecesseur_id`, `successeur_id`, `type`, `delai` → sous-sections « Prédécesseurs » et « Successeurs » du dialogue « Modifier l'activité » (E2E-595 à E2E-598) ; écran consommateur : section Dépendances du bas, liens du Gantt.
+- `mode`, `debut_valide`, `fin_valide`, `duree_validee` d'une activité parente : masqués, non envoyés (E2E-604).
+
+### Révision D-031 de saisie-activites (D-224, tag `tests-lot6c-r12`)
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-365-r2 | Corps /gantt et /planning lus par `page.route` (`route.fetch()`, lecture du corps, `route.fulfill`) au lieu de `page.on('response')` ; au moins 2 corps lus, aucun ne contient les clés ; intention et assertions inchangées | D-224 | saisie-activites | e2e/tests/lot6c.spec.ts |
+
+E2E-365-r1 : `r.text()` échouait (« Response body is not available for a response that was navigated away from », 7 passes isolées sur 10) ; révisé en E2E-365-r2 sur décision du porteur.
+
+## Coûts, tranche 1 : taux journalier et OTP (D-225, sous-lot couts-1)
+
+Fichiers : `packages/api/test/couts-taux.test.ts` (TJ-1 à TJ-10), `packages/api/test/couts-otp.test.ts` (OTP-1 à OTP-10), `packages/web/test/couts-1.test.ts` (TJ-11, TJ-12, OTP-11), `e2e/tests/couts-1.spec.ts` (E2E-607 à E2E-622 ; domaines utilisateurs-equipes-calendriers, projets, dialogues, e2e/domaines.json). Valeurs attendues recopiées de SPEC §12.1, §12.2, §11.2 et de D-225. Tout test de refus relit la base (taux, utilisateur, projet, activité, historique) et la compare à l'état d'avant.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| TJ-1 | Administrateur : POST /api/utilisateurs/:id/taux sur une ressource (période fermée, puis période ouverte `fin` absente) → 201 { id, utilisateur_id, debut, fin, montant } ; GET → liste triée par `debut` ; utilisateur sans taux : liste vide | §12.1 points 1, 2, 6 ; D-225 (A) | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-2 | POST sur un utilisateur non ressource : 422 { erreur: 'Seule une ressource a un taux journalier' }, base inchangée | §12.1 point 1 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-3 | Corps invalides, 400, base inchangée : `debut` absent ou mal formé, `montant` 0, négatif, 1000000, 600.001, 1.0000000001, chaîne ; clé inconnue ; PATCH : montant 0, 1000000, 600.001, `debut` null ou mal formé, clé inconnue, `utilisateur_id`. `fin` antérieure à `debut` : 422 { erreur: 'La date de fin précède la date de début' } (POST et PATCH), base inchangée | §12.1 point 2 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-4 | Chevauchement, bornes comprises : [01/01, 10/01] puis [10/01, 20/01] → 409 { erreur: 'Période de taux qui chevauche une autre', code: 'taux_chevauchement' } ; période ouverte puis période postérieure → 409 ; période qui en englobe une autre → 409 ; PATCH qui crée un chevauchement → 409 ; base inchangée à chaque refus. Trou permis : [01/01, 10/01] puis [11/01, ouverte] → 201. PATCH d'une période sur elle-même (montant seul) → 200 | §12.1 point 3 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-5 | Deux POST concurrents qui se chevauchent sur la même ressource : un 201 et un 409, une seule période en base (verrou de la ligne utilisateur) | §12.1 point 3 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-6 | PATCH (debut, fin, montant) → 200 ; DELETE → 204, absent du GET ; historique `GET /api/historique?entite=taux` : création, une modification par champ changé (valeur inchangée non historisée), suppression ; `projet_id` nul | §12.1 points 5, 6 ; §3 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-7 | Droits en lecture : chef de projet qui écrit sur un projet où la ressource est affectée → 200 ; ressource affectée seulement à un projet qu'il lit sans écrire → 403 ; ressource non affectée → 403 ; rôle ressource (y compris ses propres taux) → 403 ; utilisateur inconnu, id mal formé, id hors plage → 404 ; sans session → 401 | §12.1 point 7 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-8 | Droits en écriture : chef de projet (même avec lecture permise) et rôle ressource → 403 sur POST, PATCH, DELETE ; taux inconnu → 404 (administrateur) ; ordre : 403 avant 404 avant 400 ; base inchangée à chaque refus | §12.1 point 7 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-9 | PATCH /api/utilisateurs/:id `est_ressource: false` sur un utilisateur qui a un taux : 409 { erreur: 'Utilisateur avec des taux : il reste ressource' }, base inchangée ; après suppression du taux : 200 | §12.1 point 8 ; D-225 (F) (1) | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-10 | `chevauche(periodes, candidate, exclureId?)` (fonction pure) : bornes comprises, période ouverte, période exclue en modification, trous | §12.1 point 3 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-11 | Web, `tauxEnVigueur(periodes, date)` : début ≤ d ≤ fin, fin vide, hors période → null, trou → null | §12.1 point 4 | couts-1 | packages/web/test/couts-1.test.ts |
+| TJ-12 | Web, `formatMontant(n)` : « 600,00 € », « 1 234,50 € » (espace insécable U+00A0 pour les milliers et avant « € »), « 999 999,99 € » ; `analyserMontant(texte)` (nombre ou null) : virgule ou point, > 0, au plus 999999,99, 2 décimales, chiffre de chaque côté du séparateur | §12.1 points 2, 9 | couts-1 | packages/web/test/couts-1.test.ts |
+| OTP-1 | Projet : POST et PATCH avec `otp` « ␣OTP-1␣ » → « OTP-1 » relu ; « » et « ␣␣ » et null → null ; 50 caractères accepté ; 51 → 400, base inchangée ; même valeur sur deux projets permise ; modèle : idem | §12.2 points 1, 5 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-2 | Activité : POST et PATCH, mêmes règles ; jalon : POST et PATCH avec la clé `otp` → 400, base inchangée | §12.2 point 1 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-3 | Héritage dans un projet : activité sans valeur sous une activité parente avec valeur → `otp_effectif` du parent, `otp_source` { type: 'activite', id, libelle: '<WBS> <nom>' } ; sans valeur sur les activités → valeur du projet, source { type: 'projet', id, libelle: code } ; valeur propre → `otp_source` null ; aucune valeur → `otp_effectif` null, `otp_source` null | §12.2 points 2, 3 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-4 | Héritage entre projets : sous-projet et ses activités sans valeur → valeur du projet parent (à deux niveaux) ; valeur propre du sous-projet prioritaire ; lu dans GET /api/projets, GET /api/projets/:id, GET /api/projets/:id/activites, réponses de POST et PATCH ; GET /api/modeles porte les trois clés | §12.2 points 2, 3 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-5 | Ancêtre illisible : chef d'un sous-projet seulement, OTP sur le projet parent qu'il ne lit pas → `otp_effectif` = valeur, `otp_source` = { type: 'projet', id: null, libelle: null } ; aucun `otp_source` ne porte l'id du parent et le corps JSON (projet et activités) ne contient pas son code ; `parent_id` reste renvoyé (D-079, décision du porteur, D-226) ; l'administrateur lit la source complète | §12.2 point 4 ; D-225 (F) (2) | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-6 | Historique : modification de `otp` (projet, activité) historisée (ancienne et nouvelle valeur) ; valeur inchangée non historisée ; création avec `otp` dans l'objet complet | §12.2 point 5 ; §3 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-7 | Droits : chef de projet en lecture seule, PATCH `otp` d'un projet et d'une activité → 403, base inchangée ; rôle ressource : 404 | §12.2 point 5 ; §2 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-8 | Copie (§11.2) : OTP propre du projet, d'un sous-projet et des activités copié ; élément sans valeur propre : `otp` null dans la copie (l'héritage reste calculé) ; « Créer depuis un modèle » et « Enregistrer comme modèle » : OTP propre copié | §11.2 ; §12.2 point 8 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-9 | `otpHerite(chaine)` (fonction pure) : ancêtre le plus proche avec valeur, valeur propre prioritaire, source marquée illisible si l'ancêtre n'est pas lisible | §12.2 points 2, 4 | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-10 | Témoin : calcul du planning inchangé avec et sans OTP (même travail planifié) | §12.2 ; moteur inchangé | couts-1 | packages/api/test/couts-otp.test.ts |
+| OTP-11 | Web, `aideOtp(element)` : « Hérité de <code> : <valeur> », « Hérité de <WBS> <nom> : <valeur> », « Hérité d'un projet parent : <valeur> », rien si valeur propre ou aucune ; `heriteDe(parent, type, libelle)` (aide à la création : valeur propre du parent avec sa source, sinon son héritage) ; `otpSaisi(texte)` (espaces retirés, vide = null) | §12.2 point 7 | couts-1 | packages/web/test/couts-1.test.ts |
+| E2E-607 | Dialogue « Modifier <nom> » d'une ressource : section « Taux journaliers », aide « Facultatif. Sert au calcul des coûts. » ; ajout d'un taux fermé puis d'un taux ouvert par l'écran : enregistré tout de suite (relu par l'API, dialogue ouvert), lignes Du, Au (« — » si ouverte), Montant « 600,00 € » et « 1 234,50 € » (espace insécable) | §12.1 point 9 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-608 | Modification d'un taux par l'écran (fin et montant) : relu par l'API, ligne à jour | §12.1 point 9 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-609 | Suppression d'un taux par l'écran, avec confirmation (« Annuler » : rien supprimé ; confirmer : absent de l'API et de la liste) | §12.1 point 9 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-610 | Refus de chevauchement par l'écran : « Cette période chevauche un autre taux. » en `role="alert"` dans le dialogue, dialogue ouvert, liste inchangée, base inchangée (taux et historique) ; fin antérieure : « La date de fin précède la date de début. » ; montant invalide : `aria-invalid`, « Montant invalide. », bouton désactivé | §12.1 points 2, 3, 9 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-611 | Section absente pour un utilisateur non ressource et dans « Nouvel utilisateur » ; décocher « Ressource planifiable » d'un utilisateur qui a un taux : « Cet utilisateur a des taux journaliers : il reste ressource. », dialogue ouvert, base inchangée ; garde D-188 : un ajout saisi non envoyé déclenche la confirmation de fermeture | §12.1 points 8, 9 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-612 | Onglet Affectations (horloge du navigateur figée) : colonne « Taux du jour » = taux en vigueur à la date du jour (« 600,00 € »), « — » pour une ressource sans taux ou hors période ; chef de projet qui écrit : colonne présente et valeurs lues ; chef en lecture seule : colonne absente | §12.1 points 4, 10 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-613 | OTP propre d'un projet saisi par l'écran à la création (« Nouveau projet »), puis modifié par « Modifier le projet » : `otp` relu par l'API, valeur affichée à la réouverture ; champ limité à 50 caractères ; vidé → null | §12.2 points 1, 7 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-614 | OTP hérité : dialogue « Modifier l'activité » d'une activité sans valeur, projet avec OTP : aide « Hérité de <code> : <valeur> » ; sous-activité sous une activité avec OTP : « Hérité de <WBS> <nom> : <valeur> » ; « Nouvelle activité » : aide de la valeur effective du parent choisi | §12.2 points 2, 7 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-615 | OTP propre qui prime : saisi par l'écran sur l'activité héritière, aide absente à la réouverture ; API : `otp` et `otp_effectif` = valeur propre, `otp_source` null ; sous-activité : aide « Hérité de <WBS> <nom> » de cette activité | §12.2 points 2, 7 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-616 | Chef d'un sous-projet seulement, projet parent illisible avec OTP : dialogue « Modifier le projet » du sous-projet : aide « Hérité d'un projet parent : <valeur> », ni code ni nom du parent dans le dialogue | §12.2 points 4, 7 ; D-225 (F) (2) | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-617 | Copie de projet par l'écran (dialogue « Copier ») : l'OTP propre du projet et d'une activité est relu dans les dialogues de la copie et par l'API | §11.2 ; §12.2 point 8 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-618 | Parcours complet étendu (base à l'administrateur seul, tout à l'écran) : création d'une ressource, taux journalier saisi dans son dialogue, projet avec OTP, affectation : « Taux du jour » lu dans l'onglet Affectations, aide d'héritage lue dans le dialogue d'une activité | §12.1, §12.2 ; CLAUDE.md « Parcours IHM » | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-619 | OTP d'un modèle saisi par l'écran (« Modifier » de l'écran Modèles) ; « Créer un projet depuis » ce modèle : OTP propre relu sur le projet créé | §11.3 ; §12.2 points 1, 8 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-620 | Captures sans assertion de valeur : `e2e/captures/couts-1-*.png` (section « Taux journaliers » ; onglet Affectations avec « Taux du jour » ; dialogue d'activité avec aide d'héritage) à 1440 et 1024 px | §12.1, §12.2 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-621 | « Nouveau modèle » avec un OTP saisi à l'écran (espaces de bord retirés) : `otp` relu par l'API, valeur affichée dans « Modifier le projet » du modèle ; champ limité à 50 caractères | §12.2 points 1, 7 | couts-1 | e2e/tests/couts-1.spec.ts |
+| E2E-622 | « Nouvelle activité » avec un OTP saisi à l'écran : `otp`, `otp_effectif` relus par l'API, `otp_source` null, pas d'aide d'héritage ; sous-activité : aide « Hérité de <WBS> <nom> : <valeur> » (ajouté après @reviewer) | §12.2 points 1, 2, 7 | couts-1 | e2e/tests/couts-1.spec.ts |
+
+### Couverture des champs, couts-1
+
+- Taux (POST /api/utilisateurs/:id/taux) : `debut`, `fin`, `montant` → champs Du, Au, Montant de la section « Taux journaliers » du dialogue « Modifier <nom> » (E2E-607, E2E-618) ; écrans consommateurs : liste de la section, colonne « Taux du jour » de l'onglet Affectations (E2E-612, E2E-618).
+- Taux (PATCH /api/taux/:id) : `debut`, `fin`, `montant` → champs Du, Au, Montant du dialogue « Modifier le taux », ouvert par le bouton de ligne « Modifier le taux du <date> » (E2E-608 : `fin` et `montant` ; `debut` par le même composant `ChampsPeriode` que l'ajout, E2E-607).
+- Taux (DELETE /api/taux/:id) → bouton de ligne « Supprimer le taux du <date> » (E2E-609).
+- `otp` du projet (POST /api/projets, PATCH /api/projets/:id) → champ « OTP » de « Nouveau projet » et « Modifier le projet » (E2E-613) ; écran consommateur : aide d'héritage des dialogues d'activité (E2E-614, E2E-618).
+- `otp` du modèle (PATCH /api/projets/:id d'un modèle) → champ « OTP » du dialogue « Modifier le projet » ouvert depuis l'écran Modèles (E2E-619) ; écran consommateur : projet créé depuis le modèle (E2E-619). POST /api/modeles → champ « OTP » de « Nouveau modèle » (E2E-621) ; écran consommateur : « Modifier le projet » du modèle (E2E-621).
+- `otp` de l'activité (POST /api/projets/:id/activites, PATCH /api/activites/:id) → champ « OTP » de « Nouvelle activité » (E2E-622) et de « Modifier l'activité » (E2E-615) ; écran consommateur : aide d'héritage de la sous-activité (E2E-615).
+- `otp` dans la copie (POST de copie) : hors écran, aucun champ nouveau (l'OTP propre est copié sans saisie, E2E-617).
+
+### Révision D-031 de couts-1 (D-226, tag `tests-lot6c-r13`)
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| MIG-10-r1 | Les versions appliquées après 013 sont lues dans le dossier des migrations (014 en tête, puis 015 et suivantes) au lieu de `[14]` seul ; `max(version)` = dernière version du dossier ; assertions sur `charge_vendue` et `date_client` inchangées | D-149 (2) ; D-226 | couts-1 | packages/api/test/lot6c-vendu.test.ts |
+
+MIG-10 échouait seulement parce que la migration 015 s'applique aussi (`[14, 15]`) ; révisé sur décision du porteur.
+
+## Retours du déploiement 1 (D-227, lot retours-deploiement-1)
+
+Fichiers : `packages/api/test/cache-web.test.ts` (CAC-1 à CAC-5, dossier web factice), `e2e/tests/retours-deploiement-1.spec.ts` (E2E-623 à E2E-628 ; domaines gantt, accueil, vue-ressource, e2e/domaines.json). Valeurs attendues recopiées de D-227 et de SPEC §8 (Cache du navigateur), §6 (Colonnes et défilement, point 5).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| CAC-1 | GET `/` : `Cache-Control: no-cache`, ETag présent, contenu d'`index.html` | §8 Cache du navigateur ; D-227 (A) | retours-deploiement-1 | packages/api/test/cache-web.test.ts |
+| CAC-2 | GET `/projets/1` (repli des routes du front) : `Cache-Control: no-cache`, ETag présent, contenu d'`index.html` | §8 Cache du navigateur ; D-227 (A) | retours-deploiement-1 | packages/api/test/cache-web.test.ts |
+| CAC-3 | GET `/assets/app.js` : `Cache-Control: public, max-age=31536000, immutable` | §8 Cache du navigateur ; D-227 (A) | retours-deploiement-1 | packages/api/test/cache-web.test.ts |
+| CAC-4 | GET `/assets/absent.js` : 404 sans repli sur `index.html`, sans `immutable` dans `Cache-Control` | §8 ; D-140 (5) (b) ; D-227 (A) | retours-deploiement-1 | packages/api/test/cache-web.test.ts |
+| CAC-5 | Réponse /api (GET /api/health, route /api inconnue) : sans `Cache-Control: no-cache` ni `immutable` posés par `servirWeb` | §8 ; D-227 (A) | retours-deploiement-1 | packages/api/test/cache-web.test.ts |
+| E2E-623 | Défauts des trois vues sans stockage : Gantt d'un projet WBS, Nom, Début, Fin ; Accueil Code, Nom, Début, Fin ; planning d'une ressource Projet, Activité, Début, Fin ; menu « Colonnes » : autres colonnes décochées | §6 Colonnes point 5 ; D-227 (B) | retours-deploiement-1 | e2e/tests/retours-deploiement-1.spec.ts |
+| E2E-624 | Gantt d'un projet : Drapeaux absente puis cochée par le menu (présente, fixée à droite) | §6 Colonnes point 5 ; D-227 (B) | retours-deploiement-1 | e2e/tests/retours-deploiement-1.spec.ts |
+| E2E-625 | « Rétablir l'affichage par défaut » après un choix : retour aux nouveaux défauts (Gantt d'un projet) | §6 Colonnes point 5 ; D-227 (B) | retours-deploiement-1 | e2e/tests/retours-deploiement-1.spec.ts |
+| E2E-626 | Mémorisation, Gantt d'un projet : choix retrouvé après navigation vers un autre écran puis retour (historique, puis adresse). Rechargement et autre projet : déjà prouvés par E2E-546-r2 | §6 Colonnes point 6 ; D-212 (5) ; D-227 (B) | retours-deploiement-1 | e2e/tests/retours-deploiement-1.spec.ts |
+| E2E-627 | Mémorisation, Accueil : choix retrouvé après navigation vers un autre écran puis retour. Rechargement : E2E-547-r3 | §6 Colonnes point 6 ; D-227 (B) | retours-deploiement-1 | e2e/tests/retours-deploiement-1.spec.ts |
+| E2E-628 | Mémorisation, planning d'une ressource : choix retrouvé après navigation vers un autre écran puis retour. Rechargement : E2E-548-r2 | §6 Colonnes point 6 ; D-227 (B) | retours-deploiement-1 | e2e/tests/retours-deploiement-1.spec.ts |
+
+### Couverture des champs, retours-deploiement-1
+
+- Aucun champ d'API modifiable nouveau : les colonnes visibles sont un réglage du navigateur (stockage local), sans API (§6 Colonnes point 6).
+
+### Révisions D-031 de retours-deploiement-1 (D-228, tags `tests-retouches-rex6-r15`, `tests-retours-deploiement-1-r1`)
+
+Défauts de colonnes changés (D-227 (B)) : mêmes intentions et mêmes valeurs attendues ; point de départ posé par le stockage avant le chargement (`e2e/tests/colonnes-completes.ts`, colonnes d'avant D-227) ou par le menu « Colonnes ».
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GCO-6-r2 | Défauts de `colonnesAffichees` : Gantt d'un projet WBS, Nom, Début, Fin ; Accueil Code, Nom, Début, Fin ; ressource Projet, Activité, Début, Fin ; anciennes attentes gardées avec un choix « tout coché » (décision du porteur) | D-227 (B) | retours-deploiement-1 | packages/web/test/gantt-disposition.test.ts |
+| E2E-87-r1, E2E-92-r9, E2E-93-r4, E2E-100-r7, E2E-109-r6 | Accueil : stockage posé avant le chargement | D-227 (B) | retours-deploiement-1 | e2e/tests/accueil-g2.spec.ts, accueil-g3.spec.ts, accueil-g4.spec.ts |
+| E2E-33-r1, E2E-35-r1, E2E-41a-r1, E2E-41b-r1, E2E-41e-r1, E2E-43-r8, E2E-252-r1, E2E-288-r2, E2E-289-r2 | Gantt d'un projet : stockage posé avant le chargement | D-227 (B) | retours-deploiement-1 | e2e/tests/lot3b*.spec.ts, rex3a.spec.ts, rex3b-r4.spec.ts |
+| E2E-179-r6, E2E-191-r6, E2E-358-r2, E2E-362-r2, E2E-363-r1, E2E-366-r3 | Gantt d'un projet : stockage posé avant le chargement | D-227 (B) | retours-deploiement-1 | e2e/tests/lot3e.spec.ts, lot3f1.spec.ts, lot6c.spec.ts |
+| E2E-378-r1, E2E-381-r3, E2E-480-r1, E2E-482-r2, E2E-483-r1, E2E-485-r1 | Planning d'une ressource, Accueil, Gantt : stockage posé avant le chargement | D-227 (B) | retours-deploiement-1 | e2e/tests/lot6e.spec.ts, recette-auto-chefa.spec.ts |
+| E2E-521-r1, E2E-522-r2, E2E-523-r1, E2E-539-r1 | Drapeaux visible : stockage posé avant le chargement | D-227 (B) | retours-deploiement-1 | e2e/tests/gantt-colonnes.spec.ts |
+| E2E-540-r3, E2E-541-r4, E2E-542-r3, E2E-546-r2, E2E-547-r3, E2E-548-r2, E2E-549-r2, E2E-550-r3, E2E-551-r2, E2E-552-r2, E2E-553-r3, E2E-554-r2, E2E-555-r2, E2E-556-r3 | En-têtes par défaut = D-227 ; Drapeaux cochée par le menu là où la colonne est mesurée ou testée | D-227 (B) | retours-deploiement-1 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-244-r5, E2E-255-r1 | Colonnes Avancement et Planification : stockage posé avant le chargement (échecs de la première suite, hors domaines ciblés ; tag `tests-retours-deploiement-1-r2`) | D-227 (B) | retours-deploiement-1 | e2e/tests/lot4b.spec.ts, rex3a-captures.spec.ts |
+| E2E-569-r1 | Accueil : Drapeaux cochée par le menu avec les autres colonnes | D-227 (B) | retours-deploiement-1 | e2e/tests/retouches-rex6.spec.ts |
+
+## Coûts, tranche 2 : calcul, colonnes et export (D-229, sous-lot couts-2)
+
+Fichiers : `packages/api/test/couts-calcul.test.ts` (COUT-1 à COUT-7, fonctions pures, date du jour en paramètre), `packages/api/test/couts-export.test.ts` (CEX-1 à CEX-4), `packages/api/test/couts-visibilite.test.ts` (CVI-1 à CVI-5), `packages/api/test/couts-helpers.ts` (jeu de COUT-6), `e2e/tests/couts-2.spec.ts` (E2E-629 à E2E-635 ; domaines gantt, accueil, projets, e2e/domaines.json). Valeurs attendues recopiées de SPEC §12.3 (cas COUT-1 à COUT-7) et §12.4 (exemple d'export). Tout test de refus relit la base et la compare à l'état d'avant. Les e2e posent les taux relativement à la vraie date du jour du serveur (Alice 600 € depuis 2000-01-01 ; Carol 500 € sur l'année 2000 seulement) : mêmes valeurs que COUT-6 ; les dates exactes sont prouvées par vitest. Rouge : COUT-1 à COUT-7 (module absent), CEX-1 à CEX-4 et CVI-1, CVI-3, CVI-4 (7 sur 9 des tests d'API) ; CVI-2 et CVI-5 verrouillent l'existant ; E2E-629 à E2E-635 : 7 sur 7.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| COUT-1 | Alice 5 j, aucune imputation, reste 5 j, jour 15/01/2027 : planifié 3000, imputé 0, réel 3000, taux manquant non | §12.3 | couts-2 | packages/api/test/couts-calcul.test.ts |
+| COUT-2 | Alice 5 j, imputations 31/01 et 01/02, reste 3 j, jour 02/02/2027 : 3500, 1300, 3400, non | §12.3 | couts-2 | packages/api/test/couts-calcul.test.ts |
+| COUT-3 | Alice 0,5 j, reste 0,5 j, jour 15/01/2027 : 300, 0, 300, non | §12.3 | couts-2 | packages/api/test/couts-calcul.test.ts |
+| COUT-4 | Bob sans taux, 4 j, imputation 10/01, reste 3 j : 0, 0, 0, non | §12.3 | couts-2 | packages/api/test/couts-calcul.test.ts |
+| COUT-5 | Carol 2 j, imputation 15/03, reste 1 j, jour 02/04/2027 : 0, 500, 500, oui | §12.3 | couts-2 | packages/api/test/couts-calcul.test.ts |
+| COUT-6 | P, F1 (Alice 5 j), F2 (Carol 2 j), jour 15/01/2027 : F1 3000/0/3000 non ; F2 0/0/0 oui ; P et projet 3000/0/3000 oui | §12.3 | couts-2 | packages/api/test/couts-calcul.test.ts |
+| COUT-7 | Une activité, Alice 2 j et Bob 3 j : 1200, 0, 1200, non | §12.3 | couts-2 | packages/api/test/couts-calcul.test.ts |
+| CEX-1 | Export de l'administrateur = exemple de §12.4, mot pour mot (BOM, CRLF) | §12.4 point 3 | couts-2 | packages/api/test/couts-export.test.ts |
+| CEX-2 | En-têtes : text/csv UTF-8, pièce jointe `couts-<code>-AAAA-MM-JJ.csv` | §12.4 point 3 | couts-2 | packages/api/test/couts-export.test.ts |
+| CEX-3 | L'export n'écrit rien (historique inchangé) et n'exporte pas la charge vendue | §12.4 point 3 ; §7 | couts-2 | packages/api/test/couts-export.test.ts |
+| CEX-4 | Sans OTP effectif : cellule OTP vide | §12.4 point 3 | couts-2 | packages/api/test/couts-export.test.ts |
+| CVI-1 | Gantt : quatre clés sur éléments et totaux pour administrateur et chef (valeurs de COUT-6) | §12.3 point 7 | couts-2 | packages/api/test/couts-visibilite.test.ts |
+| CVI-2 | Chef en lecture seule : aucune des quatre clés, absentes (le rôle ressource ne lit pas le projet, D-148) | §12.3 point 7 | couts-2 | packages/api/test/couts-visibilite.test.ts |
+| CVI-3 | `otp_effectif` renvoyé à tout lecteur (administrateur, lecture seule) | §12.2 ; D-229 (2) (c) | couts-2 | packages/api/test/couts-visibilite.test.ts |
+| CVI-4 | Export : 401 sans session, 403 rôle ressource, 403 lecture seule, 404 projet illisible et inexistant ; base inchangée | §12.4 point 3 ; D-229 (2) (e) | couts-2 | packages/api/test/couts-visibilite.test.ts |
+| CVI-5 | Liste des activités en lecture seule : sans les clés de coût | §12.3 point 7 | couts-2 | packages/api/test/couts-visibilite.test.ts |
+| E2E-629 | Gantt d'un projet : « OTP », « Coût planifié », « Coût réel » cochées par le menu ; valeurs de COUT-6 (F1, F2, P) | §12.4 point 1 | couts-2 | e2e/tests/couts-2.spec.ts |
+| E2E-630 | Accueil : mêmes colonnes cochées par le menu ; valeurs sur les activités, ligne de projet vide | §12.4 point 1 ; D-229 (2) (c) | couts-2 | e2e/tests/couts-2.spec.ts |
+| E2E-631 | Marque « incomplet » (title « Taux manquant ») sur F2 et P, absente sur F1 | §12.4 point 1 ; §12.3 point 6 | couts-2 | e2e/tests/couts-2.spec.ts |
+| E2E-632 | Région « Totaux du projet » : « · Coût planifié 3 000,00 € · Coût réel 3 000,00 € » et marque | §12.4 point 2 | couts-2 | e2e/tests/couts-2.spec.ts |
+| E2E-633 | « Exporter les coûts » : fichier téléchargé = exemple de §12.4 ; gantt inchangé | §12.4 point 3 | couts-2 | e2e/tests/couts-2.spec.ts |
+| E2E-634 | Chef en lecture seule : « OTP » au menu, ni colonnes de coût, ni export, ni totaux ; réponses sans clés de coût | §12.3 point 7 ; §12.4 | couts-2 | e2e/tests/couts-2.spec.ts |
+| E2E-635 | Parcours complet depuis « administrateur seul » : taux, projet avec OTP, affectation, activité assignée à l'écran, colonnes, totaux, export | §12.4 point 4 | couts-2 | e2e/tests/couts-2.spec.ts |
+
+### Couverture des champs, couts-2
+
+- `cout_planifie`, `cout_impute`, `cout_reel`, `taux_manquant` : champs calculés, en lecture seule, hors saisie (aucun champ de saisie) ; écrans consommateurs : colonnes « Coût planifié » et « Coût réel » du Gantt et de l'Accueil, région « Totaux du projet », export (E2E-629 à E2E-635).
+- `otp_effectif`, `otp_source` du Gantt : lecture seule ; colonne « OTP » du Gantt et de l'Accueil (E2E-629, E2E-630, E2E-634) ; la saisie de `otp` est couverte en couts-1.
+- GET /api/projets/:id/couts/export : aucun paramètre ; lien « Exporter les coûts » (E2E-633, E2E-635).
+
+### Révisions D-031 de couts-2 (D-229, D-230)
+
+Décisions du porteur (claude.ai) : mêmes intentions et mêmes valeurs ; seules les clés nouvelles de §12 sont ajoutées à l'attendu, ou les colonnes de §12.4 au menu.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| GANTT-1-r3 | Forme complète du Gantt : `otp_effectif`, `otp_source` et les quatre clés de coût ajoutés à l'attendu de l'administrateur (tag `tests-lot3a-r2`) | §12.2, §12.3 | couts-2 | packages/api/test/lot3a-gantt.test.ts |
+| VND-8-r2, VND-10-r1 | `projet.totaux` : les quatre clés de coût ajoutées à l'attendu de l'administrateur (tag `tests-lot6c-r14`) | §12.3, §12.4 point 2 | couts-2 | packages/api/test/lot6c-vendu.test.ts |
+| GCO-7-r2 | Colonnes du menu : OTP (tous), Coût planifié et Coût réel (avec `vendu`, et Accueil) ajoutées dans l'ordre (tag `tests-gantt-colonnes-2-r2`) | §12.4 point 1 | couts-2 | packages/web/test/gantt-disposition.test.ts |
+| E2E-540-r4, E2E-541-r5, E2E-555-r3 | Menu « Colonnes » du Gantt d'un projet et de l'Accueil, et du chef en lecture seule : « OTP », « Coût planifié », « Coût réel » ajoutés dans l'ordre (tag `tests-couts-2-r1`) | §12.4 point 1 | couts-2 | e2e/tests/gantt-colonnes-2.spec.ts |
+| E2E-623-r1 | Défauts des trois vues : menu allongé des mêmes colonnes, décochées | §12.4 point 1 ; D-227 (B) | couts-2 | e2e/tests/retours-deploiement-1.spec.ts |
+| E2E-569-r2 | Accueil toutes colonnes cochées : menu allongé des trois colonnes, en-têtes inchangés | §12.4 point 1 | couts-2 | e2e/tests/retouches-rex6.spec.ts |
+| E2E-358-r3, E2E-362-r3, E2E-484-r1 | Région « Totaux du projet » : « · Coût planifié 0,00 € · Coût réel 0,00 € » ajouté ; `totaux` de l'API avec les quatre clés de coût | §12.4 point 2 | couts-2 | e2e/tests/lot6c.spec.ts, recette-auto-chefa.spec.ts |
+
+## Version de l'application (D-231, lot version)
+
+Fichiers : `packages/api/test/version.test.ts` (VER-1 à VER-7), `e2e/tests/version.spec.ts` (E2E-636 à E2E-640). Domaines : authentification, vue-ressource, dialogues, feuille-de-temps.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| VER-1 | `GET /api/version` sans session : 200, `version` égale à celle du package.json racine, `commit` égal à `COMMIT` | §13 points 2, 3 | version | packages/api/test/version.test.ts |
+| VER-2 | Sans `COMMIT` dans l'environnement : `commit` vaut « inconnu » | §13 point 2 | version | packages/api/test/version.test.ts |
+| VER-3 | En-tête `X-PlanerSource-Version` sur une réponse 200 | §13 point 3 | version | packages/api/test/version.test.ts |
+| VER-4 | En-tête sur une réponse 401 ; base inchangée | §13 point 3 | version | packages/api/test/version.test.ts |
+| VER-5 | En-tête sur une réponse 404 d'une route /api inconnue | §13 point 3 | version | packages/api/test/version.test.ts |
+| VER-6 | Version au format X.Y.Z, identique dans package.json et package-lock.json (racine) | §13 point 1 | version | packages/api/test/version.test.ts |
+| VER-7 | Dockerfile (`ARG COMMIT=inconnu` aux deux étapes, `ENV COMMIT`) et docker-compose.yml (`args: COMMIT: ${COMMIT:-inconnu}`) transmettent `COMMIT` | §13 point 2 | version | packages/api/test/version.test.ts |
+| E2E-636 | Pied de la barre latérale de l'administrateur : « v<version> · <commit> » | §13 point 4 | version | e2e/tests/version.spec.ts |
+| E2E-637 | Pied de la barre latérale d'une ressource (vue restreinte) : même texte | §13 point 4 | version | e2e/tests/version.spec.ts |
+| E2E-638 | Version identique : aucun bandeau | §13 point 5 | version | e2e/tests/version.spec.ts |
+| E2E-639 | En-tête différent (page.route) : bandeau « Nouvelle version disponible » ; « Recharger » recharge la page ; en-tête absent : pas de bandeau | §13 point 5 | version | e2e/tests/version.spec.ts |
+| E2E-640 | « Recharger » avec modifications non enregistrées (Feuille de temps) : confirmation D-172 ; « Annuler » garde la saisie, « Abandonner » recharge | §13 point 5 ; D-172 | version | e2e/tests/version.spec.ts |
+
+### Couverture des champs, version
+
+- `version`, `commit` de `GET /api/version` : lecture seule, hors saisie ; écran consommateur : pied de la barre latérale (E2E-636, E2E-637) ; en-tête `X-PlanerSource-Version` : bandeau (E2E-638 à E2E-640).
+
+## Nettoyage des coûts (D-233, lot nettoyage-couts)
+
+Fichiers : `packages/api/test/nettoyage-couts.test.ts` (NCO-1 à NCO-8), `e2e/tests/nettoyage-couts.spec.ts` (E2E-641). Domaines : projets, gantt. Point (e) : refactor de `lireOtpProjets`, couvert par OTP-1 à OTP-11 existants ; point (f) : SPEC seulement.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| NCO-1 | `POST /api/projets/:id/copie` (projet à OTP propre, projet sous un parent à OTP, modèle) : la réponse porte `otp_effectif` et `otp_source` égaux à ceux du `GET /api/projets/:id` de la copie | §12.2 ; D-233 (a) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| NCO-2 | Écriture SQL directe dans `taux_journalier` avec `montant` 0 puis −1 : 23514 (`taux_montant_positif`), table inchangée ; 0,01 accepté | §12.1 ; D-233 (b) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| NCO-3 | Écriture SQL directe avec `montant` 1000000 : 22003 (borne du type `numeric(8, 2)`, pas un CHECK), table inchangée ; 999999,99 accepté | §12.1 ; D-233 (b) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| NCO-4 | Écriture SQL directe avec `fin` < `debut` : 23514 (`taux_fin_apres_debut`), table inchangée ; `fin` = `debut` et `fin` nulle acceptées | §12.1 ; D-233 (b) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| NCO-5 | UPDATE direct de `projet.otp` et `activite.otp` à « » puis à 51 caractères : 23514 (`projet_otp_longueur`, `activite_otp_longueur`), lignes inchangées ; 1 et 50 caractères acceptés | §12.2 ; D-233 (b) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| NCO-6 | INSERT direct dans `historique` : entité `taux` acceptée, entité inconnue refusée (23514, `historique_entite_check`), table inchangée | §12.1 ; D-233 (b) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| NCO-7 | `POST /api/utilisateurs/:id/taux` à deux défauts : corps invalide + fin < début → 400 ; corps invalide + chevauchement → 400 ; fin < début + chevauchement → 422 ; corps invalide sur une non-ressource → 400 ; base inchangée | §12.1 ; D-233 (c) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| NCO-8 | `PATCH /api/taux/:id` à deux défauts : mêmes cumuls que NCO-7 (400 avant 422, 422 avant 409) ; base inchangée | §12.1 ; D-233 (c) | nettoyage-couts | packages/api/test/nettoyage-couts.test.ts |
+| E2E-641 | Dialogue « Modifier le projet » (par l'écran) : sans OTP propre, l'aide d'héritage suit le changement de « Projet parent » avant l'enregistrement (parent à OTP, puis « Aucun parent ») ; après enregistrement, l'API et le dialogue rouvert le confirment | §12.2 ; D-233 (d) | nettoyage-couts | e2e/tests/nettoyage-couts.spec.ts |
+
+### Couverture des champs, nettoyage-couts
+
+- `otp_effectif`, `otp_source` de la réponse de copie : lecture seule, hors saisie ; écran consommateur : dialogue « Modifier le projet » rouvert (E2E-641) ; copie par l'écran : E2E-617.
+- Aucun champ modifiable nouveau.
+
+## Retours du déploiement 2 (D-235, lot retours-deploiement-2)
+
+Fichiers : `packages/web/test/retours-deploiement-2.test.ts` (RD2-1, RD2-2), `e2e/tests/retours-deploiement-2.spec.ts` (E2E-642 à E2E-649). Domaines : projets, gantt, accueil, dialogues, planning-manuel.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| RD2-1 | Table des aides par mode (`champsActivite`) : FDUR et DDUR « Effet sur le planning : oui (jours ouvrés). » ; ASAP, START, STARR, ALAP « Effet sur le planning : seulement sans ressource assignée (longueur de la barre, jours ouvrés). » ; REGUL et MAN : aucune aide de durée | §6 Charge lisible point 5 ; D-235 (A) | retours-deploiement-2 | packages/web/test/retours-deploiement-2.test.ts |
+| RD2-2-r1 | (révisé, D-236 (1)) Aucun libellé « (jours) » ni « (jours ouvrés) » dans les sources de packages/web/src, hors aides « Effet sur le planning : … » | §6 Charge lisible point 5 ; D-235 (A) | retours-deploiement-2 | packages/web/test/retours-deploiement-2.test.ts |
+| E2E-642 | Dialogue « Nouvelle activité » : libellé « Durée validée (j) » et aide reliée par `aria-describedby`, selon le mode (ASAP, START, STARR, ALAP, FDUR, DDUR) ; « Charge vendue (j) » et son aide | §6 Charge lisible point 5 ; D-235 (A) | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+| E2E-643-r1 | (révisé, D-236 (1)) Dialogue « Modifier l'activité » : mêmes libellés et aides par mode, mis à jour au changement de mode ; charge assignée et marge en lecture seule sans aide ; 4 aides (Durée validée, Charge vendue, Délai des prédécesseurs, Délai des successeurs), chacune vérifiée par `aria-describedby` | §6 Charge lisible point 5 ; D-235 (A) | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+| E2E-644 | Aide de la charge vendue « Effet sur le planning : non (sert à la marge). » dans la création et la modification, reliée par `aria-describedby` | §6 Charge lisible point 5 | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+| E2E-645 | « Délai (j) » et son aide « Effet sur le planning : oui (jours ouvrés). » : onglet Planning, formulaire d'édition, section Prédécesseurs et Successeurs du dialogue d'une activité | §6 Charge lisible point 5 | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+| E2E-646 | « Charge assignée (j) » et son aide « Effet sur le planning : oui. » : dialogues d'assignation du Planning et des formulaires d'édition | §6 Charge lisible point 5 | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+| E2E-647 | Planning manuel : en-tête « Total du mois (j) » | §6 Charge lisible point 5 | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+| E2E-648 | Gantt d'un projet, page défilée sous l'en-tête collant, dialogue d'une activité ouvert par un clic : `document.elementFromPoint` au centre de chaque champ renvoie un élément du dialogue | §6 Charge lisible point 6 ; D-235 (B) | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+| E2E-649 | Même contrôle sur le Gantt global de l'Accueil | §6 Charge lisible point 6 ; D-235 (B) | retours-deploiement-2 | e2e/tests/retours-deploiement-2.spec.ts |
+
+### Couverture des champs, retours-deploiement-2
+
+- Aucun champ modifiable nouveau : libellés et aides des champs `duree`, `charge_vendue`, `charge` de l'assignation, `delai` de la dépendance, et total du mois du Planning manuel (E2E-642 à E2E-647) ; empilement du dialogue (E2E-648, E2E-649).
+
+### Révisions D-031 de retours-deploiement-2 (D-235, D-236, tags `tests-retours-deploiement-2-r1`, `tests-retours-deploiement-2-r2`)
+
+- `-r1` (décision du porteur, D-236 (1)) : RD2-2-r1 et E2E-643-r1, une contradiction du prompt d'ouverture et non de la SPEC.
+- `-r2` (sans décision préalable, D-235) : e2e dont seuls les libellés renommés ou l'aide ajoutée changent (même intention, mêmes valeurs attendues) : E2E-110-r2 → E2E-110-r3, E2E-572 → E2E-572-r1, E2E-573 → E2E-573-r1, E2E-574 → E2E-574-r1, E2E-575 → E2E-575-r1, E2E-576 → E2E-576-r1, E2E-577 → E2E-577-r1, E2E-578 → E2E-578-r1, E2E-123-r2 → E2E-123-r3, E2E-635 → E2E-635-r1, E2E-443-r2 → E2E-443-r3, E2E-8 → E2E-8-r1, E2E-9 → E2E-9-r1, E2E-18-r1 → E2E-18-r2, E2E-19-r1 → E2E-19-r2, E2E-59-r1 → E2E-59-r2, E2E-131-r1 → E2E-131-r2, E2E-133a → E2E-133a-r1, E2E-170-r1 → E2E-170-r2, E2E-180-r1 → E2E-180-r2, E2E-192-r1 → E2E-192-r2, E2E-208-r1 → E2E-208-r2, E2E-244-r5 → E2E-244-r6, E2E-316 → E2E-316-r1, E2E-345-r1 → E2E-345-r2, E2E-353-r1 → E2E-353-r2, E2E-358-r3 → E2E-358-r4, E2E-376-r1 → E2E-376-r2, E2E-382-r1 → E2E-382-r2, E2E-387-r1 → E2E-387-r2, E2E-46-r1 → E2E-46-r2, E2E-248 → E2E-248-r1, E2E-595 → E2E-595-r1, E2E-596 → E2E-596-r1, E2E-597 → E2E-597-r1, E2E-604 → E2E-604-r1. Les tests E2E-572 à E2E-578 de charge-lisible.spec.ts reprennent le nouveau libellé « Durée validée (j) » et la nouvelle aide de la SPEC §6 point 5.
+
+## Colonne Ressources (D-238, lot colonne-ressources)
+
+Fichiers : `packages/api/test/colonne-ressources.test.ts` (CRS-1 à CRS-3), `packages/web/test/gantt-disposition.test.ts` (CRS-4), `e2e/tests/colonne-ressources.spec.ts` (E2E-650 à E2E-656). Domaines : gantt, accueil, dialogues, projets.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| CRS-1 | GET …/gantt, feuille à 3 assignations dont une ressource sans initiales : `assignations` aux champs exacts { id, ressource_id, nom, initiales, charge_assignee, taux }, triées par nom sans tenir compte de la casse (deux noms qui ne diffèrent que par la casse départagés par id), `initiales` null pour la ressource sans initiales | §6 Lecture ; D-238 (a) | colonne-ressources | colonne-ressources | packages/api/test/colonne-ressources.test.ts |
+| CRS-2 | Feuille sans assignation : `assignations` []; parent et jalon : clé `assignations` absente ; `initiales` (D-088) inchangé (ordre par id, sans les null) | §6 Lecture ; D-238 (a) | colonne-ressources | colonne-ressources | packages/api/test/colonne-ressources.test.ts |
+| CRS-3 | Lecteur sans droit d'écriture (chef de projet affecté au projet d'un autre chef) : `assignations` présentes et identiques à celles de l'administrateur ; base inchangée (la route n'écrit rien) | §6 Lecture ; D-238 (a) | colonne-ressources | colonne-ressources | packages/api/test/colonne-ressources.test.ts |
+| CRS-4 | Disposition : défauts des deux vues avec `ressources` après `fin` ; planning d'une ressource sans `ressources` ; choix enregistré sans clé `ressources` : affichée ; `ressources: false` : masquée | §6 Colonne Ressources points 1, 7 ; Colonnes et défilement point 5 ; D-238 (c) | colonne-ressources | colonne-ressources | packages/web/test/gantt-disposition.test.ts |
+| E2E-650 | Gantt d'un projet, administrateur, colonne Ressources par défaut après Fin : contenu exact (initiales, nom si pas d'initiales, tri par nom), `title` « Alice Bernard — 2,5 j » ; parent et jalon vides | §6 Colonne Ressources points 1 à 3 | colonne-ressources | colonne-ressources | e2e/tests/colonne-ressources.spec.ts |
+| E2E-651 | Parcours par l'écran, sans appel API pour l'assignation : création dans l'onglet Planning, puis clic sur l'initiale dans le Gantt ; dialogue « Modifier l'assignation », charge préremplie, passage à 4, enregistrement ; `title` « … — 4 j », bandeau « Planning à recalculer », colonne Charge, charge dans l'onglet Planning | §6 Colonne Ressources points 4, 5 | colonne-ressources | colonne-ressources | e2e/tests/colonne-ressources.spec.ts |
+| E2E-652 | Accueil, projet déplié : même contenu ; clic, enregistrement, Accueil rechargé, `title` mis à jour | §6 Colonne Ressources points 2 à 5 | colonne-ressources | colonne-ressources | e2e/tests/colonne-ressources.spec.ts |
+| E2E-653 | Chef de projet sans droit d'écriture sur le projet : infobulles présentes, aucun bouton dans la colonne, dans les deux vues | §6 Colonne Ressources point 4 | colonne-ressources | colonne-ressources | e2e/tests/colonne-ressources.spec.ts |
+| E2E-654-r1 | (révisé, D-238, D-031) Menu « Colonnes » : « Ressources » juste après « Fin », cochée par défaut ; décochée : absente du DOM et conservée au rechargement ; « Rétablir l'affichage par défaut » la recoche ; pas d'entrée « Ressources » dans le planning d'une ressource | §6 Colonne Ressources point 1 ; Colonnes et défilement points 5, 9 | colonne-ressources | colonne-ressources | e2e/tests/colonne-ressources.spec.ts |
+| E2E-655 | « Recalcul automatique » cochée, modification par une initiale : calcul déclenché, bandeau effacé | §6 Colonne Ressources point 5 ; 3d-4 | colonne-ressources | colonne-ressources | e2e/tests/colonne-ressources.spec.ts |
+| E2E-656 | Critère 3b point 15 (a) à (c) à 1440 et 1024 px, colonnes par défaut, Gantt d'un projet et Accueil | §6 Colonne Ressources point 7 | colonne-ressources | colonne-ressources | e2e/tests/colonne-ressources.spec.ts |
+
+### Couverture des champs, colonne-ressources
+
+- `charge_assignee` et `taux` de PATCH /api/assignations/:id : aussi modifiables depuis la colonne Ressources du Gantt d'un projet et de l'Accueil (dialogue « Modifier l'assignation », champs « Charge assignée (j) » et « Taux ») ; écran consommateur : `title` de l'élément, colonne Charge, onglet Planning (E2E-651, E2E-652).
+- `assignations` de GET …/gantt : lecture seule, hors saisie (CRS-1 à CRS-3) → colonne « Ressources » (E2E-650).
+
+### Révisions D-031 de colonne-ressources (D-238, tag `tests-colonne-ressources-r1`)
+
+Décisions du porteur (claude.ai) : révisions dues à la colonne Ressources par défaut (liste exacte des colonnes, ordre de tabulation, boutons de la colonne) et à la clé `assignations` ; assertions inchangées pour le reste. Un commit par fichier (les tests d'une même boucle partagent leur code).
+
+- E2E-654 → E2E-654-r1 : attente « 1 Tâche R » pour la vue ressource.
+- GCO-6-r2 → GCO-6-r3, GCO-7-r2 → GCO-7-r3 (colonnes et menu).
+- GANTT-1-r3 → GANTT-1-r4 : clé `assignations` de la feuille.
+- gantt-colonnes-2 : E2E-540-r4 → r5, E2E-541-r5 → r6, E2E-546-r2 → r3, E2E-547-r3 → r4, E2E-549-r2 → r3, E2E-550-r3 → r4, E2E-552-r2 → r3, E2E-553-r3 → r4, E2E-555-r3 → r4, E2E-556-r3 → r4.
+- retours-deploiement-1 : E2E-623-r1 → r2, E2E-624 → r1, E2E-625 → r1, E2E-626 → r1, E2E-627 → r1 ; retouches-rex6 : E2E-569-r2 → r3.
+- Accueil : E2E-87-r1 → r2, E2E-92-r9 → r10, E2E-100-r7 → r8, E2E-109-r6 → r7 (poignée « Ressources » dans l'ordre de tabulation).
+- Gantt d'un projet, ordre de tabulation (poignée et boutons d'assignation) : E2E-43-r8 → r9, E2E-179-r6 → r7, E2E-191-r6 → r7.
+- `ressources: false` posé avant le chargement (assistant `sansColonneRessources`, colonnes-completes.ts), assertions inchangées (D-238 (1), (4)) : E2E-93-r4 → r5, E2E-289-r2 → r3, E2E-366-r3 → r4.

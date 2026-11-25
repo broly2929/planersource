@@ -146,8 +146,10 @@ La mise à jour récupère la dernière version publiée sur GitHub (branche mai
 4. Reconstruire et redémarrer :
 
    ```sh
-   docker compose up -d --build
+   COMMIT=$(git rev-parse --short HEAD) docker compose up -d --build
    ```
+
+   `COMMIT` est le numéro court du commit, affiché avec la version en bas de la barre latérale (SPEC §13). Sans lui, l'application affiche « inconnu ».
 
 5. Vérifier :
 
@@ -156,6 +158,12 @@ La mise à jour récupère la dernière version publiée sur GitHub (branche mai
    ```
 
    `db` et `app` doivent être `Up`, `db` avec la mention `healthy`. Les migrations de la nouvelle version sont appliquées au démarrage de `app`, sans effacer les données.
+
+6. Les navigateurs chargent la nouvelle version au prochain affichage, sans vider le cache.
+
+   Les navigateurs déjà ouverts affichent un bandeau « Nouvelle version disponible » avec un bouton « Recharger » (SPEC §13).
+
+   Une seule fois, pour la mise à jour qui apporte ce réglage : forcer le rechargement de la page (Ctrl+F5, ou Cmd+Maj+R sur Mac), car le navigateur garde l'ancienne page jusqu'à ce rechargement.
 
 En cas d'échec : restaurer la sauvegarde avec la version précédente (`git checkout <commit précédent>`, puis section 5, « Restauration »). Une version plus ancienne que la base refuse de démarrer : dans ce cas, restaurer la sauvegarde avec l'ancienne version. Les images des versions précédentes restent sur le disque : `docker image prune` les supprime.
 

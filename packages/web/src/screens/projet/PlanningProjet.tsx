@@ -26,19 +26,30 @@ import { navigate } from '../../router';
 import { libelleType, SelectTypeDependance } from '../../typesDependance';
 import { FormulaireDialogue, texteRefusCode, useListe, type Affectation } from './commun';
 import { messagePosition, wbsDe } from './deplacement';
+import { ChampParent, useArbo } from './ChampParent';
+import { parentChange } from '../../saisieActivites';
+import { DialogueModifAssignation } from './DialogueModifAssignation';
 import { FormulaireDeplacement } from './FormulaireDeplacement';
 import { inverseLigne } from '../../gantt/annulation';
 import type { PileAnnulation } from './annulation';
 import {
   ChampChargeVendue,
+  ChampDuree,
+  ChampMode,
+  ChampsDates,
   FormulaireActivite,
   FormulaireJalon,
-  FormulaireModifAssignation,
   FormulaireModifDependance,
   type ActiviteDetail,
   type JalonDetail,
+  useAideOtpCreation,
   useChargeVendue,
+  usePlanification,
 } from './FormulairesEdition';
+import { ChampOtp } from '../../components/ChampOtp';
+import { otpSaisi } from '../../couts';
+import { ChampTaux } from '../../components/ChampTaux';
+import { AIDE_TAUX_ASSIGNATION } from '../../aidesTaux';
 
 interface Ligne {
   id: number;
@@ -82,6 +93,7 @@ interface Suppression {
 
 export function FormulaireNom({
   libelle,
+  projetId,
   chemin,
   corps,
   onSucces,
@@ -89,6 +101,7 @@ export function FormulaireNom({
   avecChargeVendue = false,
 }: {
   libelle: string;
+  projetId: number;
   chemin: string;
   corps: Record<string, unknown>;
   onSucces: () => void;
@@ -98,6 +111,16 @@ export function FormulaireNom({
 }) {
   const [nom, setNom] = useState('');
   const vendue = useChargeVendue(null);
+  const p = usePlanification({ mode: 'ASAP', debut: null, fin: null, duree: null });
+  // D-222 (1) : parent préchoisi par `corps` (sous-activité, menu) ; changé, il remplace le rang (dernier de sa fratrie).
+  const lignes = useArbo(projetId);
+  const parentInitial = typeof corps.parent_id === 'number' ? corps.parent_id : null;
+  const [parent, setParent] = useState(parentInitial === null ? '' : String(parentInitial));
+  const [otp, setOtp] = useState('');
+  const aideHeritage = useAideOtpCreation(projetId, lignes, parent);
+  const parentChoisi = parentChange(parentInitial, parent)
+    ? { parent_id: parent === '' ? null : Number(parent), rang: undefined }
+    : {};
   return (
     <FormulaireDialogue
       libelle={libelle}
@@ -107,9 +130,20 @@ export function FormulaireNom({
           body: {
             nom,
             ...corps,
+            ...parentChoisi,
+            // D-220 : mode et champs visibles seulement ; durée par défaut : celle de l'API.
+            ...(avecChargeVendue
+              ? {
+                  mode: p.mode,
+                  ...(p.champs.debut && p.debut !== '' ? { debut_valide: p.debut } : {}),
+                  ...(p.champs.fin && p.fin !== '' ? { fin_valide: p.fin } : {}),
+                  ...(p.champs.duree && p.duree !== '' ? { duree_validee: Number(p.duree) } : {}),
+                }
+              : {}),
             ...(avecChargeVendue && vendue.analyse.ok && vendue.analyse.valeur !== null
               ? { charge_vendue: vendue.analyse.valeur }
               : {}),
+            ...(avecChargeVendue && otpSaisi(otp) ? { otp: otpSaisi(otp) } : {}),
           },
         })
       }
@@ -119,7 +153,16 @@ export function FormulaireNom({
       onAnnuler={onAnnuler}
     >
       <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
-      {avecChargeVendue && <ChampChargeVendue valeur={vendue.texte} onChange={vendue.setTexte} />}
+      <ChampParent lignes={lignes} id={null} valeur={parent} onChange={setParent} />
+      {avecChargeVendue && (
+        <>
+          <ChampMode p={p} />
+          <ChampsDates p={p} />
+          <ChampDuree p={p} />
+          <ChampChargeVendue valeur={vendue.texte} onChange={vendue.setTexte} />
+          <ChampOtp valeur={otp} onChange={setOtp} aide={otp.trim() === '' ? aideHeritage : null} />
+        </>
+      )}
     </FormulaireDialogue>
   );
 }
@@ -162,7 +205,8 @@ function FormulaireAssignation({
         options={[{ value: '', label: 'Choisir une ressource' }, ...candidats]}
       />
       <Field
-        label="Charge assignée (jours)"
+        label="Charge assignée (j)"
+        aide="Effet sur le planning : oui."
         type="number"
         required
         min="0.01"
@@ -170,16 +214,7 @@ function FormulaireAssignation({
         value={charge}
         onChange={(e) => setCharge(e.target.value)}
       />
-      <Field
-        label="Taux (%)"
-        type="number"
-        required
-        min="1"
-        max="100"
-        step="any"
-        value={taux}
-        onChange={(e) => setTaux(e.target.value)}
-      />
+      <ChampTaux valeur={taux} onChange={setTaux} aide={AIDE_TAUX_ASSIGNATION} />
     </FormulaireDialogue>
   );
 }
@@ -236,7 +271,8 @@ function FormulaireDependance({
       />
       <SelectTypeDependance valeur={type} onChange={setType} />
       <Field
-        label="Délai (jours ouvrés)"
+        label="Délai (j)"
+        aide="Effet sur le planning : oui (jours ouvrés)."
         type="number"
         step="1"
         required
@@ -293,12 +329,15 @@ export function PlanningProjet({
   const listeAssignations = assignations.statut === 'ok' ? assignations.donnees : [];
 
   const fermer = () => setDialogue(null);
-  const apres = () => {
-    fermer();
+  const rechargerTout = () => {
     chargerPlanning();
     chargerActivites();
     chargerAssignations();
     chargerDependances();
+  };
+  const apres = () => {
+    fermer();
+    rechargerTout();
   };
 
   const supprimerAvecConfirmation = (nom: string, chemin: string) =>
@@ -607,6 +646,7 @@ export function PlanningProjet({
       >
         <FormulaireNom
           libelle="Créer"
+          projetId={projetId}
           chemin={`${base}/activites`}
           corps={{}}
           avecChargeVendue
@@ -622,6 +662,7 @@ export function PlanningProjet({
       >
         <FormulaireNom
           libelle="Créer"
+          projetId={projetId}
           chemin={`${base}/jalons`}
           corps={{}}
           onSucces={apres}
@@ -657,6 +698,7 @@ export function PlanningProjet({
         >
           <FormulaireNom
             libelle="Créer"
+            projetId={projetId}
             chemin={`${base}/activites`}
             corps={{ parent_id: dialogue.ligne.id }}
             avecChargeVendue
@@ -702,7 +744,13 @@ export function PlanningProjet({
           titre="Modifier l’activité"
           description={`Modifiez ${dialogue.activite.nom}.`}
         >
-          <FormulaireActivite activite={dialogue.activite} onSucces={apres} onAnnuler={fermer} />
+          <FormulaireActivite
+            activite={dialogue.activite}
+            projetId={projetId}
+            onChangement={rechargerTout}
+            onSucces={apres}
+            onAnnuler={fermer}
+          />
         </Dialog>
       )}
       {dialogue?.kind === 'jalon-edition' && (
@@ -712,24 +760,25 @@ export function PlanningProjet({
           titre="Modifier le jalon"
           description={`Modifiez ${dialogue.jalon.nom}.`}
         >
-          <FormulaireJalon jalon={dialogue.jalon} onSucces={apres} onAnnuler={fermer} />
-        </Dialog>
-      )}
-      {dialogue?.kind === 'assignation-edition' && (
-        <Dialog
-          ouvert
-          onOuvertChange={(o) => !o && fermer()}
-          titre="Modifier l’assignation"
-          description={`Modifiez la charge et le taux de ${nomRessource(dialogue.assignation.ressource_id)} sur ${dialogue.ligne.nom}.`}
-        >
-          <FormulaireModifAssignation
-            id={dialogue.assignation.id}
-            charge={dialogue.assignation.charge_assignee}
-            taux={dialogue.assignation.taux}
+          <FormulaireJalon
+            jalon={dialogue.jalon}
+            projetId={projetId}
+            onChangement={rechargerTout}
             onSucces={apres}
             onAnnuler={fermer}
           />
         </Dialog>
+      )}
+      {dialogue?.kind === 'assignation-edition' && (
+        <DialogueModifAssignation
+          id={dialogue.assignation.id}
+          charge={dialogue.assignation.charge_assignee}
+          taux={dialogue.assignation.taux}
+          nomRessource={nomRessource(dialogue.assignation.ressource_id)}
+          nomActivite={dialogue.ligne.nom}
+          onSucces={apres}
+          onFermer={fermer}
+        />
       )}
       {dialogue?.kind === 'dependance-edition' && (
         <Dialog

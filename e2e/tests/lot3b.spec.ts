@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { activite, poserSaisies } from './lot2e-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, monde3b, sousProjet } from './lot3b-helpers.js';
@@ -29,10 +30,11 @@ async function dep1(request: Parameters<typeof monde3b>[0], suffixe: string) {
   return { ...m, a, b, lien };
 }
 
-test('E2E-33 : onglet Gantt de DEP-1 calculé : adresse, barres, ligne du tableau, lien FD', async ({
+test('E2E-33-r1 : onglet Gantt de DEP-1 calculé : adresse, barres, ligne du tableau, lien FD', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await dep1(request, 'E2E33');
   await page.clock.setFixedTime(J06);
   await connecterAvec(page, m.emailChef);
@@ -132,10 +134,11 @@ async function montageDrapeaux(request: Parameters<typeof monde3b>[0], suffixe: 
   return { ...m, alap, jalon, lienMan, starr };
 }
 
-test('E2E-35 : drapeaux : retard (barre, jalon), dépendance non respectée (lien), début non respecté (trait, badge)', async ({
+test('E2E-35-r1 : drapeaux : retard (barre, jalon), dépendance non respectée (lien), début non respecté (trait, badge)', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await montageDrapeaux(request, 'E2E35');
   await page.clock.setFixedTime(J06);
   await connecterAvec(page, m.emailChef);

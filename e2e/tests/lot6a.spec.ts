@@ -293,7 +293,7 @@ test('E2E-344 : refus 422 « Équipe inconnue » en modification et en création
   expect(avant).not.toEqual(apresSuppression);
 });
 
-test('E2E-345-r1 : parcours complet à l’écran avec une équipe, de l’administrateur seul à l’assignation', async ({
+test('E2E-345-r2 : parcours complet à l’écran avec une équipe, de l’administrateur seul à l’assignation', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6A';
@@ -345,7 +345,7 @@ test('E2E-345-r1 : parcours complet à l’écran avec une équipe, de l’admin
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 6A' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: RESSOURCE });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 6A.*${RESSOURCE}`) })).toBeVisible();
 

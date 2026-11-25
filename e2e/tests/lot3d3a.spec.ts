@@ -149,7 +149,10 @@ test('E2E-132 : glisser le corps d’une START → un PATCH, contour au 14/01, b
   await expect(bandeau(page)).toHaveCount(0);
 });
 
-test('E2E-133a : poignée droite d’une FDUR +72 px → durée validée 6', async ({ page, request }) => {
+test('E2E-133a-r1 : poignée droite d’une FDUR +72 px → durée validée 6', async ({
+  page,
+  request,
+}) => {
   const m = await monde3b(request, 'E2E133A', ['Alice']);
   const a = await activiteAssignee(request, m, 'Alice', 'Tâche FDUR', 5, {
     mode: 'FDUR',
@@ -166,7 +169,7 @@ test('E2E-133a : poignée droite d’une FDUR +72 px → durée validée 6', asy
   await expect.poll(() => patchs.length).toBe(1);
   expect(patchs[0]!.corps).toEqual({ duree_validee: 6 });
   const dialogue = await dialogueModifier(page, 'Tâche FDUR');
-  await expect(dialogue.getByLabel('Durée validée (jours ouvrés)')).toHaveValue('6');
+  await expect(dialogue.getByLabel('Durée validée (j)')).toHaveValue('6');
 });
 
 test('E2E-133b : poignée droite d’une ALAP +72 px → fin validée 18/01/2027', async ({

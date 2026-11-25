@@ -22,6 +22,8 @@ import {
 import type { Db } from '../db/erreurs.js';
 import { transaction } from '../db/transaction.js';
 import { idCorps, identifiant } from '../planning/identifiant.js';
+import { avecOtp, lireOtpProjets } from '../planning/otp.js';
+import { otpCorps } from './otp.js';
 import type { AppDeps } from '../app.js';
 import { requireUser } from './acces.js';
 
@@ -32,6 +34,7 @@ const champsProjet = {
   priorite: z.number().int().min(0).max(1000),
   chef_id: idCorps,
   date_debut: z.iso.date(),
+  otp: otpCorps,
 };
 
 // strictObject : toute clé inconnue (dont est_modele, fixé à la création, D-038) est refusée.
@@ -42,6 +45,7 @@ const creation = z.strictObject({
   parent_id: champsProjet.parent_id.optional(),
   priorite: champsProjet.priorite.optional(),
   chef_id: champsProjet.chef_id.optional(),
+  otp: champsProjet.otp.optional(),
 });
 // Un modèle a pour chef l'administrateur qui le crée (SPEC §11.1) : un chef_id envoyé est ignoré.
 const creationModele = z.strictObject({
@@ -51,6 +55,7 @@ const creationModele = z.strictObject({
   date_debut: champsProjet.date_debut,
   parent_id: champsProjet.parent_id.optional(),
   priorite: champsProjet.priorite.optional(),
+  otp: champsProjet.otp.optional(),
 });
 const copie = z.strictObject({
   nom: champsProjet.nom,
@@ -113,12 +118,24 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
 
   app.get('/api/projets', opts, async (request, reply) => {
     if (request.user!.role === 'ressource') return reply.code(403).send({ erreur: 'Interdit' });
-    return projetsVisibles(pool, request.user!);
+    const projets = await projetsVisibles(pool, request.user!);
+    const herite = await lireOtpProjets(
+      pool,
+      request.user!,
+      projets.map((p) => p.id),
+    );
+    return projets.map((p) => avecOtp(p, p.id, herite));
   });
 
   app.get('/api/modeles', opts, async (request, reply) => {
     if (request.user!.role === 'ressource') return reply.code(403).send({ erreur: 'Interdit' });
-    return modelesVisibles(pool, request.user!);
+    const modeles = await modelesVisibles(pool, request.user!);
+    const herite = await lireOtpProjets(
+      pool,
+      request.user!,
+      modeles.map((p) => p.id),
+    );
+    return modeles.map((p) => avecOtp(p, p.id, herite));
   });
 
   app.post('/api/modeles', opts, async (request, reply) => {
@@ -139,11 +156,13 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
       chef_id: user.id,
       date_debut: d.date_debut,
       est_modele: true,
+      otp: d.otp ?? null,
     };
     try {
+      const cree = await transaction(pool, (db) => creerSousParent(db, user.id, nouveau));
       return reply
         .code(201)
-        .send(await transaction(pool, (db) => creerSousParent(db, user.id, nouveau)));
+        .send(avecOtp(cree, cree.id, await lireOtpProjets(pool, user, [cree.id])));
     } catch (err) {
       return traduire(err, reply);
     }
@@ -152,7 +171,8 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
   app.get<{ Params: { id: string } }>('/api/projets/:id', opts, async (request, reply) => {
     const id = identifiant(request.params.id);
     const [projet] = id === null ? [] : await projetsVisibles(pool, request.user!, id);
-    return projet ?? reply.code(404).send(introuvable);
+    if (!projet) return reply.code(404).send(introuvable);
+    return avecOtp(projet, projet.id, await lireOtpProjets(pool, request.user!, [projet.id]));
   });
 
   app.post('/api/projets', opts, async (request, reply) => {
@@ -180,11 +200,13 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
       priorite: d.priorite ?? 500,
       chef_id: chefId,
       date_debut: d.date_debut,
+      otp: d.otp ?? null,
     };
     try {
+      const cree = await transaction(pool, (db) => creerSousParent(db, user.id, nouveau));
       return reply
         .code(201)
-        .send(await transaction(pool, (db) => creerSousParent(db, user.id, nouveau)));
+        .send(avecOtp(cree, cree.id, await lireOtpProjets(pool, user, [cree.id])));
     } catch (err) {
       return traduire(err, reply);
     }
@@ -208,9 +230,10 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
         (acces.projet.est_modele || acces.peutEcrire));
     if (!autorise) return reply.code(403).send({ erreur: 'Interdit' });
     try {
+      const cree = await transaction(pool, (db) => copierProjet(db, user.id, acces.projet, d));
       return reply
         .code(201)
-        .send(await transaction(pool, (db) => copierProjet(db, user.id, acces.projet, d)));
+        .send(avecOtp(cree, cree.id, await lireOtpProjets(pool, user, [cree.id])));
     } catch (err) {
       if (err instanceof DateApres2099) {
         return reply.code(422).send({ erreur: 'Date validée au-delà du 31/12/2099' });
@@ -247,7 +270,7 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
       if (vParent) return refuser(reply, vParent);
     }
     try {
-      return await transaction(pool, async (db) => {
+      const modifie = await transaction(pool, async (db) => {
         await verrouillerRacines(db, champs.parent_id != null ? [id, champs.parent_id] : [id]);
         const { rows } = await db.query<{ clos: boolean; parent_id: number | null }>(
           'SELECT clos, parent_id FROM projet WHERE id = $1',
@@ -271,6 +294,9 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
         }
         return apres;
       });
+      return (
+        modifie && avecOtp(modifie, modifie.id, await lireOtpProjets(pool, user, [modifie.id]))
+      );
     } catch (err) {
       return traduire(err, reply);
     }

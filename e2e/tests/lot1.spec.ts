@@ -39,7 +39,7 @@ import { chefLecteur } from './lot6b-helpers.js';
  *   ligne contient le nom des ressources assignées.
  *   Région « Dépendances » (titre de niveau 2 du même nom) : bouton « Nouvelle dépendance »
  *   (dialogue : listes « Prédécesseur » et « Successeur » (options = noms des éléments), liste
- *   « Type » (FD, DD, FF ; FD par défaut), champ « Délai (jours ouvrés) » (0 par défaut), bouton
+ *   « Type » (FD, DD, FF ; FD par défaut), champ « Délai (j) » (0 par défaut), bouton
  *   « Créer »). Tableau Prédécesseur | Successeur | Type | Délai.
  *   Aucun bouton d'écriture pour une ressource : ni « Nouvelle activité », « Nouveau jalon »,
  *   « Nouvelle dépendance », « Affecter une ressource », « Modifier le projet », ni bouton
@@ -128,7 +128,7 @@ test('E2E-7 : un chef affecte une ressource, crée une activité puis une sous-a
   await expect(page.getByRole('row', { name: /1\.1 Fondations E2E7/ })).toBeVisible();
 });
 
-test('E2E-8 : un chef crée un jalon et une dépendance FD', async ({ page, request }) => {
+test('E2E-8-r1 : un chef crée un jalon et une dépendance FD', async ({ page, request }) => {
   const api = await preparer(request);
   const chef = await api.utilisateur('Chef E2E8', 'chef-e2e8@example.test', 'chef_de_projet');
   const projet = await api.projet('E2E-8', 'Projet E2E8', chef.id);
@@ -145,7 +145,7 @@ test('E2E-8 : un chef crée un jalon et une dépendance FD', async ({ page, requ
   await dialog.getByLabel('Prédécesseur').selectOption({ label: 'Analyse E2E8' });
   await dialog.getByLabel('Successeur').selectOption({ label: 'Livraison E2E8' });
   await expect(dialog.getByLabel('Type')).toHaveValue('FD');
-  await expect(dialog.getByLabel('Délai (jours ouvrés)')).toHaveValue('0');
+  await expect(dialog.getByLabel('Délai (j)')).toHaveValue('0');
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await expect(
     page
@@ -154,7 +154,7 @@ test('E2E-8 : un chef crée un jalon et une dépendance FD', async ({ page, requ
   ).toBeVisible();
 });
 
-test('E2E-9 : un chef assigne une ressource ; une ressource non affectée n’est pas proposée', async ({
+test('E2E-9-r1 : un chef assigne une ressource ; une ressource non affectée n’est pas proposée', async ({
   page,
   request,
 }) => {
@@ -173,7 +173,7 @@ test('E2E-9 : un chef assigne une ressource ; une ressource non affectée n’es
   await expect(dialog.getByRole('option', { name: 'Alice E2E9' })).toHaveCount(1);
   await expect(dialog.getByRole('option', { name: 'Bob E2E9' })).toHaveCount(0);
   await dialog.getByLabel('Ressource').selectOption({ label: 'Alice E2E9' });
-  await dialog.getByLabel('Charge assignée (jours)').fill('2');
+  await dialog.getByLabel('Charge assignée (j)').fill('2');
   await dialog.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Maçonnerie E2E9.*Alice E2E9/ })).toBeVisible();
 });

@@ -12,6 +12,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { allerA, creerRessourceParEcran, ouvrirCalendriers } from './lot3c-helpers.js';
 import {
   EMAIL_ALICE,
@@ -672,9 +673,10 @@ test('E2E-243 : changement de semaine avec des modifications : confirmation ; «
   expect(f.feuille.id).toBeNull();
 });
 
-test('E2E-244-r4 : parcours complet à l’écran : saisie, soumission, validation par le chef, dévalidation puis nouvelle validation, lecture seule ; avancement dans le Gantt du projet', async ({
+test('E2E-244-r6 : parcours complet à l’écran : saisie, soumission, validation par le chef, dévalidation puis nouvelle validation, lecture seule ; avancement dans le Gantt du projet', async ({
   page,
 }) => {
+  await colonnesCompletes(page);
   await loginAsAdmin(page);
   await ouvrirCalendriers(page);
   await page.getByRole('button', { name: 'Nouveau calendrier' }).click();
@@ -726,7 +728,7 @@ test('E2E-244-r4 : parcours complet à l’écran : saisie, soumission, validati
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 4B-244' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource 4B-244' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche 4B-244.*Ressource 4B-244/ })).toBeVisible();
   await page.getByRole('button', { name: 'Se déconnecter' }).click();

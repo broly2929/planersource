@@ -3,6 +3,7 @@
 // Gantt : D0 = 2027-01-04 (calcul par l'API) ; une activité assignée 4 j, vendue 3, a une marge de −1.
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
+import { colonnesCompletes, sansColonneRessources } from './colonnes-completes.js';
 import { MOT_DE_PASSE, connecterAvec, preparer } from './lot1-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b } from './lot3b-helpers.js';
 import { allerA, creerRessourceParEcran, ouvrirCalendriers } from './lot3c-helpers.js';
@@ -65,10 +66,11 @@ async function monde(request: APIRequestContext, suffixe: string, vendue: number
   return { ...m, tache };
 }
 
-test('E2E-358-r1 : parcours complet à l’écran (administrateur seul) : charge vendue et date client saisies à l’écran, vérifiées dans le Gantt (colonnes, Totaux, marqueur client)', async ({
+test('E2E-358-r4 : parcours complet à l’écran (administrateur seul) : charge vendue et date client saisies à l’écran, vérifiées dans le Gantt (colonnes, Totaux, marqueur client)', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const RESSOURCE = 'Ressource 6C';
   const CHEF = 'Chef 6C';
   await loginAsAdmin(page);
@@ -120,7 +122,7 @@ test('E2E-358-r1 : parcours complet à l’écran (administrateur seul) : charge
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 6C' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: RESSOURCE });
-  await assignation.getByLabel('Charge assignée (jours)').fill('4');
+  await assignation.getByLabel('Charge assignée (j)').fill('4');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 6C.*${RESSOURCE}`) })).toBeVisible();
 
@@ -148,7 +150,9 @@ test('E2E-358-r1 : parcours complet à l’écran (administrateur seul) : charge
   await page.locator('svg[data-zoom]').waitFor();
   await expect(await cellule(page, 'Tâche 6C', 'Vendu')).toHaveText('6,5');
   await expect(await cellule(page, 'Tâche 6C', 'Marge')).toHaveText('2,5');
-  await expect(regionTotaux(page)).toHaveText('Vendu 6,5 j · Assigné 4 j · Marge 2,5 j · Réel 0 j');
+  await expect(regionTotaux(page)).toHaveText(
+    'Vendu 6,5 j · Assigné 4 j · Marge 2,5 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+  );
   const g = await lireElements(page, projetId);
   const jalon = g.elements.find((e) => e.type === 'jalon')!;
   await expect(losangeClient(page, jalon.id as number)).toHaveCount(1);
@@ -158,6 +162,10 @@ test('E2E-358-r1 : parcours complet à l’écran (administrateur seul) : charge
     charge_assignee: 4,
     marge: 2.5,
     charge_reelle: 0,
+    cout_planifie: 0,
+    cout_impute: 0,
+    cout_reel: 0,
+    taux_manquant: false,
   });
   expect(jalon).toMatchObject({
     date_client: '2027-01-06',
@@ -309,10 +317,11 @@ test('E2E-361-r1 : refus : sous-activité sous une activité vendue (écran) et 
   await expect(modif).toBeVisible();
 });
 
-test('E2E-362 : Gantt du projet (administrateur) : colonnes « Vendu » et « Marge » après « Charge », marge négative en couleur flag, « — », parent = somme, jalon vide, région « Totaux du projet »', async ({
+test('E2E-362-r3 : Gantt du projet (administrateur) : colonnes « Vendu » et « Marge » après « Charge », marge négative en couleur flag, « — », parent = somme, jalon vide, région « Totaux du projet »', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde(request, 'E2E362', 3);
   const parent = await activiteAvec(request, m.projet.id, 'Parent 362');
   const f1 = await activiteAvec(request, m.projet.id, 'Positive 362', {
@@ -348,7 +357,9 @@ test('E2E-362 : Gantt du projet (administrateur) : colonnes « Vendu » et « Ma
   await expect(await cellule(page, 'Jalon 362', 'Marge')).toHaveText('');
 
   const region = regionTotaux(page);
-  await expect(region).toHaveText('Vendu 13 j · Assigné 8 j · Marge 5 j · Réel 0 j');
+  await expect(region).toHaveText(
+    'Vendu 13 j · Assigné 8 j · Marge 5 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+  );
   const boiteRegion = await region.boundingBox();
   const boiteTableau = await page.getByRole('table').first().boundingBox();
   expect(boiteRegion!.y + boiteRegion!.height).toBeLessThanOrEqual(boiteTableau!.y + 0.5);
@@ -357,13 +368,16 @@ test('E2E-362 : Gantt du projet (administrateur) : colonnes « Vendu » et « Ma
   const vide = await monde3b(request, 'E2E362B', []);
   // Projet sans élément : état vide, sans SVG (SPEC §6, 3b point 9).
   await page.goto(`/projets/${vide.projet.id}?onglet=gantt`);
-  await expect(regionTotaux(page)).toHaveText('Vendu — j · Assigné 0 j · Marge — j · Réel 0 j');
+  await expect(regionTotaux(page)).toHaveText(
+    'Vendu — j · Assigné 0 j · Marge — j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+  );
 });
 
-test('E2E-363 : jalon à date client : losange, texte d’écart, badge « Client », nom accessible ; écart négatif : neutre, sans badge', async ({
+test('E2E-363-r1 : jalon à date client : losange, texte d’écart, badge « Client », nom accessible ; écart négatif : neutre, sans badge', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde3b(request, 'E2E363', []);
   const retard = await jalonAvec(request, m.projet.id, 'Dépassé 363', {
     type: 'fixe',
@@ -434,7 +448,7 @@ test('E2E-364 : la plage du Gantt inclut la date client (08/03/2027, au-delà de
   await expect(ecartClient(page, j.id)).toHaveText('−59 j');
 });
 
-test('E2E-365 : témoin, chef de projet en lecture seule : ni colonnes, ni région, ni marqueur, ni badge ; réponses sans les clés', async ({
+test('E2E-365-r2 : témoin, chef de projet en lecture seule : ni colonnes, ni région, ni marqueur, ni badge ; réponses sans les clés', async ({
   page,
   request,
 }) => {
@@ -446,9 +460,12 @@ test('E2E-365 : témoin, chef de projet en lecture seule : ni colonnes, ni régi
   });
   await calculer(request, [m.projet.id]);
   const email = await chefLecteur(request, m.projet.id, 'E365');
-  const reponses: string[] = [];
-  page.on('response', async (r) => {
-    if (/\/api\/projets\/\d+\/(gantt|planning)$/.test(r.url())) reponses.push(await r.text());
+  // E2E-365-r2 : chaque corps est lu par page.route (la réponse est récupérée par le test avant d'être servie à la page).
+  const corpsLus: string[] = [];
+  await page.route(/\/api\/projets\/\d+\/(gantt|planning)$/, async (route) => {
+    const rep = await route.fetch();
+    corpsLus.push(await rep.text());
+    await route.fulfill({ response: rep });
   });
   await connecterAvec(page, email);
   await ouvrirGantt(page, m.projet.id);
@@ -463,8 +480,8 @@ test('E2E-365 : témoin, chef de projet en lecture seule : ni colonnes, ni régi
   await expect(barre(page, j.id)).toHaveAttribute('aria-label', 'Jalon 365, le 08/01/2027');
   await ouvrirPlanning(page, m.projet.id);
   await expect(page.getByRole('cell', { name: 'Jalon 365', exact: true })).toBeVisible();
-  expect(reponses.length).toBeGreaterThanOrEqual(2);
-  for (const corps of reponses) {
+  expect(corpsLus.length).toBeGreaterThanOrEqual(2);
+  for (const corps of corpsLus) {
     expect(corps).not.toMatch(
       /charge_vendue|"marge"|date_client|ecart_client|engagement_depasse|totaux/,
     );
@@ -484,10 +501,12 @@ async function separateurAuMaximum(page: Page) {
 }
 
 for (const largeur of LARGEURS) {
-  test(`E2E-366-r2 (${largeur} px) : critères D-069 (a) à (d) avec « Vendu », « Marge » et le badge « Client »`, async ({
+  test(`E2E-366-r4 (${largeur} px) : critères D-069 (a) à (d) avec « Vendu », « Marge » et le badge « Client »`, async ({
     page,
     request,
   }) => {
+    await colonnesCompletes(page);
+    await sansColonneRessources(page); // D-238 (1)
     const m = await monde(request, `E2E366-${largeur}`, 3);
     const nom = `Tâche E2E366-${largeur}`;
     const j = await jalonAvec(request, m.projet.id, `Jalon ${largeur}`, {

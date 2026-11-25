@@ -10,8 +10,10 @@ import { Notification } from '../../components/Notification';
 import { Select } from '../../components/Select';
 import { optionsProjetParent, type ProjetArbre } from '../../projets/arbre';
 import { CODE_UTILISE, FormulaireDialogue, useListe } from './commun';
+import { ChampOtp } from '../../components/ChampOtp';
+import { aideOtp, heriteDe, otpSaisi, type OtpLecture } from '../../couts';
 
-interface ProjetModifiable {
+interface ProjetModifiable extends OtpLecture {
   id: number;
   code: string;
   nom: string;
@@ -34,7 +36,7 @@ function Formulaire({
   projet: ProjetModifiable;
   admin: boolean;
   annuaire: EntreeAnnuaire[] | null;
-  projets: ProjetArbre[];
+  projets: (ProjetArbre & OtpLecture)[];
   onSucces: () => void;
   onAnnuler: () => void;
 }) {
@@ -46,7 +48,17 @@ function Formulaire({
   const [clos, setClos] = useState(p.clos);
   const [chef, setChef] = useState(String(p.chef_id));
   const [parent, setParent] = useState(p.parent_id === null ? '' : String(p.parent_id));
+  const [otp, setOtp] = useState(p.otp ?? '');
   const parentChange = parent !== (p.parent_id === null ? '' : String(p.parent_id));
+  // D-225, D-233 (d) : aide de la valeur héritée, si le projet n'a pas de valeur propre et que le champ est vide ;
+  // elle suit « Projet parent » avant l'enregistrement (parent choisi : sa valeur ou celle qu'il hérite).
+  const parentChoisi = parentChange ? projets.find((x) => String(x.id) === parent) : undefined;
+  const heritage: OtpLecture | null = !parentChange
+    ? p
+    : parentChoisi
+      ? heriteDe(parentChoisi, 'projet', parentChoisi.code)
+      : null;
+  const aide = otp.trim() === '' && p.otp === null && heritage ? aideOtp(heritage) : null;
   const optionsParent = [
     { value: '', label: 'Aucun (projet racine)' },
     ...optionsProjetParent(projets, p.id),
@@ -70,6 +82,7 @@ function Formulaire({
     ...(clos !== p.clos ? { clos } : {}),
     ...(avecChef && chef !== String(p.chef_id) ? { chef_id: Number(chef) } : {}),
     ...(!p.est_modele && parentChange ? { parent_id: parent === '' ? null : Number(parent) } : {}),
+    ...(otpSaisi(otp) !== p.otp ? { otp: otpSaisi(otp) } : {}),
   });
 
   return (
@@ -116,6 +129,7 @@ function Formulaire({
           options={optionsParent}
         />
       )}
+      <ChampOtp valeur={otp} onChange={setOtp} aide={aide} />
       <Case label="Clos" checked={clos} onChange={(e) => setClos(e.target.checked)} />
     </FormulaireDialogue>
   );
@@ -138,7 +152,7 @@ export function DialogueModifProjet({
   const admin = auth.statut === 'connecte' && auth.user.role === 'administrateur';
   const annuaire = useAnnuaire();
   const [etat] = useListe<ProjetModifiable>(`/api/projets/${projetId}`);
-  const [liste] = useListe<ProjetArbre[]>('/api/projets');
+  const [liste] = useListe<(ProjetArbre & OtpLecture)[]>('/api/projets');
   return (
     <Dialog
       ouvert

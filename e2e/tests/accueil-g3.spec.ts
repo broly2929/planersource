@@ -3,6 +3,7 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import pg from 'pg';
 import { loginAsAdmin } from './helpers.js';
+import { colonnesCompletes, sansColonneRessources } from './colonnes-completes.js';
 import { preparer } from './lot1-helpers.js';
 import { activiteAvec, calculer, jalonAvec, lier, sousProjet } from './lot3b-helpers.js';
 import { replierTout } from './retouches-rex6-helpers.js';
@@ -114,10 +115,12 @@ async function monde(request: APIRequestContext, suffixe: string): Promise<Monde
   return { api, admin, ressource: r.id };
 }
 
-test('E2E-93-r3 dépliage d’un projet calculé : lignes, badge Jalon, barres, nom accessible, lien dessiné, sous-projet une seule fois', async ({
+test('E2E-93-r5 dépliage d’un projet calculé : lignes, badge Jalon, barres, nom accessible, lien dessiné, sous-projet une seule fois', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
+  await sansColonneRessources(page); // D-238 (4)
   const { api, admin, ressource } = await monde(request, '93');
   const p = await api.projet('P93', 'Projet93', admin);
   await api.affectation(p.id, ressource);
@@ -386,10 +389,11 @@ test('E2E-99-r1 plage élargie par un élément chargé hors plage initiale, non
   expect(await largeur()).toBe(apres);
 });
 
-test('E2E-100-r6 ordre de tabulation : zoom, « Tout déplier », tableau (bouton Déplier puis lien), calendrier', async ({
+test('E2E-100-r8 ordre de tabulation : zoom, « Tout déplier », tableau (bouton Déplier puis lien), calendrier', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const { api, admin } = await monde(request, '100');
   await api.projet('P100', 'Projet100', admin);
   await loginAsAdmin(page);
@@ -415,7 +419,7 @@ test('E2E-100-r6 ordre de tabulation : zoom, « Tout déplier », tableau (bouto
   // Révision D-213 : le séparateur « Largeur du tableau » précède la zone du calendrier.
   // Révision -r5 (D-216 (3)) : « Colonnes » après « Initiales » ; poignées de largeur des colonnes après la
   // zone du tableau, dans l'ordre des en-têtes, avant le contenu des lignes.
-  for (let i = 0; i < 17; i++) {
+  for (let i = 0; i < 18; i++) {
     await page.keyboard.press('Tab');
     ordre.push(await libelle());
   }
@@ -432,6 +436,7 @@ test('E2E-100-r6 ordre de tabulation : zoom, « Tout déplier », tableau (bouto
     'Largeur de la colonne Nom',
     'Largeur de la colonne Début',
     'Largeur de la colonne Fin',
+    'Largeur de la colonne Ressources',
     'Largeur de la colonne Drapeaux',
     'Déplier Projet100',
     'Projet100',

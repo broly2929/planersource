@@ -18,6 +18,8 @@ export interface Activite {
   drapeaux: string[];
   close: boolean;
   charge_vendue: number | null;
+  /** OTP propre (D-225, SPEC §12.2). */
+  otp: string | null;
   /** Calculé à la lecture : l'activité a des enfants (jamais historisé). */
   est_parent: boolean;
 }
@@ -51,7 +53,7 @@ export interface LignePlanning {
 
 const ACTIVITE = `e.id, e.projet_id, e.parent_id, e.rang, e.nom, a.mode, a.priorite, a.debut_valide,
   a.fin_valide, a.duree_validee, a.debut_planifie, a.fin_planifiee, a.drapeaux, a.close,
-  a.charge_vendue,
+  a.charge_vendue, a.otp,
   EXISTS (SELECT 1 FROM element f WHERE f.parent_id = e.id) AS est_parent
   FROM element e JOIN activite a ON a.id = e.id`;
 const JALON = `e.id, e.projet_id, e.parent_id, e.rang, e.nom, j.type, j.date_validee, j.date_planifiee,
@@ -208,6 +210,7 @@ export interface NouvelleActivite {
   fin_valide: string | null;
   duree_validee: number | null;
   charge_vendue: number | null;
+  otp: string | null;
 }
 
 /** Sans transaction interne : l'appelant ouvre la transaction (plusieurs écritures). */
@@ -219,9 +222,10 @@ export async function creerActivite(
 ): Promise<Activite> {
   const id = await insererElement(db, projetId, 'activite', d.parent_id, d.nom, d.rang);
   await db.query(
-    `INSERT INTO activite (id, mode, priorite, debut_valide, fin_valide, duree_validee, charge_vendue)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue],
+    `INSERT INTO activite (id, mode, priorite, debut_valide, fin_valide, duree_validee,
+                           charge_vendue, otp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue, d.otp],
   );
   const activite = (await lireActivite(db, id))!;
   await enregistrer(db, {
@@ -280,8 +284,8 @@ export async function modifierActivite(
   await db.query('UPDATE element SET nom = $2 WHERE id = $1', [id, d.nom]);
   await db.query(
     `UPDATE activite SET mode = $2, priorite = $3, debut_valide = $4, fin_valide = $5,
-            duree_validee = $6, charge_vendue = $7 WHERE id = $1`,
-    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue],
+            duree_validee = $6, charge_vendue = $7, otp = $8 WHERE id = $1`,
+    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue, d.otp],
   );
   if (d.close !== undefined) {
     await db.query('UPDATE activite SET close = $2 WHERE id = $1', [id, d.close]);

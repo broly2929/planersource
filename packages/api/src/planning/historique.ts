@@ -1,7 +1,14 @@
 import type { Db } from '../db/erreurs.js';
 
 export type Entite =
-  'projet' | 'affectation' | 'activite' | 'jalon' | 'dependance' | 'assignation' | 'calendrier';
+  | 'projet'
+  | 'affectation'
+  | 'activite'
+  | 'jalon'
+  | 'dependance'
+  | 'assignation'
+  | 'calendrier'
+  | 'taux';
 
 export const ENTITES: readonly Entite[] = [
   'projet',
@@ -11,6 +18,7 @@ export const ENTITES: readonly Entite[] = [
   'dependance',
   'assignation',
   'calendrier',
+  'taux',
 ];
 
 export type Objet = object;
@@ -45,7 +53,7 @@ export interface Ecriture {
   avant: (Objet & { id: number }) | null;
   /** État après l'écriture ; null pour une suppression. */
   apres: (Objet & { id: number }) | null;
-  /** Projet concerné ; absent pour un calendrier. */
+  /** Projet concerné ; absent pour un calendrier et un taux (D-225). */
   projetId?: number | undefined;
 }
 

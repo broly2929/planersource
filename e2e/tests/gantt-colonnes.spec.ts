@@ -5,6 +5,7 @@
 // hauteur limitée à la fenêtre. Valeurs des gestes recopiées de E2E-132 et E2E-182.
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { connecterAvec } from './lot1-helpers.js';
+import { colonnesCompletes } from './colonnes-completes.js';
 import { activite, poserSaisies } from './lot2e-helpers.js';
 import { activiteAvec, calculer, monde3b } from './lot3b-helpers.js';
 import { remettreAdminSeul6b } from './lot6b-helpers.js';
@@ -142,9 +143,9 @@ async function largeurEst(page: Page, v: Vue, attendu: number, quoi: string) {
 }
 
 const numeros: Record<Vue, Record<'a' | 'b' | 'c' | 'd' | 'e', string>> = {
-  projet: { a: 'E2E-521', b: 'E2E-524', c: 'E2E-527', d: 'E2E-530', e: 'E2E-533' },
-  accueil: { a: 'E2E-522-r1', b: 'E2E-525-r1', c: 'E2E-528-r1', d: 'E2E-531-r1', e: 'E2E-534-r1' },
-  ressource: { a: 'E2E-523', b: 'E2E-526', c: 'E2E-529', d: 'E2E-532', e: 'E2E-535' },
+  projet: { a: 'E2E-521-r1', b: 'E2E-524', c: 'E2E-527', d: 'E2E-530', e: 'E2E-533' },
+  accueil: { a: 'E2E-522-r2', b: 'E2E-525-r1', c: 'E2E-528-r1', d: 'E2E-531-r1', e: 'E2E-534-r1' },
+  ressource: { a: 'E2E-523-r1', b: 'E2E-526', c: 'E2E-529', d: 'E2E-532', e: 'E2E-535' },
 };
 
 for (const v of VUES) {
@@ -154,6 +155,7 @@ for (const v of VUES) {
     page,
     request,
   }) => {
+    await colonnesCompletes(page);
     const m = await monde(request, `${n.a.replace('-', '')}`, false);
     for (const largeur of [1440, 1024]) {
       await ouvrir(page, m, v, largeur, 900, largeur === 1440);
@@ -434,10 +436,11 @@ test('E2E-537 : Gantt d’un projet, après défilement vertical : glisser de la
     .toEqual([60, 61]);
 });
 
-test('E2E-539 : Gantt d’un projet, 1024 px : après « Calculer » à l’écran, le badge « Début non respecté » apparu reste visible et Drapeaux ne recouvre ni WBS ni Nom (D-069 (a), (b))', async ({
+test('E2E-539-r1 : Gantt d’un projet, 1024 px : après « Calculer » à l’écran, le badge « Début non respecté » apparu reste visible et Drapeaux ne recouvre ni WBS ni Nom (D-069 (a), (b))', async ({
   page,
   request,
 }) => {
+  await colonnesCompletes(page);
   const m = await monde3b(request, 'E2E539', ['Eve']);
   const p = m.projet.id;
   const occupe = await activite(request, p, 'Occupe Eve', 'MAN');

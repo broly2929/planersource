@@ -16,6 +16,8 @@ import { Notification } from '../components/Notification';
 import { Select } from '../components/Select';
 import { Table, type Colonne } from '../components/Table';
 import { dateLocale } from '../gantt/echelle';
+import { ChampOtp } from '../components/ChampOtp';
+import { aideOtp, heriteDe, otpSaisi, type OtpLecture } from '../couts';
 import { Link, navigate, usePath, useSearch } from '../router';
 import {
   aplatir,
@@ -45,6 +47,9 @@ export interface Projet {
   debut_planifie?: string | null;
   est_modele: boolean;
   peut_ecrire: boolean;
+  otp: string | null;
+  otp_effectif: string | null;
+  otp_source: OtpLecture['otp_source'];
 }
 
 type Etat<T> =
@@ -113,6 +118,13 @@ function FormulaireProjet({
   const [chef, setChef] = useState(admin ? '' : String(user?.id ?? ''));
   const [debut, setDebut] = useState(() => dateLocale(new Date()));
   const [parent, setParent] = useState('');
+  const [otp, setOtp] = useState('');
+  // D-225 : aide de la valeur héritée du projet parent choisi.
+  const projetParent = projets.find((x) => String(x.id) === parent);
+  const aide =
+    otp.trim() === '' && projetParent
+      ? aideOtp(heriteDe(projetParent, 'projet', projetParent.code))
+      : null;
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
   const optionsParent = [
@@ -144,6 +156,7 @@ function FormulaireProjet({
           ...(chef ? { chef_id: Number(chef) } : {}),
           date_debut: debut,
           ...(parent ? { parent_id: Number(parent) } : {}),
+          ...(otpSaisi(otp) ? { otp: otpSaisi(otp) } : {}),
         },
       });
       onCree();
@@ -190,6 +203,7 @@ function FormulaireProjet({
         value={debut}
         onChange={(e) => setDebut(e.target.value)}
       />
+      <ChampOtp valeur={otp} onChange={setOtp} aide={aide} />
       <Actions onAnnuler={onAnnuler} enCours={enCours} libelle="Créer" />
     </form>
   );

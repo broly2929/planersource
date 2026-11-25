@@ -30,3 +30,29 @@
 {"evenement":"fin","date":"2026-11-24T17:54:24.393Z","commit":"e2df76a","lot":"gantt-colonnes-2","vitest":{"statut":"vert","duree_s":219},"e2e":{"statut":"vert","duree_s":662.3},"resultat":"vert"}
 {"evenement":"debut","date":"2026-11-24T19:12:45.992Z","commit":"9960eed","arbre_propre":true,"lot":"retouches-rex6"}
 {"evenement":"fin","date":"2026-11-24T19:27:57.559Z","commit":"9960eed","lot":"retouches-rex6","vitest":{"statut":"vert","duree_s":225.6},"e2e":{"statut":"vert","duree_s":685.9},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T20:49:51.803Z","commit":"021536f","arbre_propre":true,"lot":"charge-lisible"}
+{"evenement":"fin","date":"2026-11-24T21:04:54.455Z","commit":"021536f","lot":"charge-lisible","vitest":{"statut":"vert","duree_s":226.2},"e2e":{"statut":"rouge","duree_s":676.5},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-24T21:09:43.538Z","commit":"9eb81ca","arbre_propre":false,"lot":"charge-lisible","justification":"E2E-365-r1, lecture des corps avant navigation (D-221)"}
+{"evenement":"fin","date":"2026-11-24T21:24:45.844Z","commit":"9eb81ca","lot":"charge-lisible","vitest":{"statut":"vert","duree_s":230.1},"e2e":{"statut":"vert","duree_s":672.2},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-24T21:56:56.582Z","commit":"d4c6704","arbre_propre":true,"lot":"saisie-activites"}
+{"evenement":"fin","date":"2026-11-24T22:12:32.913Z","commit":"d4c6704","lot":"saisie-activites","vitest":{"statut":"vert","duree_s":226.5},"e2e":{"statut":"rouge","duree_s":709.9},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-25T06:58:30.135Z","commit":"44b1884","arbre_propre":true,"lot":"saisie-activites","justification":"E2E-365-r2, corps lus par page.route (D-224)"}
+{"evenement":"fin","date":"2026-11-25T07:14:31.038Z","commit":"44b1884","lot":"saisie-activites","vitest":{"statut":"vert","duree_s":224.5},"e2e":{"statut":"vert","duree_s":736.4},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T08:59:47.310Z","commit":"1db976d","arbre_propre":false,"lot":"couts-1"}
+{"evenement":"fin","date":"2026-11-25T09:15:30.900Z","commit":"1db976d","lot":"couts-1","vitest":{"statut":"vert","duree_s":239.7},"e2e":{"statut":"vert","duree_s":703.9},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T10:26:57.269Z","commit":"157e37e","arbre_propre":true,"lot":"retours-deploiement-1"}
+{"evenement":"fin","date":"2026-11-25T10:42:53.594Z","commit":"157e37e","lot":"retours-deploiement-1","vitest":{"statut":"vert","duree_s":238.3},"e2e":{"statut":"rouge","duree_s":718},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-25T10:46:51.433Z","commit":"86c7966","arbre_propre":false,"lot":"retours-deploiement-1","justification":"Seconde suite : la première a échoué sur E2E-244-r4 et E2E-255, deux e2e hors domaines qui supposaient les anciens défauts de colonnes (révisés en E2E-244-r5 et E2E-255-r1, D-228)"}
+{"evenement":"fin","date":"2026-11-25T11:02:38.223Z","commit":"86c7966","lot":"retours-deploiement-1","vitest":{"statut":"vert","duree_s":238.7},"e2e":{"statut":"vert","duree_s":708.1},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T11:57:37.137Z","commit":"8a92402","arbre_propre":true,"lot":"couts-2"}
+{"evenement":"fin","date":"2026-11-25T12:14:02.221Z","commit":"8a92402","lot":"couts-2","vitest":{"statut":"vert","duree_s":240.2},"e2e":{"statut":"vert","duree_s":744.9},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T13:08:15.689Z","commit":"2f9b505","arbre_propre":true,"lot":"version"}
+{"evenement":"fin","date":"2026-11-25T13:28:55.502Z","commit":"2f9b505","lot":"version","vitest":{"statut":"vert","duree_s":289.2},"e2e":{"statut":"rouge","duree_s":950.6},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-25T13:47:50.446Z","commit":"08c4cc2","arbre_propre":false,"lot":"version","justification":"deadlock de remise à zéro, E2E-518, sans lien avec le lot (D-232)"}
+{"evenement":"fin","date":"2026-11-25T14:08:29.858Z","commit":"08c4cc2","lot":"version","vitest":{"statut":"vert","duree_s":275.9},"e2e":{"statut":"vert","duree_s":963.5},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T15:35:46.626Z","commit":"903d794","arbre_propre":true,"lot":"nettoyage-couts"}
+{"evenement":"fin","date":"2026-11-25T15:53:16.599Z","commit":"903d794","lot":"nettoyage-couts","vitest":{"statut":"vert","duree_s":245.6},"e2e":{"statut":"vert","duree_s":804.4},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T16:44:05.208Z","commit":"3e134d0","arbre_propre":true,"lot":"retours-deploiement-2"}
+{"evenement":"fin","date":"2026-11-25T17:01:04.117Z","commit":"3e134d0","lot":"retours-deploiement-2","vitest":{"statut":"vert","duree_s":243.9},"e2e":{"statut":"vert","duree_s":775},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T18:42:26.851Z","commit":"65056f1","arbre_propre":false,"lot":"colonne-ressources"}
+{"evenement":"fin","date":"2026-11-25T19:00:14.762Z","commit":"65056f1","lot":"colonne-ressources","vitest":{"statut":"vert","duree_s":245.3},"e2e":{"statut":"vert","duree_s":822.6},"resultat":"vert"}

@@ -51,7 +51,7 @@ async function poserReel(ctx: TestCtx, assignationId: number, reel: number, rest
 describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
   const ctx = useTestApp();
 
-  it('GANTT-1-r2 : avant calcul, forme complète (avec les champs de 6c, D-149 (4), (5)) : ordre et numéros WBS (parent, enfant, jalon), dates planifiées null, drapeaux [], dépendance avec drapeaux []', async () => {
+  it('GANTT-1-r4 : avant calcul, forme complète (avec les champs de 6c, D-149 (4), (5), et de §12, D-230) : ordre et numéros WBS (parent, enfant, jalon), dates planifiées null, drapeaux [], dépendance avec drapeaux []', async () => {
     const m = await creerMonde(ctx);
     const g = await creerActivite(ctx, m.admin, m.projet.id, { nom: 'Parent' });
     const enfant = await creerActivite(ctx, m.admin, m.projet.id, {
@@ -66,6 +66,12 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
       type: 'FD',
     });
     const reste = assignation.reste_a_faire as number;
+    // D-238 (a) : `assignations` de la feuille, une entrée par assignation (nom lu de l'utilisateur).
+    const nomAlice = (
+      await ctx.pool.query<{ nom: string }>('SELECT nom FROM utilisateur WHERE id = $1', [
+        m.alice.id,
+      ])
+    ).rows[0]!.nom;
     const base = (a: Objet) => ({
       id: a.id,
       type: 'activite',
@@ -81,6 +87,12 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
       debut_planifie: null,
       fin_planifiee: null,
       close: a.close,
+      otp_effectif: null,
+      otp_source: null,
+      cout_planifie: 0,
+      cout_impute: 0,
+      cout_reel: 0,
+      taux_manquant: false,
     });
 
     const res = await appel(ctx, m.admin).get(adresse(m.projet.id));
@@ -95,7 +107,16 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
         fin_planifiee: null,
         clos: false,
         peut_ecrire: true,
-        totaux: { charge_vendue: null, charge_assignee: 2, marge: null, charge_reelle: 0 },
+        totaux: {
+          charge_vendue: null,
+          charge_assignee: 2,
+          marge: null,
+          charge_reelle: 0,
+          cout_planifie: 0,
+          cout_impute: 0,
+          cout_reel: 0,
+          taux_manquant: false,
+        },
       },
       elements: [
         {
@@ -120,6 +141,16 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
           reste_a_faire: reste,
           avancement: 0,
           initiales: [],
+          assignations: [
+            {
+              id: assignation.id,
+              ressource_id: m.alice.id,
+              nom: nomAlice,
+              initiales: null,
+              charge_assignee: 2,
+              taux: 100,
+            },
+          ],
         },
         {
           id: jalon.id,

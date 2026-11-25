@@ -517,7 +517,7 @@ test('E2E-169 : GET des activités en échec à l’ouverture du dialogue : aler
   await expect(alertes(page)).toHaveCount(0);
 });
 
-test('E2E-170-r1 : parcours complet à l’écran, puis recalcul automatique : la barre glissée prend sa nouvelle date sans clic sur « Calculer »', async ({
+test('E2E-170-r2 : parcours complet à l’écran, puis recalcul automatique : la barre glissée prend sa nouvelle date sans clic sur « Calculer »', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -562,7 +562,7 @@ test('E2E-170-r1 : parcours complet à l’écran, puis recalcul automatique : l
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 3D-170' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource 3D-170' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche 3D-170.*Ressource 3D-170/ })).toBeVisible();
 

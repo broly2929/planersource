@@ -358,7 +358,7 @@ test('E2E-122 « Monter » un jalon sous une activité close : alerte, ordre inc
   expect(await nomsPlanning(page)).toEqual(['Activité A122', 'Activité B122', 'Jalon J122']);
 });
 
-test('E2E-123-r2 parcours complet à l’écran : calcul depuis l’Accueil, clôture des activités puis du projet, projet absent de l’Accueil', async ({
+test('E2E-123-r3 parcours complet à l’écran : calcul depuis l’Accueil, clôture des activités puis du projet, projet absent de l’Accueil', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -398,7 +398,7 @@ test('E2E-123-r2 parcours complet à l’écran : calcul depuis l’Accueil, cl�
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche C2-123' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: 'Ressource C2-123' });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: /Tâche C2-123.*Ressource C2-123/ })).toBeVisible();
 

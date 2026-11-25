@@ -186,7 +186,7 @@ test('E2E-561 : Gantt, dialogue d’un lien : libellés des types et aide selon 
   await verifierTypes(d);
 });
 
-test('E2E-562 : « Modifier l’activité » : « Début planifié » et « Fin planifiée » en lecture seule, « — » avant tout calcul, après « Fin validée » ; pas de champ', async ({
+test('E2E-562-r1 : « Modifier l’activité » : « Début planifié » et « Fin planifiée » en lecture seule, « — » avant tout calcul, après « Début validé » (« Fin validée » masquée en START) ; pas de champ', async ({
   page,
   request,
 }) => {
@@ -202,7 +202,7 @@ test('E2E-562 : « Modifier l’activité » : « Début planifié » et « Fin 
   await expect(d.locator('[data-planifie="fin"]')).toHaveText('—');
   await expect(d.getByLabel('Début planifié')).toHaveCount(0);
   await expect(d.getByLabel('Fin planifiée')).toHaveCount(0);
-  const yFinValidee = (await d.getByLabel('Fin validée', { exact: true }).boundingBox())!.y;
+  const yFinValidee = (await d.getByLabel('Début validé', { exact: true }).boundingBox())!.y;
   const yDebutPlanifie = (await d.locator('[data-planifie="debut"]').boundingBox())!.y;
   const yFinPlanifiee = (await d.locator('[data-planifie="fin"]').boundingBox())!.y;
   expect(yDebutPlanifie).toBeGreaterThan(yFinValidee);
@@ -375,6 +375,7 @@ const ENTETES_ACCUEIL = [
   'Nom',
   'Début',
   'Fin',
+  'Ressources',
   'Charge',
   'Avancement',
   'Réel',
@@ -383,7 +384,7 @@ const ENTETES_ACCUEIL = [
   'Drapeaux',
 ];
 
-test('E2E-569 : Accueil, toutes les colonnes cochées : en-têtes Code, Nom, Début, Fin, Charge, Avancement, Réel, Vendu, Marge, Drapeaux, dans l’ordre du menu « Colonnes »', async ({
+test('E2E-569-r3 : Accueil, toutes les colonnes cochées : en-têtes Code, Nom, Début, Fin, Charge, Avancement, Réel, Vendu, Marge, Drapeaux, dans l’ordre du menu « Colonnes »', async ({
   page,
   request,
 }) => {
@@ -393,13 +394,19 @@ test('E2E-569 : Accueil, toutes les colonnes cochées : en-têtes Code, Nom, Dé
   await page.goto('/?zoom=jour');
   await page.locator('svg[data-zoom]').waitFor();
   await page.getByRole('button', { name: 'Colonnes', exact: true }).click();
-  for (const t of ['Charge', 'Avancement', 'Réel', 'Vendu', 'Marge']) {
+  for (const t of ['Charge', 'Avancement', 'Réel', 'Vendu', 'Marge', 'Drapeaux']) {
     await page.getByRole('menuitemcheckbox', { name: t, exact: true }).click();
   }
   const elements = (
     await page.getByRole('menu').getByRole('menuitemcheckbox').allTextContents()
   ).map((t) => t.trim());
-  expect(elements).toEqual(ENTETES_ACCUEIL.slice(2));
+  expect(elements).toEqual([
+    ...ENTETES_ACCUEIL.slice(2, -1),
+    'OTP',
+    'Coût planifié',
+    'Coût réel',
+    'Drapeaux',
+  ]);
   await page.keyboard.press('Escape');
   const entetes = (await zoneAccueil(page).getByRole('columnheader').allTextContents()).map((t) =>
     t.trim(),

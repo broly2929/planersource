@@ -16,9 +16,11 @@ export interface Projet {
   chef_id: number;
   date_debut: string;
   clos: boolean;
+  /** OTP propre (D-225, SPEC §12.2) ; la valeur héritée est calculée à la lecture (otp.ts). */
+  otp: string | null;
 }
 
-const COLONNES = 'id, code, nom, parent_id, est_modele, priorite, chef_id, date_debut, clos';
+const COLONNES = 'id, code, nom, parent_id, est_modele, priorite, chef_id, date_debut, clos, otp';
 
 /** Lecture seule (D-078 5) : jamais écrits par une route, jamais historisés, absents de COLONNES. */
 const COLONNES_LECTURE = `${COLONNES}, debut_planifie, fin_planifiee`;
@@ -76,6 +78,11 @@ export async function projetsVisibles(db: Db, user: Acteur, id?: number): Promis
   return id === undefined ? lignes.filter((l) => !l.est_modele) : lignes;
 }
 
+/** Identifiants des projets et modèles que l'utilisateur lit (héritage de l'OTP, D-225 (F) (2)). */
+export async function idsVisibles(db: Db, user: Acteur): Promise<Set<number>> {
+  return new Set((await lireVisibles(db, user)).map((l) => l.id));
+}
+
 /** Liste des modèles visibles ; vide pour une ressource. */
 export async function modelesVisibles(db: Db, user: Acteur): Promise<Ligne[]> {
   return (await lireVisibles(db, user)).filter((l) => l.est_modele);
@@ -102,6 +109,7 @@ export async function accesProjet(db: Db, user: Acteur, id: number): Promise<Acc
     chef_id: complet.chef_id,
     date_debut: complet.date_debut,
     clos: complet.clos,
+    otp: complet.otp,
   };
   return { projet, peutEcrire };
 }
@@ -115,6 +123,8 @@ export interface NouveauProjet {
   date_debut: string;
   /** Fixé à la création : faux par défaut. */
   est_modele?: boolean;
+  /** OTP propre, null = aucun (D-225). */
+  otp?: string | null;
 }
 
 async function lireProjet(db: Db, id: number): Promise<Projet | null> {
@@ -125,9 +135,18 @@ async function lireProjet(db: Db, id: number): Promise<Projet | null> {
 /** Sans transaction interne (l'appelant l'ouvre) : réutilisable par la copie de projet (lot 1b). */
 export async function creerProjet(db: Db, par: number, d: NouveauProjet): Promise<Projet> {
   const { rows } = await db.query<Projet>(
-    `INSERT INTO projet (code, nom, parent_id, priorite, chef_id, date_debut, est_modele)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${COLONNES}`,
-    [d.code, d.nom, d.parent_id, d.priorite, d.chef_id, d.date_debut, d.est_modele ?? false],
+    `INSERT INTO projet (code, nom, parent_id, priorite, chef_id, date_debut, est_modele, otp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${COLONNES}`,
+    [
+      d.code,
+      d.nom,
+      d.parent_id,
+      d.priorite,
+      d.chef_id,
+      d.date_debut,
+      d.est_modele ?? false,
+      d.otp ?? null,
+    ],
   );
   const projet = rows[0]!;
   await enregistrer(db, {

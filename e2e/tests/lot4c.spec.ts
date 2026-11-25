@@ -526,7 +526,7 @@ test('E2E-315 : rejeter, 400 : message, base inchangée', async ({ page, request
   expect(await etatFeuille(id)).toEqual({ statut: 'soumise', commentaire: null, validations: [] });
 });
 
-test('E2E-316 : valider, 500 : « Une erreur est survenue. », base inchangée', async ({
+test('E2E-316-r1 : valider, 500 : « Une erreur est survenue. », base inchangée', async ({
   page,
   request,
   playwright,
@@ -596,7 +596,7 @@ async function parcoursJusquaSoumission(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Assigner une ressource à Tâche 4C' }).click();
   const assignation = page.getByRole('dialog');
   await assignation.getByLabel('Ressource').selectOption({ label: RESSOURCE });
-  await assignation.getByLabel('Charge assignée (jours)').fill('2');
+  await assignation.getByLabel('Charge assignée (j)').fill('2');
   await assignation.getByRole('button', { name: 'Assigner' }).click();
   await expect(page.getByRole('row', { name: new RegExp(`Tâche 4C.*${RESSOURCE}`) })).toBeVisible();
   await page.getByRole('button', { name: 'Se déconnecter' }).click();

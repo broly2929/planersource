@@ -32,6 +32,16 @@ import {
 import { verrou } from './verrou';
 import { formaterEcartClient, infoClient, libelleInitiales, nomBarre, nomJalon } from './libelles';
 
+/** Assignation d'une feuille, lue par GET /api/projets/:id/gantt (D-238 (a)). */
+export interface AssignationGantt {
+  id: number;
+  ressource_id: number;
+  nom: string;
+  initiales: string | null;
+  charge_assignee: number;
+  taux: number;
+}
+
 export interface ElementGantt {
   id: number;
   type: 'activite' | 'jalon';
@@ -52,12 +62,19 @@ export interface ElementGantt {
   charge_reelle?: number;
   avancement?: number | null;
   initiales?: string[];
+  assignations?: AssignationGantt[];
   type_jalon?: 'flottant' | 'fixe';
   date_validee?: string | null;
   date_planifiee?: string | null;
   /** Champs de 6c : présents seulement si l'utilisateur écrit sur le projet (D-149 (4)). */
   charge_vendue?: number | null;
   marge?: number | null;
+  /** Activités : OTP effectif pour tout lecteur ; coûts seulement si l'utilisateur écrit (D-229). */
+  otp_effectif?: string | null;
+  cout_planifie?: number;
+  cout_impute?: number;
+  cout_reel?: number;
+  taux_manquant?: boolean;
   date_client?: string | null;
   ecart_client?: number | null;
   engagement_depasse?: boolean;

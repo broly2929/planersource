@@ -1,4 +1,5 @@
 import { VIDE, formaterNombre } from './libelles';
+import { formatMontant } from '../couts';
 
 /** Charge vendue, totaux du projet et écart client (lot 6c, D-149 (7), (8)). */
 
@@ -27,15 +28,27 @@ export interface TotauxProjet {
   charge_assignee: number;
   marge: number | null;
   charge_reelle: number;
+  /** Coûts (D-229) : présents quand l'utilisateur écrit le projet. */
+  cout_planifie?: number;
+  cout_reel?: number;
+  taux_manquant?: boolean;
 }
 
 /** Texte de la région « Totaux du projet » (D-149 (8a)). */
 export function texteTotaux(t: TotauxProjet): string {
+  const couts =
+    t.cout_planifie === undefined || t.cout_reel === undefined
+      ? []
+      : [
+          `Coût planifié ${formatMontant(t.cout_planifie)}`,
+          `Coût réel ${formatMontant(t.cout_reel)}`,
+        ];
   return [
     `Vendu ${formaterJours(t.charge_vendue)} j`,
     `Assigné ${formaterJours(t.charge_assignee)} j`,
     `Marge ${formaterJours(t.marge)} j`,
     `Réel ${formaterJours(t.charge_reelle)} j`,
+    ...couts,
   ].join(' · ');
 }
 

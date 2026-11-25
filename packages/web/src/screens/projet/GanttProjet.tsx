@@ -69,6 +69,7 @@ import {
   GanttSvg,
   datesLigne,
   type DependanceGantt,
+  type AssignationGantt,
   type ElementGantt,
   type LigneGantt,
   type SousProjetGantt,
@@ -82,6 +83,8 @@ import {
 } from '../../gantt/libelles';
 import { calculerPlage, etendrePlage, joursClient, joursConnus } from '../../gantt/plage';
 import { formaterJours, texteTotaux, type TotauxProjet } from '../../gantt/vendu';
+import { LienTelechargement } from '../../components/LienTelechargement';
+import { CelluleCout, MarqueIncomplet } from '../../gantt/CelluleCout';
 import { retrait } from '../../gantt/retraits';
 import { useLargeur } from '../../gantt/useLargeur';
 import {
@@ -100,6 +103,8 @@ import {
 import { Link, usePath, useSearch } from '../../router';
 import type { Contours } from './contours';
 import type { PileAnnulation } from './annulation';
+import { CelluleRessources } from '../../gantt/CelluleRessources';
+import { DialogueModifAssignation } from './DialogueModifAssignation';
 import { DialogueModifProjet } from './DialogueModifProjet';
 import { DialogueCopie } from './DialogueCopie';
 import { FormulaireNom } from './PlanningProjet';
@@ -137,6 +142,30 @@ const colonnesVendu: ColonneGantt[] = [
   },
 ];
 
+/** Colonnes « Coût planifié » et « Coût réel » (D-229) : activités seulement, marque « incomplet » si un taux manque. */
+const colonnesCouts: ColonneGantt[] = [
+  {
+    id: 'cout_planifie',
+    titre: 'Coût planifié',
+    cellule: (l) =>
+      l.genre === 'element' && l.element.type === 'activite' ? (
+        <CelluleCout montant={l.element.cout_planifie} manquant={l.element.taux_manquant} />
+      ) : (
+        ''
+      ),
+  },
+  {
+    id: 'cout_reel',
+    titre: 'Coût réel',
+    cellule: (l) =>
+      l.genre === 'element' && l.element.type === 'activite' ? (
+        <CelluleCout montant={l.element.cout_reel} manquant={l.element.taux_manquant} />
+      ) : (
+        ''
+      ),
+  },
+];
+
 /** Région « Totaux du projet » (D-149 (8a)) : marge négative en couleur flag. */
 function TotauxProjetRegion({ totaux }: { totaux: TotauxProjet }) {
   const parties = texteTotaux(totaux).split(' · ');
@@ -144,7 +173,7 @@ function TotauxProjetRegion({ totaux }: { totaux: TotauxProjet }) {
     <div
       role="region"
       aria-label="Totaux du projet"
-      className="flex flex-wrap gap-x-1 rounded-ui border border-gray-200 bg-white px-3 py-2 shadow-ui"
+      className="flex flex-wrap items-baseline gap-x-1 rounded-ui border border-gray-200 bg-white px-3 py-2 shadow-ui"
     >
       {parties.map((p, i) => (
         <span
@@ -155,6 +184,7 @@ function TotauxProjetRegion({ totaux }: { totaux: TotauxProjet }) {
           {i < parties.length - 1 ? ' · ' : ''}
         </span>
       ))}
+      {totaux.taux_manquant && <MarqueIncomplet />}
     </div>
   );
 }
@@ -177,6 +207,8 @@ const colonnes = (
   modifierSousProjet: (sousProjet: SousProjetGantt) => (() => void) | null,
   /** Colonnes « Vendu » et « Marge » et badge « Client » : seulement si l'utilisateur écrit (D-149 (8)). */
   client: boolean,
+  /** Ouvre « Modifier l'assignation » depuis la colonne Ressources ; null : texte avec infobulle (D-238 (4)). */
+  modifierAssignation: ((element: ElementGantt, assignation: AssignationGantt) => void) | null,
 ): ColonneGantt[] => {
   const nomMax = client ? CLASSE_NOM_MAX_CLIENT : CLASSE_NOM_MAX;
   return resserrer(client, [
@@ -245,6 +277,18 @@ const colonnes = (
     { id: 'debut', titre: 'Début', cellule: (l) => formaterDate(datesLigne(l)?.debut ?? null) },
     { id: 'fin', titre: 'Fin', cellule: (l) => formaterDate(datesLigne(l)?.fin ?? null) },
     {
+      id: 'ressources',
+      titre: 'Ressources',
+      cellule: (l) =>
+        l.genre === 'element' && l.element.type === 'activite' ? (
+          <CelluleRessources
+            assignations={l.element.assignations}
+            nomActivite={l.element.nom}
+            modifier={modifierAssignation ? (a) => modifierAssignation(l.element, a) : null}
+          />
+        ) : null,
+    },
+    {
       id: 'charge',
       titre: 'Charge',
       cellule: (l) =>
@@ -261,6 +305,15 @@ const colonnes = (
           ? formaterAvancement(l.element.avancement ?? null)
           : VIDE,
     },
+    {
+      id: 'otp',
+      titre: 'OTP',
+      cellule: (l) =>
+        l.genre === 'element' && l.element.type === 'activite'
+          ? (l.element.otp_effectif ?? VIDE)
+          : VIDE,
+    },
+    ...(client ? colonnesCouts : []),
     {
       id: 'drapeaux',
       titre: 'Drapeaux',
@@ -283,7 +336,8 @@ type DialogueEdition =
   | { kind: 'activite'; activite: ActiviteDetail }
   | { kind: 'jalon'; jalon: JalonDetail }
   | { kind: 'dependance'; dependance: DependanceGantt }
-  | { kind: 'projet'; id: number };
+  | { kind: 'projet'; id: number }
+  | { kind: 'assignation'; assignation: AssignationGantt; activite: string };
 
 const TEXTE_ECHEC_ANNULATION =
   'Impossible d’annuler ce geste ; les annulations précédentes ne sont plus possibles.';
@@ -646,6 +700,13 @@ export function GanttProjet({
     declencherAuto();
   };
 
+  // Action enregistrée tout de suite dans le dialogue (déplacement, dépendance) : même effet qu'un enregistrement, sans fermer.
+  const apresChangement = () => {
+    contours.signaler();
+    recharger();
+    declencherAuto();
+  };
+
   const fermerCreation = () => setCreation(null);
   const apresCreation = () => {
     contours.signaler();
@@ -895,6 +956,11 @@ export function GanttProjet({
       <div className="flex flex-wrap items-center gap-4">
         {peutCalculer && boutonCalculer}
         {peutCalculer && caseAuto}
+        {projet.peut_ecrire && (
+          <LienTelechargement href={`/api/projets/${projet.id}/couts/export`}>
+            Exporter les coûts
+          </LienTelechargement>
+        )}
         <BoutonsZoom zoom={zoom} chemin={chemin} />
         <CaseInitiales actif={initiales} chemin={chemin} />
         <MenuColonnes etat={disposition} />
@@ -959,6 +1025,13 @@ export function GanttProjet({
                       }
                     : null,
                 client,
+                projet.peut_ecrire
+                  ? (element, assignation) => {
+                      if (edition) return;
+                      origine.current = 'tableau';
+                      setEdition({ kind: 'assignation', assignation, activite: element.nom });
+                    }
+                  : null,
               ),
             )}
             attributsLigne={attributsLigne}
@@ -1061,6 +1134,7 @@ export function GanttProjet({
         >
           <FormulaireNom
             libelle="Créer"
+            projetId={projetId}
             chemin={`/api/projets/${projetId}/${creation.entree === 'jalon' ? 'jalons' : 'activites'}`}
             corps={creation.corps}
             avecChargeVendue={creation.entree !== 'jalon'}
@@ -1086,10 +1160,23 @@ export function GanttProjet({
         >
           <FormulaireActivite
             activite={edition.activite}
+            projetId={projetId}
+            onChangement={apresChangement}
             onSucces={apresEdition}
             onAnnuler={fermerEdition}
           />
         </Dialog>
+      )}
+      {edition?.kind === 'assignation' && (
+        <DialogueModifAssignation
+          id={edition.assignation.id}
+          charge={edition.assignation.charge_assignee}
+          taux={edition.assignation.taux}
+          nomRessource={edition.assignation.nom}
+          nomActivite={edition.activite}
+          onSucces={apresEdition}
+          onFermer={fermerEdition}
+        />
       )}
       {edition?.kind === 'dependance' && (
         <Dialog
@@ -1148,6 +1235,8 @@ export function GanttProjet({
         >
           <FormulaireJalon
             jalon={edition.jalon}
+            projetId={projetId}
+            onChangement={apresChangement}
             onSucces={apresEdition}
             onAnnuler={fermerEdition}
           />

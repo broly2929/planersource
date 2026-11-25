@@ -90,7 +90,7 @@ test('E2E-442-r2 : croix « Fermer » : confirmation seulement si le formulaire 
   await parcoursDeclencheur(page, 'croix');
 });
 
-test('E2E-443-r2 : champ nombre (Modifier l’assignation) : modifié puis Échap : confirmation ; remis : aucune', async ({
+test('E2E-443-r3 : champ nombre (Modifier l’assignation) : modifié puis Échap : confirmation ; remis : aucune', async ({
   page,
   request,
 }) => {
@@ -102,7 +102,7 @@ test('E2E-443-r2 : champ nombre (Modifier l’assignation) : modifié puis Écha
     .getByRole('button', { name: "Modifier l'assignation de Alice 4B à Tâche A", exact: true })
     .click();
   const dialogue = dialogueNomme(page, 'Modifier l’assignation');
-  const charge = dialogue.getByLabel('Charge assignée (jours)');
+  const charge = dialogue.getByLabel('Charge assignée (j)');
   const initiale = await charge.inputValue();
   await verifierGardeChamp(
     page,
