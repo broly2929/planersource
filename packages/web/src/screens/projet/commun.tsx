@@ -147,7 +147,8 @@ export function FormulaireDialogue<T = unknown>({
   libelle: string;
   envoyer: () => Promise<T>;
   onSucces: (resultat: T) => void;
-  onAnnuler: () => void;
+  /** Absent : pas de bouton « Annuler » (page plein écran). */
+  onAnnuler?: () => void;
   /** Message affiché sur un 409 (sinon « Cet élément existe déjà. »). */
   conflit?: Conflit;
   /** Validation locale avant l'envoi : renvoie un message de refus, ou null si tout va bien. */
@@ -163,7 +164,7 @@ export function FormulaireDialogue<T = unknown>({
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
   useEnvoiEnCours(enCours);
-  const fermer = useFermeture(onAnnuler);
+  const fermer = useFermeture(onAnnuler ?? (() => undefined));
   const soumettre = async (event: FormEvent) => {
     event.preventDefault();
     const refus = valider?.() ?? null;
@@ -182,9 +183,11 @@ export function FormulaireDialogue<T = unknown>({
       {erreur && <Notification type="erreur">{erreur}</Notification>}
       {children}
       <div className="flex justify-end gap-2">
-        <Button variante="secondaire" onClick={fermer}>
-          Annuler
-        </Button>
+        {onAnnuler && (
+          <Button variante="secondaire" onClick={fermer}>
+            Annuler
+          </Button>
+        )}
         <Button type="submit" enCours={enCours} disabled={inactif}>
           {libelle}
         </Button>

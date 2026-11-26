@@ -77,3 +77,9 @@ Dialogues touchés (garde D-188 conservée, tous restent dans la catégorie A) :
 - 19 (Modifier l'activité) : champ « Activité parente » ; sous-sections « Prédécesseurs » et « Successeurs » (ajout, modification, suppression enregistrés tout de suite, avec confirmations) ; un ajout saisi non envoyé compte comme une modification (garde) ; activité parente : mode et dates validées absents. Dialogues imbriqués : les confirmations de suppression ouvrent une `Confirmation` (catégorie B, sans garde) au-dessus du dialogue.
 - 20 (Modifier le jalon) : champ « Activité parente » ; pas de dépendances.
 
+
+## Mise à jour mot-de-passe (D-254)
+
+- 10 (Nouvel utilisateur) et 11 (Modifier <utilisateur>) : champ ajouté « Doit changer son mot de passe à la prochaine connexion » (Case, décochée par défaut) ; en modification, un changement de la case compte comme une modification (garde).
+- Nouveau dialogue de catégorie A : « Changer mon mot de passe » (bouton du pied de la barre latérale, Layout.tsx) ; champs Mot de passe actuel, Nouveau mot de passe, Confirmation (password) ; pas d'async ; garde active (saisie non envoyée = modification).
+- La page « Changez votre mot de passe » n'est pas un dialogue : même formulaire, sans garde de dialogue.

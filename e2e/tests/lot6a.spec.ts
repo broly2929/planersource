@@ -169,7 +169,7 @@ test('E2E-341-r1 : refus d’une équipe utilisée, confirmation ouverte, base i
   expect(await equipesEnBase()).toEqual([]);
 });
 
-test('E2E-342 : écran Utilisateurs, création : liste « Équipe », corps envoyé, colonne « Équipe »', async ({
+test('E2E-342-r1 : écran Utilisateurs, création : liste « Équipe », corps envoyé, colonne « Équipe »', async ({
   page,
   request,
 }) => {
@@ -186,7 +186,7 @@ test('E2E-342 : écran Utilisateurs, création : liste « Équipe », corps envo
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Nom').fill(nom);
     await dialog.getByLabel('Email').fill(email);
-    await dialog.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+    await dialog.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
     const liste = dialog.getByLabel('Équipe', { exact: true });
     expect(await options(liste)).toEqual(['Aucune', 'Alpha', 'bravo', 'Charlie']);
     expect(await choix(liste)).toBe('Aucune');
@@ -257,7 +257,7 @@ test('E2E-343-r2 : écran Utilisateurs, modification : corps du PATCH, colonne, 
   await expect(await cellule(tableauEquipes(page), 'bravo', 'Membres')).toHaveText('0');
 });
 
-test('E2E-344 : refus 422 « Équipe inconnue » en modification et en création, dialogue ouvert', async ({
+test('E2E-344-r1 : refus 422 « Équipe inconnue » en modification et en création, dialogue ouvert', async ({
   page,
   request,
 }) => {
@@ -284,7 +284,7 @@ test('E2E-344 : refus 422 « Équipe inconnue » en modification et en création
   await page.getByRole('button', { name: 'Nouvel utilisateur' }).click();
   await dialog.getByLabel('Nom').fill('Nouveau 344');
   await dialog.getByLabel('Email').fill('nouveau-344@lot6a.test');
-  await dialog.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await dialog.getByLabel('Équipe', { exact: true }).selectOption({ label: 'bravo' });
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await expect(dialog.getByText(INCONNUE)).toBeVisible();
@@ -293,7 +293,7 @@ test('E2E-344 : refus 422 « Équipe inconnue » en modification et en création
   expect(avant).not.toEqual(apresSuppression);
 });
 
-test('E2E-345-r2 : parcours complet à l’écran avec une équipe, de l’administrateur seul à l’assignation', async ({
+test('E2E-345-r3 : parcours complet à l’écran avec une équipe, de l’administrateur seul à l’assignation', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6A';
@@ -312,7 +312,7 @@ test('E2E-345-r2 : parcours complet à l’écran avec une équipe, de l’admin
   const utilisateur = page.getByRole('dialog');
   await utilisateur.getByLabel('Nom').fill(RESSOURCE);
   await utilisateur.getByLabel('Email').fill('ressource-6a@lot6a.test');
-  await utilisateur.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await utilisateur.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await utilisateur.getByLabel('Calendrier').selectOption({ label: 'Cal 6A' });
   await utilisateur.getByLabel('Équipe', { exact: true }).selectOption({ label: 'Équipe 6a' });
   await utilisateur.getByRole('button', { name: 'Créer' }).click();

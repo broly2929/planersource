@@ -122,7 +122,7 @@ test('E2E-402-r1 : Feuille de temps, modification puis déconnexion : confirmati
   await feuilleInexistante(playwright);
 });
 
-test('E2E-403 : Feuille de temps, modification puis « Semaine suivante » : une seule confirmation', async ({
+test('E2E-403-r1 : Feuille de temps, modification puis « Semaine suivante » : une seule confirmation', async ({
   page,
   request,
   playwright,
@@ -139,6 +139,7 @@ test('E2E-403 : Feuille de temps, modification puis « Semaine suivante » : une
 
   await bouton(page, 'Semaine suivante').click();
   await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(confirmation(page)).toBeVisible();
   await abandonner(page).click();
   await expect(page).toHaveURL(adresseFeuille('2026-01-19'));
   await expect(page.getByRole('dialog')).toHaveCount(0);

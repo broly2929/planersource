@@ -184,7 +184,7 @@ async function creerRessourceAvecInitiales(
   await dialog.getByLabel('Nom').fill(nom);
   await dialog.getByLabel('Initiales').fill(initiales);
   await dialog.getByLabel('Email').fill(email);
-  await dialog.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   if (calendrier) await dialog.getByLabel('Calendrier').selectOption({ label: calendrier });
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: new RegExp(nom) })).toBeVisible();

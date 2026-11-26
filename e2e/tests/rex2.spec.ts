@@ -45,7 +45,7 @@ async function creerUtilisateur(
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Nom').fill(nom);
   await dialog.getByLabel('Email').fill(email);
-  await dialog.getByLabel('Mot de passe').fill(motDePasse);
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(motDePasse);
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: new RegExp(nom) })).toBeVisible();
 }

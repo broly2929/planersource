@@ -864,3 +864,11 @@ Chaque point source, avec les lignes qui le couvrent. Aucun point sans ligne (co
 - `GDL-RD-6` : « Annuler » propre au formulaire : calendrier, jour férié, projet, Rejeter → lignes 178, 179
 - `GDL-RD-7` : focus initial des confirmations sur « Annuler » → lignes 180
 
+
+### Recette différée (mot-de-passe, D-254)
+
+Non ajoutée au parcours ordonné ci-dessus : le lot est couvert par E2E-678 à E2E-681 et MDP-1 à MDP-5. À juger à la prochaine recette : lisibilité du bouton « Changer mon mot de passe » dans le pied de la barre latérale (1024 px et 1440 px) et de la page « Changez votre mot de passe ». Les mots de passe de démonstration (mot de passe = identifiant) restent valables ; aucun compte de démonstration n'a la case cochée.
+
+### Recette différée (taux-2, D-260)
+
+Non ajoutée au parcours ordonné ci-dessus : le lot est couvert par E2E-684 à E2E-695. À juger à la prochaine recette : lisibilité de la colonne « Taux du jour » et de la mention « (équipe) » ; la liste Utilisateurs à 1024 px défile horizontalement (la colonne est hors de la zone visible sans défilement) ; la croix « Fermer » des dialogues « Taux de l'équipe <nom> » et « Taux de <nom> » tient lieu de bouton « Fermer » (pas de bouton en pied).

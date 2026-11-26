@@ -105,7 +105,7 @@ describe('Utilisateurs et rôles', () => {
   });
 
   // USR-5-r1 (D-031, tag tests-lot5i-r2) : seul le booléen « mot_de_passe_origine » (D-138 (2)) est admis.
-  it('USR-5-r1 : le mot de passe haché n’apparaît dans aucune réponse de l’API', async () => {
+  it('USR-5-r2 : le mot de passe haché n’apparaît dans aucune réponse de l’API', async () => {
     const headers = await asRole('administrateur');
     const created = await ctx.app.inject({
       method: 'POST',
@@ -128,7 +128,10 @@ describe('Utilisateurs et rôles', () => {
     ];
     for (const res of responses) {
       expect(res.statusCode).toBeLessThan(300);
-      const corps = res.body.replace(/"mot_de_passe_origine":(true|false)/g, '');
+      // D-254 : seule la clé exacte `doit_changer_mot_de_passe` est exclue avant la regex.
+      const corps = res.body
+        .replace(/"mot_de_passe_origine":(true|false)/g, '')
+        .replace(/"doit_changer_mot_de_passe":(true|false)/g, '');
       expect(corps).not.toMatch(/argon2|mot_de_passe/);
     }
   });

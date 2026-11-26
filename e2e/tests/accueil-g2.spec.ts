@@ -93,7 +93,7 @@ interface ProjetApi {
   fin_planifiee: string | null;
 }
 
-test('E2E-86-r1 racines triées par code ; sous-projets, projet clos, sa descendance et modèle absents ; lien vers la fiche', async ({
+test('E2E-86-r4 racines triées par code ; sous-projets, projet clos, sa descendance et modèle absents ; lien vers la fiche', async ({
   page,
   request,
 }) => {
@@ -111,7 +111,7 @@ test('E2E-86-r1 racines triées par code ; sous-projets, projet clos, sa descend
   await api.modele('MOD-86', 'Modèle86');
 
   await loginAsAdmin(page);
-  await expect(page.getByText('Connecté en tant que')).toBeVisible();
+  await expect(page.locator('aside').getByText(NOM_ADMIN_E2E, { exact: true })).toBeVisible(); // D-252
   await expect(zoneTableau(page)).toBeVisible();
   await replierTout(page); // D-218 (4), (9)
   expect(await codesAffiches(page)).toEqual(['R-A', 'R-b', 'R-c']);
@@ -193,9 +193,9 @@ test('E2E-88 zoom dans l’adresse, conservé au rechargement, valeur inconnue =
   await expect(page.locator('svg[data-zoom]')).toHaveAttribute('data-zoom', 'semaine');
 });
 
-test('E2E-89 base « administrateur seul » : état vide', async ({ page }) => {
+test('E2E-89-r1 base « administrateur seul » : état vide', async ({ page }) => {
   await loginAsAdmin(page);
-  await expect(page.getByText('Connecté en tant que')).toBeVisible();
+  await expect(page.locator('aside').getByText(NOM_ADMIN_E2E, { exact: true })).toBeVisible(); // D-252
   await expect(page.getByText('Aucun projet à afficher.')).toBeVisible();
   await expect(zoneTableau(page)).toHaveCount(0);
   await expect(page.locator('svg[data-zoom]')).toHaveCount(0);

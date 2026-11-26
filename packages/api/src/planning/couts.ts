@@ -1,4 +1,5 @@
 import type { Db } from '../db/erreurs.js';
+import { lireTauxRessources, resoudreTaux } from './taux.js';
 
 /**
  * Coûts d'un projet (SPEC §12.3, D-229) : calculés à la lecture, jamais stockés. Les fonctions de calcul
@@ -20,7 +21,10 @@ export interface Imputation {
 /** Une assignation (feuille) avec les taux de sa ressource et ses imputations. */
 export interface LigneAssignation {
   activite_id: number;
+  /** Taux propres. */
   taux: PeriodeTaux[];
+  /** Taux de l'équipe actuelle (§12.6 point 3). */
+  taux_equipe?: PeriodeTaux[];
   charge_assignee: number;
   reste_a_faire: number;
   imputations: Imputation[];
@@ -37,24 +41,20 @@ const arrondi = (n: number): number => Math.round(n * 100) / 100;
 
 const AUCUN: Cout = { planifie: 0, impute: 0, reel: 0, taux_manquant: false };
 
-/** Taux en vigueur à `jour` (SPEC §12.1 point 4), undefined si aucune période ne le couvre. */
-function tauxEnVigueur(taux: PeriodeTaux[], jour: string): number | undefined {
-  return taux.find((p) => p.debut <= jour && (p.fin === null || jour <= p.fin))?.montant;
-}
-
 /** Coût d'une assignation (§12.3 points 2, 3, 6). */
 export function coutAssignation(l: LigneAssignation, jour: string): Cout {
-  // Ressource sans aucune période : coût 0, sans avertissement.
-  if (l.taux.length === 0) return { ...AUCUN };
+  const equipe = l.taux_equipe ?? [];
+  // Ressource sans aucune période, propre ou d'équipe : coût 0, sans avertissement (§12.3 point 8).
+  if (l.taux.length + equipe.length === 0) return { ...AUCUN };
   let manquant = false;
   const part = (charge: number, date: string): number => {
     if (charge <= 0) return 0;
-    const montant = tauxEnVigueur(l.taux, date);
-    if (montant === undefined) {
+    const resolu = resoudreTaux(l.taux, equipe, date);
+    if (!resolu) {
       manquant = true;
       return 0;
     }
-    return arrondi(charge * montant);
+    return arrondi(charge * resolu.montant);
   };
   const planifie = part(l.charge_assignee, jour);
   const impute = arrondi(l.imputations.reduce((s, i) => s + part(i.charge, i.jour), 0));
@@ -111,12 +111,7 @@ export async function lireCouts(db: Db, projetId: number, jour: string) {
        FROM assignation WHERE projet_id = $1 ORDER BY id`,
     [projetId],
   );
-  const { rows: taux } = await db.query<PeriodeTaux & { utilisateur_id: number }>(
-    `SELECT utilisateur_id, debut::text AS debut, fin::text AS fin, montant
-       FROM taux_journalier
-      WHERE utilisateur_id IN (SELECT ressource_id FROM assignation WHERE projet_id = $1)`,
-    [projetId],
-  );
+  const taux = await lireTauxRessources(db, [...new Set(assignations.map((s) => s.ressource_id))]);
   const { rows: imputations } = await db.query<Imputation & { assignation_id: number }>(
     `SELECT i.assignation_id, i.jour::text AS jour, i.charge
        FROM imputation i JOIN assignation s ON s.id = i.assignation_id
@@ -132,7 +127,8 @@ export async function lireCouts(db: Db, projetId: number, jour: string) {
     activite_id: s.activite_id,
     charge_assignee: s.charge_assignee,
     reste_a_faire: s.reste_a_faire,
-    taux: taux.filter((t) => t.utilisateur_id === s.ressource_id),
+    taux: taux.get(s.ressource_id)?.propres ?? [],
+    taux_equipe: taux.get(s.ressource_id)?.equipe ?? [],
     imputations: imputations.filter((i) => i.assignation_id === s.id),
   }));
   return coutsActivites(lignes, parents, jour);

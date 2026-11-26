@@ -413,7 +413,7 @@ for (const largeur of [1440, 1024]) {
   });
 }
 
-test('E2E-376-r3 : parcours complet à l’écran (administrateur seul) : équipe, ressource et chef créés à l’écran, assignation ; Plan de charge filtré sur l’équipe, ligne de la ressource et dépliage du projet', async ({
+test('E2E-376-r4 : parcours complet à l’écran (administrateur seul) : équipe, ressource et chef créés à l’écran, assignation ; Plan de charge filtré sur l’équipe, ligne de la ressource et dépliage du projet', async ({
   page,
   request,
 }) => {
@@ -436,7 +436,7 @@ test('E2E-376-r3 : parcours complet à l’écran (administrateur seul) : équip
   const utilisateur = page.getByRole('dialog');
   await utilisateur.getByLabel('Nom').fill(RESSOURCE);
   await utilisateur.getByLabel('Email').fill(EMAIL_RES);
-  await utilisateur.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await utilisateur.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await utilisateur.getByLabel('Calendrier').selectOption({ label: 'Cal 6D' });
   await utilisateur.getByLabel('Équipe', { exact: true }).selectOption({ label: 'Équipe 6D' });
   await utilisateur.getByRole('button', { name: 'Créer' }).click();
@@ -446,7 +446,7 @@ test('E2E-376-r3 : parcours complet à l’écran (administrateur seul) : équip
   const chef = page.getByRole('dialog');
   await chef.getByLabel('Nom').fill(CHEF);
   await chef.getByLabel('Email').fill(EMAIL_CHEF);
-  await chef.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await chef.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await chef.getByLabel('Rôle').selectOption({ label: 'Chef de projet' });
   await chef.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: new RegExp(CHEF) })).toBeVisible();

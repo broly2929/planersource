@@ -52,7 +52,7 @@ async function seConnecter(page: Page, identifiant: string, motDePasse: string):
 
 test.afterAll(remettreAdminSeul);
 
-test('E2E-321 bandeau du mot de passe d’origine : affiché pour admin / admin, absent après changement à l’écran', async ({
+test('E2E-321-r1 bandeau du mot de passe d’origine : affiché pour admin / admin, absent après changement à l’écran', async ({
   page,
 }) => {
   await remettreAdminSeul();
@@ -65,7 +65,7 @@ test('E2E-321 bandeau du mot de passe d’origine : affiché pour admin / admin,
   const creation = page.getByRole('dialog');
   await creation.getByLabel('Nom').fill('Administrateur initial');
   await creation.getByLabel('Identifiant').fill('admin');
-  await creation.getByLabel('Mot de passe').fill('admin');
+  await creation.getByLabel('Mot de passe', { exact: true }).fill('admin');
   await creation.getByLabel('Rôle').selectOption({ label: 'Administrateur' });
   await creation.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: /Administrateur initial/ })).toBeVisible();

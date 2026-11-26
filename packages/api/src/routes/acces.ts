@@ -10,3 +10,12 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
   if (!request.user) return reply.code(401).send({ erreur: 'Non authentifié' });
   if (request.user.role !== 'administrateur') return reply.code(403).send({ erreur: 'Interdit' });
 }
+
+/** 401 sans session, 403 pour le rôle ressource. */
+export async function requireNonRessource(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  if (!request.user) return reply.code(401).send({ erreur: 'Non authentifié' });
+  if (request.user.role === 'ressource') return reply.code(403).send({ erreur: 'Interdit' });
+}

@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Coins, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, type Utilisateur } from '../api';
 import { BoutonIcone } from '../components/BoutonIcone';
@@ -9,6 +9,8 @@ import { Chargement, Vide } from '../components/Etat';
 import { Field } from '../components/Field';
 import { Notification } from '../components/Notification';
 import { Table, type Colonne } from '../components/Table';
+import { AIDE_TAUX_EQUIPE } from '../aidesTaux';
+import { DialogueTaux } from './TauxJournaliers';
 import { FormulaireDialogue } from './projet/commun';
 
 /** Équipe (lot 6a, D-147) : regroupement d'utilisateurs pour l'affichage et les filtres. */
@@ -19,6 +21,7 @@ export interface Equipe {
 
 const DOUBLON = 'Cette équipe existe déjà.';
 const UTILISEE = "Cette équipe a des membres : retirez-les d'abord.";
+const A_DES_TAUX = "Cette équipe a des taux : supprimez-les d'abord.";
 
 type Liste =
   | { statut: 'chargement' }
@@ -28,7 +31,7 @@ type Liste =
 /** Texte du refus d'une suppression : 409 = équipe portée par au moins un utilisateur. */
 function messageSuppression(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.status === 409) return UTILISEE;
+    if (err.status === 409) return err.erreur === 'Équipe avec des taux' ? A_DES_TAUX : UTILISEE;
     if (err.status === 404) return 'Cette équipe n’existe plus.';
     if (err.status === 403) return 'Vous n’avez pas le droit d’effectuer cette suppression.';
   }
@@ -76,6 +79,7 @@ export function OngletEquipes() {
   const [creation, setCreation] = useState(false);
   const [aRenommer, setARenommer] = useState<Equipe | null>(null);
   const [aSupprimer, setASupprimer] = useState<Equipe | null>(null);
+  const [tauxDe, setTauxDe] = useState<Equipe | null>(null);
 
   const charger = useCallback(() => {
     Promise.all([api<Equipe[]>('/api/equipes'), api<Utilisateur[]>('/api/utilisateurs')])
@@ -112,6 +116,7 @@ export function OngletEquipes() {
             icone={Pencil}
             onClick={() => setARenommer(e)}
           />
+          <BoutonIcone libelle={`Taux de ${e.nom}`} icone={Coins} onClick={() => setTauxDe(e)} />
           <BoutonIcone
             libelle={`Supprimer ${e.nom}`}
             icone={Trash2}
@@ -173,6 +178,15 @@ export function OngletEquipes() {
           />
         )}
       </Dialog>
+      {tauxDe && (
+        <DialogueTaux
+          titre={`Taux de l'équipe ${tauxDe.nom}`}
+          aide={AIDE_TAUX_EQUIPE}
+          cible="equipe"
+          id={tauxDe.id}
+          onFermer={() => setTauxDe(null)}
+        />
+      )}
       {aSupprimer && (
         <Confirmation
           nom={aSupprimer.nom}

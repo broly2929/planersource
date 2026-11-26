@@ -5,12 +5,15 @@ import { hashDeSubstitution } from '../auth/password.js';
 import {
   createSession,
   destroySession,
+  fermerAutresSessions,
+  oublierOrigine,
   marquerOrigine,
   purgeExpiredSessions,
   setSessionCookie,
 } from '../auth/session.js';
 import type { SessionsOrigine } from '../auth/session.js';
 import { toPublicUser, USER_COLUMNS, type UtilisateurRow } from '../auth/user.js';
+import { hashPassword } from '../auth/password.js';
 import type { AppDeps } from '../app.js';
 
 // Clé `identifiant`, ou `email` comme synonyme (D-077 5) ; comparée au login seul.
@@ -25,6 +28,8 @@ const loginBody = z
     mot_de_passe: b.mot_de_passe,
   }))
   .refine((b) => b.identifiant !== '');
+
+const changementBody = z.object({ actuel: z.string(), nouveau: z.string().min(1) });
 
 export function authRoutes(
   app: FastifyInstance,
@@ -73,6 +78,56 @@ export function authRoutes(
   app.post('/api/auth/logout', async (request, reply) => {
     await destroySession(pool, request, sessionsOrigine);
     reply.clearCookie('session', { path: '/' });
+    return reply.code(204).send();
+  });
+
+  // Changement de son propre mot de passe (D-254, SPEC §8 point 4).
+  app.post('/api/auth/mot-de-passe', async (request, reply) => {
+    const moi = request.user;
+    if (!moi) return reply.code(401).send({ erreur: 'Non authentifié' });
+    const body = changementBody.safeParse(request.body);
+    if (!body.success) return reply.code(400).send({ erreur: 'Données invalides' });
+    const { actuel, nouveau } = body.data;
+    const ip = request.ip;
+    const cle = `mot-de-passe:${moi.id}`;
+    const verdict = limiteur.verifier(ip, cle);
+    if (verdict.bloque) {
+      return reply
+        .code(429)
+        .header('Retry-After', String(verdict.retryAfter))
+        .send({ erreur: 'Trop de tentatives' });
+    }
+    const { rows } = await pool.query<{ mot_de_passe_hash: string }>(
+      'SELECT mot_de_passe_hash FROM utilisateur WHERE id = $1',
+      [moi.id],
+    );
+    if (!rows[0] || !(await verifier(rows[0].mot_de_passe_hash, actuel))) {
+      limiteur.echec(ip, cle);
+      return reply.code(400).send({ erreur: 'Mot de passe actuel incorrect' });
+    }
+    if (nouveau === actuel) {
+      return reply
+        .code(400)
+        .send({ erreur: "Le nouveau mot de passe doit être différent de l'actuel" });
+    }
+    limiteur.succes(ip, cle);
+    const hash = await hashPassword(nouveau);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'UPDATE utilisateur SET mot_de_passe_hash = $2, doit_changer_mot_de_passe = false WHERE id = $1',
+        [moi.id, hash],
+      );
+      await fermerAutresSessions(client, request, sessionsOrigine, moi.id);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw err;
+    } finally {
+      client.release();
+    }
+    oublierOrigine(request, sessionsOrigine);
     return reply.code(204).send();
   });
 

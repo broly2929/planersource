@@ -57,7 +57,7 @@ async function remplirCreation(page: Page, s: Saisie): Promise<void> {
   if (s.identifiant !== undefined) await dialog.getByLabel('Identifiant').fill(s.identifiant);
   if (s.initiales !== undefined) await dialog.getByLabel('Initiales').fill(s.initiales);
   if (s.email !== undefined) await dialog.getByLabel('Email').fill(s.email);
-  await dialog.getByLabel('Mot de passe').fill(s.motDePasse ?? 'a');
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(s.motDePasse ?? 'a');
   await dialog.getByRole('button', { name: 'Créer' }).click();
 }
 

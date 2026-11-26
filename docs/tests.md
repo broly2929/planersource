@@ -793,7 +793,7 @@ Web : packages/web/test/accueil.test.ts (nouveau fichier ; fonctions pures de `p
 | E2E-86-r3 | Racines R-b, R-A, R-c créées par l'API (+ un sous-projet de R-A, un projet clos avec un sous-projet non clos, un modèle ; le projet R-CLOS est clos en SQL, donnée incohérente, D-083 (10), -r3) : lignes Code dans l'ordre R-A, R-b, R-c ; sous-projets, projet clos, sa descendance et modèle absents ; trois boutons « Déplier » et « Tout déplier » (G3), un bouton « Calculer » pour l'administrateur (G4, -r2) ; ligne « Connecté en tant que … » présente ; lien Nom → `/projets/:id` de la fiche | 6 Accueil (1, 3, 7) | G2 | e2e/tests/accueil-g2.spec.ts |
 | E2E-87 | Deux projets calculés : tableau aux colonnes Code, Nom, Début, Fin, Drapeaux ; Début et Fin au format JJ/MM/AAAA égaux aux `debut_planifie` et `fin_planifiee` relus par l'API ; Drapeaux vide ; une barre `role="img"` par projet avec `data-projet-id` et nom accessible « <nom>, du JJ/MM/AAAA au JJ/MM/AAAA » ; trait du jour `data-aujourdhui` 2027-01-06 | 6 Accueil (3, 4, 5) | G2 | e2e/tests/accueil-g2.spec.ts |
 | E2E-88 | Zoom : par défaut `data-zoom` « semaine » ; clic « Jour » : adresse `/?zoom=jour`, `data-zoom` « jour » ; rechargement : conservé ; `/?zoom=xyz` : « semaine » | 6 Accueil (4) | G2 | e2e/tests/accueil-g2.spec.ts |
-| E2E-89 | Base « administrateur seul » : « Aucun projet à afficher. », ni tableau ni SVG, ligne « Connecté en tant que » présente | 6 Accueil (7) | G2 | e2e/tests/accueil-g2.spec.ts |
+| E2E-89 | Base « administrateur seul » : « Aucun projet à afficher. », ni tableau ni SVG, nom de l'utilisateur dans la barre latérale (révision D-252, E2E-89-r1) | 6 Accueil (7) | G2 | e2e/tests/accueil-g2.spec.ts |
 | E2E-90 | Projets non calculés : bandeau « Planning non calculé » en role=status, lignes visibles (Début et Fin « — »), aucune barre `role="img"` | 6 Accueil (3, 7) | G2 | e2e/tests/accueil-g2.spec.ts |
 | E2E-91 | Ressource affectée à un sous-projet seulement : ce sous-projet est affiché comme racine, son parent absent, aucun bouton | 6 Accueil (1), D-079 (2) | G2 | e2e/tests/accueil-g2.spec.ts |
 | E2E-92-r4 | Zones focalisables de noms « Tableau du Gantt global » et « Calendrier du Gantt global » ; ordre de tabulation : boutons Jour, Semaine, Mois, « Calculer », « Tout déplier », puis la zone du tableau, puis les liens Nom qu'elle contient, puis la zone du SVG | 6 Accueil (9) | G2 | e2e/tests/accueil-g2.spec.ts ; révisé : arrêt « Initiales » après « Mois » dans l'ordre de focus (D-091, D-092, tests-accueil-g2-r5) |
@@ -853,6 +853,8 @@ Révision G4 (D-031, tag `tests-accueil-g2-r2`) : E2E-86 révisé sur décision 
 Révision G4 (D-031, décision pré-autorisée par la consigne de la session G4 ; tags `tests-accueil-g2-r3` et `tests-accueil-g3-r1`) : E2E-92 et E2E-100 : « Calculer » inséré entre le zoom et « Tout déplier » dans l'ordre de tabulation, seule assertion modifiée.
 
 Révision Clôture (D-031, D-083 (10), tag `tests-accueil-g2-r4`) : E2E-86 révisé en E2E-86-r3 sur décision du porteur (2026-11-17) : R-CLOS, clos avec un sous-projet ouvert S-CLOS, est une donnée incohérente créée en SQL (`UPDATE projet SET clos = true`, comme accueil-g3.spec.ts) et non plus par PATCH, que D-083 (1) refuse désormais. Aucune autre assertion modifiée ; l'intention de D-081 est gardée.
+
+Révision accueil-sans-bandeau (D-031, D-252, tag `tests-accueil-sans-bandeau-r1`) : E2E-86-r3 devient E2E-86-r4 et E2E-89 devient E2E-89-r1, sur décision du porteur : l'attente de la ligne « Connecté en tant que » (lignes 114 et 198 de accueil-g2.spec.ts) est remplacée par la vérification du nom de l'administrateur dans la barre latérale (`aside`). Aucune autre assertion modifiée. Le titre du spec portait encore « E2E-86-r1 » : il suit désormais la numérotation de ce fichier. La ligne E2E-86-r3 du tableau ci-dessus décrit l'état avant cette révision.
 
 ## Tests de la tranche Clôture, C1 (D-083)
 
@@ -3603,7 +3605,7 @@ Fichiers : `packages/api/test/couts-taux.test.ts` (TJ-1 à TJ-10), `packages/api
 | TJ-5 | Deux POST concurrents qui se chevauchent sur la même ressource : un 201 et un 409, une seule période en base (verrou de la ligne utilisateur) | §12.1 point 3 | couts-1 | packages/api/test/couts-taux.test.ts |
 | TJ-6 | PATCH (debut, fin, montant) → 200 ; DELETE → 204, absent du GET ; historique `GET /api/historique?entite=taux` : création, une modification par champ changé (valeur inchangée non historisée), suppression ; `projet_id` nul | §12.1 points 5, 6 ; §3 | couts-1 | packages/api/test/couts-taux.test.ts |
 | TJ-7 | Droits en lecture : chef de projet qui écrit sur un projet où la ressource est affectée → 200 ; ressource affectée seulement à un projet qu'il lit sans écrire → 403 ; ressource non affectée → 403 ; rôle ressource (y compris ses propres taux) → 403 ; utilisateur inconnu, id mal formé, id hors plage → 404 ; sans session → 401 | §12.1 point 7 | couts-1 | packages/api/test/couts-taux.test.ts |
-| TJ-8 | Droits en écriture : chef de projet (même avec lecture permise) et rôle ressource → 403 sur POST, PATCH, DELETE ; taux inconnu → 404 (administrateur) ; ordre : 403 avant 404 avant 400 ; base inchangée à chaque refus | §12.1 point 7 | couts-1 | packages/api/test/couts-taux.test.ts |
+| TJ-8-r1 | Droits en écriture : rôle ressource → 403 (révision D-258 (5) : le chef dans sa portée écrit, couvert par TCH-1 à TCH-5) sur POST, PATCH, DELETE ; taux inconnu → 404 (administrateur) ; ordre : 403 avant 404 avant 400 ; base inchangée à chaque refus | §12.1 point 7 | couts-1 | packages/api/test/couts-taux.test.ts |
 | TJ-9 | PATCH /api/utilisateurs/:id `est_ressource: false` sur un utilisateur qui a un taux : 409 { erreur: 'Utilisateur avec des taux : il reste ressource' }, base inchangée ; après suppression du taux : 200 | §12.1 point 8 ; D-225 (F) (1) | couts-1 | packages/api/test/couts-taux.test.ts |
 | TJ-10 | `chevauche(periodes, candidate, exclureId?)` (fonction pure) : bornes comprises, période ouverte, période exclue en modification, trous | §12.1 point 3 | couts-1 | packages/api/test/couts-taux.test.ts |
 | TJ-11 | Web, `tauxEnVigueur(periodes, date)` : début ≤ d ≤ fin, fin vide, hors période → null, trou → null | §12.1 point 4 | couts-1 | packages/web/test/couts-1.test.ts |
@@ -3958,3 +3960,148 @@ Aucun champ modifiable nouveau : les onglets reprennent les écrans Modèles et 
   - `autrui-e.spec.ts` : E2E-429-r1. `lot3f2.spec.ts` : E2E-207-r1. `lot6b.spec.ts` : E2E-352-r1. `lot6f.spec.ts` : E2E-387-r5.
   - `lot4b.spec.ts` : E2E-221-r2, E2E-244-r7. `lot4c.spec.ts` : E2E-299-r1, E2E-317-r2, E2E-318-r2.
   - `recette-auto-admin.spec.ts` : E2E-468-r2. `recette-auto-chefa.spec.ts` : E2E-477-r2. `recette-auto-chefb.spec.ts` : E2E-493-r2.
+
+## Correctif garde-focus (D-250, lot correctif-garde-focus)
+
+Fichier : `e2e/tests/garde-focus-auto.spec.ts` (domaine `dialogues`). Comportement fixé par le porteur (D-250 (3)), pas de `SPEC.md`. Dialogue « Nouvelle équipe » (onglet Équipes de Utilisateurs), administrateur. Minuteries simulées : `page.clock.install()` avant le chargement, `page.clock.pauseAt()` une fois l'écran chargé, avant le clic « Nouvelle équipe » (D-250 (4)) ; aucune attente de délai réel.
+
+| id | énoncé | section SPEC | lot | fichier |
+|---|---|---|---|---|
+| E2E-674 | Horloge arrêtée (minuterie de `focusAuto` non écoulée) : `fill` du champ « Nom », puis « Annuler » → confirmation « Abandonner les modifications ? » visible, dialogue ouvert, saisie conservée | D-250 (3) | correctif-garde-focus | e2e/tests/garde-focus-auto.spec.ts |
+| E2E-675 | Non-régression : horloge arrêtée, focus automatique d'ouverture seul, sans saisie, puis « Annuler » → fermeture sans confirmation | D-250 (3), D-188 (11) | correctif-garde-focus | e2e/tests/garde-focus-auto.spec.ts |
+| E2E-676 | Non-régression : `runFor` au-delà de la minuterie, saisie au clavier (`pressSequentially`) dans « Nom », puis « Annuler » → confirmation, dialogue ouvert | D-250 (3), D-188 (4) | correctif-garde-focus | e2e/tests/garde-focus-auto.spec.ts |
+
+## Accueil sans bandeau (D-252, lot accueil-sans-bandeau)
+
+Fichier : `e2e/tests/accueil-sans-bandeau.spec.ts` (domaine `accueil`). Comportement fixé par le porteur (D-252), `SPEC.md` §6 « Écran Accueil ». Administrateur puis chef de projet, base « administrateur seul » avant et après.
+
+| id | énoncé | section SPEC | lot | fichier |
+|---|---|---|---|---|
+| E2E-677 | Administrateur, puis chef de projet : sur l'Accueil, aucun texte « Connecté en tant que » ; le nom de l'utilisateur est visible dans le pied de la barre latérale ; le Gantt de l'Accueil est présent | §6 Accueil, D-252 | accueil-sans-bandeau | e2e/tests/accueil-sans-bandeau.spec.ts |
+
+## Changement de mot de passe (D-254, lot mot-de-passe)
+
+Fichiers : `packages/api/test/mot-de-passe.test.ts` (MDP-1 à MDP-5), `e2e/tests/mot-de-passe.spec.ts` (E2E-678 à E2E-681). Domaines : utilisateurs-equipes-calendriers, authentification. Valeurs de SPEC §8, « Changement de mot de passe (mot-de-passe, D-254) ».
+
+| id | énoncé | section SPEC | lot | fichier |
+|---|---|---|---|---|
+| MDP-1 | Migration 016 : `doit_changer_mot_de_passe` faux par défaut ; POST et PATCH `/api/utilisateurs` par l'administrateur fixent et lisent la valeur (réponses, `GET /api/auth/me`) ; refus 403 pour un non-administrateur, base inchangée | §8 Changement de mot de passe points 1 et 2 | mot-de-passe | packages/api/test/mot-de-passe.test.ts |
+| MDP-2 | Case vraie : 403 « Changement de mot de passe requis » sur une route quelconque (lecture et écriture), y compris pour une session ouverte avant le changement de la case ; `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/auth/mot-de-passe` accessibles ; 401 avant 403 ; `GET /api/version` sans session | §8 point 3 | mot-de-passe | packages/api/test/mot-de-passe.test.ts |
+| MDP-3 | `POST /api/auth/mot-de-passe` : 204 ; connexion avec le nouveau mot de passe, ancien refusé, case à faux, autres sessions fermées, session courante valide | §8 point 4 | mot-de-passe | packages/api/test/mot-de-passe.test.ts |
+| MDP-4 | Refus dans l'ordre : 401, corps invalide, nouveau vide, actuel incorrect, identique ; base inchangée à chaque refus | §8 point 4 | mot-de-passe | packages/api/test/mot-de-passe.test.ts |
+| MDP-5 | Compte admin/admin : le signal `mot_de_passe_origine` disparaît après le changement | §8 point 4 ; D-138 (2) | mot-de-passe | packages/api/test/mot-de-passe.test.ts |
+| E2E-678 | L'administrateur coche la case dans « Modifier <nom> » ; à sa connexion, l'utilisateur voit la page « Changez votre mot de passe » sans menu ; il change son mot de passe et arrive sur sa page d'accueil ; à la reconnexion, l'ancien mot de passe est refusé et le nouveau accepté ; la case est décochée dans le dialogue de l'administrateur | §8 points 2, 4, 5 | mot-de-passe | e2e/tests/mot-de-passe.spec.ts |
+| E2E-679 | « Changer mon mot de passe » depuis la barre latérale : confirmation différente refusée sans envoi ; actuel incorrect, message affiché, dialogue ouvert ; succès, notification « Mot de passe changé. » | §8 point 5 | mot-de-passe | e2e/tests/mot-de-passe.spec.ts |
+| E2E-680 | Création d'un utilisateur avec la case cochée dans « Nouvel utilisateur », puis passage forcé à sa connexion | §8 points 2 et 5 | mot-de-passe | e2e/tests/mot-de-passe.spec.ts |
+| E2E-681 | Session ouverte, l'administrateur coche la case : à la prochaine action, la page « Changez votre mot de passe » s'affiche | §8 points 3 et 5 | mot-de-passe | e2e/tests/mot-de-passe.spec.ts |
+
+### Couverture des champs, mot-de-passe
+
+| Champ de l'API | Champ d'écran | Test |
+|---|---|---|
+| doit_changer_mot_de_passe (POST et PATCH /api/utilisateurs) | case « Doit changer son mot de passe à la prochaine connexion » des dialogues « Nouvel utilisateur » et « Modifier <nom> » | E2E-678, E2E-680, E2E-681 |
+| actuel, nouveau (POST /api/auth/mot-de-passe) | « Mot de passe actuel », « Nouveau mot de passe » ; « Confirmation » est un champ d'écran seul, contrôlé avant l'envoi | E2E-678, E2E-679 |
+
+### Révisions D-031 de mot-de-passe (D-254 (4), complément du porteur, tag `tests-mot-de-passe-r1`)
+
+Seuls changent : `getByLabel('Mot de passe')` → `getByLabel('Mot de passe', { exact: true })` dans les dialogues « Nouvel utilisateur » et « Modifier <nom> » (le libellé de la case contient « mot de passe »), et le suffixe -rN. Un commit par fichier ; l'écran de connexion n'est pas touché.
+
+- Identifiants révisés : E2E-3-r1 (`login.spec.ts`), E2E-244-r8 (`lot4b.spec.ts`), E2E-321-r1 (`lot5i.spec.ts`), E2E-358-r6 (`lot6c.spec.ts`), E2E-353-r3 (`lot6b.spec.ts`), E2E-376-r4 (`lot6d.spec.ts`), E2E-387-r6 (`lot6f.spec.ts`), E2E-510-r1 (`recette-auto-admin-retour.spec.ts`), E2E-390-r1 (`rex5.spec.ts`), E2E-342-r1, E2E-344-r1, E2E-345-r3 (`lot6a.spec.ts`), E2E-382-r3 (`lot6e.spec.ts`), E2E-445-r3 (`garde-dialogue.spec.ts`).
+- Aides (identifiant inchangé) : `lot3c-helpers.ts` (`creerRessourceParEcran`), `lot3d1.spec.ts`, `lot4c.spec.ts`, `rex1.spec.ts`, `rex2.spec.ts`, `rex2d.spec.ts`.
+- USR-5-r1 → USR-5-r2 (`packages/api/test/users.test.ts`) : la clé exacte `doit_changer_mot_de_passe` est exclue avant la regex `/argon2|mot_de_passe/`, inchangée.
+
+## Correctif atterrissage (D-256, lot correctif-atterrissage)
+
+Fichier : `e2e/tests/mot-de-passe.spec.ts` (E2E-682 et E2E-683). Domaine : authentification. Référence : SPEC §8 point 5 et §2 « Arrivée après connexion ».
+
+| id | énoncé | section SPEC | lot | fichier |
+|---|---|---|---|---|
+| E2E-682 | 403 en cours de session : chef de projet en session sur /projets ; l'administrateur coche la case (PATCH par l'API) ; un lien du menu (Pilotage), sans rechargement, reçoit un 403 « Changement de mot de passe requis », la page « Changez votre mot de passe » s'affiche ; après le changement réussi, l'adresse est « / » (Accueil, titre h1 « Accueil » visible), menu visible | §8 point 5 ; §2 « Arrivée après connexion » | correctif-atterrissage | e2e/tests/mot-de-passe.spec.ts |
+| E2E-683 | Utilisateur de rôle ressource (est_ressource) en session sur l'écran Imputations (/imputations) ; même déroulé ; après le changement réussi, l'adresse est /mes-taches, titre h1 « Mes tâches » visible | §8 point 5 ; §2 « Arrivée après connexion » | correctif-atterrissage | e2e/tests/mot-de-passe.spec.ts |
+
+## Taux, tranche 1 (D-258, lot taux, sous-lot taux-1)
+
+Valeurs recopiées de SPEC §12.6 (cas TRS-A à TRS-N du point 11) et de §12.1. Aucun e2e en tranche 1. Domaine : plan-de-charge. Fichiers : `packages/api/test/taux-equipe.test.ts` (TEQ), `taux-resolution.test.ts` (TRS), `taux-chef.test.ts` (TCH), `taux-du-jour.test.ts` (TDJ), aides `taux-helpers.ts`. Montants : nombres, comme l'API existante des taux (§12.1). Les « cas » TRS-A à TRS-N de la SPEC sont des jeux de données, distincts des identifiants TRS-n. Le compteur de requêtes espionne `pg.Client.prototype.query` et compte les textes qui citent `taux_journalier` ou `taux_equipe`.
+
+| ID | Cas | Source | Lot | Fichier |
+|---|---|---|---|---|
+| TEQ-1 | GET sans taux : liste vide ; POST (ouverte, fermée) → 201, corps exact `{ id, equipe_id, debut, fin, montant }` ; GET trié par début | §12.6 points 1, 4 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TEQ-2 | Corps invalides 400 (POST et PATCH : montant 0, négatif, > 999999,99, 3 décimales, chaîne ; date invalide ; clé inconnue ; `equipe_id`) ; fin avant début 422 (POST, PATCH) ; 999999,99 accepté ; base inchangée | §12.6 point 1 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TEQ-3 | Chevauchement 409 `taux_chevauchement` : borne commune, englobante, incluse, période ouverte avant et après, PATCH ; trou permis ; autre équipe non concernée ; PATCH d'une période sur elle-même 200 | §12.6 point 1 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TEQ-4 | Deux POST concurrents qui se chevauchent sur une équipe : un 201, un 409, une seule période (verrou de la ligne equipe) | §12.6 point 1 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TEQ-5 | PATCH 200, DELETE 204 ; historique `entite=taux_equipe` : création, modification par champ, suppression, sans projet | §12.6 points 2, 4 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TEQ-6 | Lecture : chef dont un projet a un membre de l'équipe affecté 200 ; chef lecteur seul, chef sans membre affecté 403 ; ressource 403 (son équipe comprise, avant 404) ; 404 (inconnu, mal formé, hors plage) avant le 403 du chef ; 401 ; base inchangée | §12.6 point 5 ; §12.1 point 7 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TEQ-7 | Écriture : chef (dans sa portée) et ressource 403 sur POST, PATCH, DELETE, avant 404 et 400 ; administrateur 404 sur équipe ou taux inconnu, mal formé, hors plage ; ordre 404 → 400 → 422 → 409 ; 401 ; base inchangée | §12.6 point 5 ; §12.1 point 7 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TEQ-8 | DELETE /api/equipes/:id d'une équipe avec taux : 409 « Équipe avec des taux », base inchangée ; avec membres et taux : refus existant « Équipe utilisée » d'abord ; chef 403 ; après suppression des taux : 204 | §12.6 point 7 | taux-1 | packages/api/test/taux-equipe.test.ts |
+| TRS-1 | Taux du jour (administrateur), cas TRS-A à TRS-F : Alice 600 propre, 400 equipe, 700 propre, aucun ; Dave 400 equipe puis aucun ; Erin aucun | §12.6 points 3, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-2 | TRS-G : Zoé (non ressource, membre de Dev) absente du taux du jour | §12.6 points 3, 8, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-3 | TRS-H : Dave passé de Dev à Ops par PATCH /api/utilisateurs : 300 equipe au 15/02/2027 et au 15/07/2027 | §12.6 points 3, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-4 | TRS-I : Gantt de PT au 15/02/2027, coûts de A1, A2 et totaux du projet | §12.3 point 8 ; §12.6 points 9, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-5 | TRS-J : jour 15/07/2027, A2 taux manquant, projet taux manquant | §12.3 point 8 ; §12.6 point 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-6 | TRS-K : changement d'équipe de Dave, coûts de A2 au 15/02/2027 | §12.6 points 3, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-7 | TRS-L : Erin sans aucun taux, coûts 0 sans taux manquant | §12.3 point 8 ; §12.6 point 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-8 | Export des coûts du projet PT (TRS-I) : colonnes de coût et taux manquant des lignes A1, A2 et Total | §12.4 point 3 ; §12.6 points 9, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-9 | TRS-M : GET /api/couts?debut=2027-01, projet PT, lignes Alice, Dave, projet et total | §12.5 point 10 ; §12.6 points 9, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-10 | TRS-N : GET /api/couts après le passage de Dave à Ops | §12.6 points 3, 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-11 | Export du pilotage (TRS-M) : fichier exact | §12.5 points 5, 10 ; §12.6 point 11 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TRS-12 | Une seule requête de lecture des taux (taux_journalier ou taux_equipe) pour le Gantt et pour GET /api/couts, avec 2 ou 10 ressources (compteur des requêtes de pg) | §12.6 point 9 | taux-1 | packages/api/test/taux-resolution.test.ts |
+| TCH-1 | Chef, ressource affectée à son projet : POST → 201 (corps exact), visible au GET ; historique `taux` créé | §12.6 point 6 | taux-1 | packages/api/test/taux-chef.test.ts |
+| TCH-2 | Chef dans sa portée : PATCH → 200, DELETE → 204 | §12.6 point 6 | taux-1 | packages/api/test/taux-chef.test.ts |
+| TCH-3 | Portée par un sous-projet : ressource affectée à un sous-projet d'un projet du chef → POST 201 | §12.6 point 6 | taux-1 | packages/api/test/taux-chef.test.ts |
+| TCH-4 | Hors portée (ressource non affectée, ressource d'un projet que le chef lit sans écrire) : POST, PATCH, DELETE 403 « Interdit », base inchangée | §12.6 point 6 | taux-1 | packages/api/test/taux-chef.test.ts |
+| TCH-5 | Ordre des refus du chef : 401 ; ressource 403 avant 404 ; chef 404 (utilisateur ou taux inconnu) ; hors portée 403 avant 400 ; dans sa portée 400, puis 422, puis 409 ; base inchangée | §12.6 point 6 | taux-1 | packages/api/test/taux-chef.test.ts |
+| TDJ-1 | GET /api/taux/du-jour, administrateur : réponse exacte (cas de §12.6 point 11) au 15/01/2027 et au 15/02/2027, triée par utilisateur_id, sans non-ressource | §12.6 points 8, 11 | taux-1 | packages/api/test/taux-du-jour.test.ts |
+| TDJ-2 | Date absente, mal formée ou irréelle (2027-02-30, 2027-13-01, 2027-2-15, demain) : 400, base inchangée | §12.6 point 8 | taux-1 | packages/api/test/taux-du-jour.test.ts |
+| TDJ-3 | Portée du chef : ressources de ses projets et sous-projets seulement ; chef lecteur seul : liste vide | §12.6 point 8 | taux-1 | packages/api/test/taux-du-jour.test.ts |
+| TDJ-4 | Refus : 401 ; ressource 403 (date invalide comprise) ; base inchangée | §12.6 point 8 | taux-1 | packages/api/test/taux-du-jour.test.ts |
+| TDJ-5 | Une seule requête de lecture des taux pour 3 ou 15 ressources (compteur des requêtes de pg) | §12.6 point 8 | taux-1 | packages/api/test/taux-du-jour.test.ts |
+| TDJ-6 | Ressource inactive (est_ressource, avec un taux propre) : présente dans la réponse de l'administrateur avec son montant et source 'propre' | §12.6 point 8 | taux-1 | packages/api/test/taux-du-jour.test.ts |
+
+### Révisions D-031 de taux-1 (D-258 (5), tag `tests-taux-1-r1`)
+
+- TJ-8 → TJ-8-r1 (`packages/api/test/couts-taux.test.ts`) : seule l'attente du 403 pour le chef dans sa portée est retirée (SPEC §12.6 point 6). Aucun autre test révisé.
+
+## Taux, tranche 2 (D-260, lot taux-2, écrans)
+
+Fichier : `e2e/tests/taux-2.spec.ts` (E2E-684 à E2E-695). Domaines : utilisateurs-equipes-calendriers, projets, gantt, dialogues. Valeurs de SPEC §12.6 point 12 (a à e), §12.1 point 9 (format des montants). Base « administrateur seul » équipes et taux d'équipe compris avant et après chaque test ; horloge du navigateur figée au 06/01/2027 pour les colonnes « Taux du jour ». Données préparées par l'API, sauf E2E-694 (tout à l'écran) et l'entité dont l'écran est l'objet du test (taux saisis à l'écran dans E2E-684, 685, 690, 693, 694, 695).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-684 | Équipes : bouton « Taux de <nom> » ; dialogue « Taux de l'équipe <nom> », section « Taux journaliers », aide « Facultatif. S'applique aux membres ressources sans taux propre à la date. », bouton « Fermer » ; ajout d'un taux fermé puis ouvert, enregistrés tout de suite (relus par GET /api/equipes/:id/taux), montants « 600,00 € » et « 1 234,50 € » | §12.6 point 12 a, b, e | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-685 | Dialogue de l'équipe : modification (« Modifier le taux du <date> ») et suppression avec confirmation (« Supprimer le taux du <date> », Annuler puis Supprimer), relues par l'API | §12.6 point 12 a, b | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-686 | Dialogue de l'équipe : refus de chevauchement et de fin antérieure en `role="alert"` (mêmes messages que pour une ressource), montant invalide (`aria-invalid`, « Montant invalide. », bouton désactivé) ; liste, taux et historique `taux_equipe` inchangés | §12.6 point 12 a | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-687 | Garde D-188 : un ajout saisi non envoyé, puis « Fermer » : confirmation « Abandonner les modifications ? » ; « Annuler » reste, « Abandonner » ferme sans rien enregistrer | §12.6 point 12 a | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-688 | Suppression d'une équipe qui a des taux : « Cette équipe a des taux : supprimez-les d'abord. », confirmation ouverte, équipe, membres et taux inchangés ; après suppression des taux par l'API, la suppression réussit | §12.6 point 12 b ; point 7 | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-689 | Affectations (écrivain), colonne « Taux du jour » : « 600,00 € » (propre), « 400,00 € (équipe) », « — » ; une seule requête GET /api/taux/du-jour?date=2027-01-06, aucun GET /api/utilisateurs/:id/taux | §12.6 point 12 c | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-690 | Affectations : bouton « Modifier les taux de <nom> », dialogue « Taux de <nom> », aide « Facultatif. Sert au calcul des coûts. Sans taux propre à une date, le taux de son équipe s'applique. », seuls les taux propres listés, bouton « Fermer » ; ajout d'un taux propre à l'écran ; à la fermeture la colonne est relue (« 700,00 € ») | §12.6 point 12 a, c | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-691 | Lecture seule (chef lecteur) : ni colonne « Taux du jour » ni bouton « Modifier les taux de <nom> » | §12.6 point 12 c | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-692 | Liste des utilisateurs : colonne « Taux du jour » juste après « Équipe » ; « 600,00 € », « 400,00 € (équipe) », « — » (ressource sans taux et non ressource) ; une seule requête du-jour, aucun GET par utilisateur | §12.6 point 12 d | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-693 | Colonne de la liste relue après un taux ajouté dans « Modifier <nom> » ; à jour au retour sur l'onglet « Utilisateurs » après un changement de taux d'équipe | §12.6 point 12 d | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-694 | Parcours complet à l'écran, base « administrateur seul » : équipe, taux d'équipe, ressource dans l'équipe, projet, affectation, « (équipe) » dans Affectations et dans la liste Utilisateurs, taux propre, montant propre, « Coût planifié » du Gantt | §12.6 point 12 a à d ; §12.3 point 8 | taux-2 | e2e/tests/taux-2.spec.ts |
+| E2E-695 | Chef de projet : « Modifier les taux de <nom> » dans son projet, ajout d'un taux, la colonne affiche le nouveau montant ; pas de bouton ni de colonne dans un projet qu'il lit seulement | §12.6 point 12 c ; point 6 | taux-2 | e2e/tests/taux-2.spec.ts |
+
+### Couverture des champs, taux-2
+
+- Taux d'équipe (POST /api/equipes/:id/taux) : `debut`, `fin`, `montant` → champs Du, Au, Montant (€) de la section « Taux journaliers » du dialogue « Taux de l'équipe <nom> » (E2E-684, E2E-694) ; écrans consommateurs : colonne « Taux du jour » de la liste Utilisateurs et de l'onglet Affectations, mention « (équipe) » (E2E-692, E2E-694).
+- Taux d'équipe (PATCH /api/taux-equipe/:id) : `debut`, `fin`, `montant` → champs du dialogue « Modifier le taux », bouton de ligne « Modifier le taux du <date> » (E2E-685 : `fin` et `montant` ; E2E-693 : `montant` ; `debut` par le même composant, E2E-684) ; écran consommateur : liste Utilisateurs (E2E-693).
+- Taux d'équipe (DELETE /api/taux-equipe/:id) → bouton de ligne « Supprimer le taux du <date> » (E2E-685) ; écran consommateur : suppression d'équipe qui passe (E2E-688).
+- Taux propres écrits par le chef (POST /api/utilisateurs/:id/taux, PATCH et DELETE /api/taux/:id, D-258 (5)) → section « Taux journaliers » du dialogue « Taux de <nom> » de l'onglet Affectations : POST `debut`, `fin`, `montant` (E2E-695) ; écran consommateur : colonne « Taux du jour » (E2E-695). PATCH et DELETE par le chef : même composant que pour l'administrateur (E2E-685 le prouve pour l'équipe, E2E-608 et E2E-609 pour la ressource) ; hors écran pour le chef : pas de cas de modification ou de suppression par le chef à l'écran, l'API les prouve (TCH-2, tranche 1).
+- Taux propres (même routes) par l'administrateur dans l'onglet Affectations : E2E-690, E2E-694 ; dans « Modifier <nom> » : E2E-693.
+- `GET /api/taux/du-jour` (`date`) : paramètre calculé par le navigateur, aucun champ saisi ; lu par E2E-689, E2E-692.
+
+## Robustesse CI (D-262, lot robustesse-ci)
+
+Domaines : gantt, feuille-de-temps, dialogues (e2e, STB-3 compris) ; vitest `scripts/test/` (RCI-2).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| BPW-9 | Nettoyage des bases de worker, client simulé : SQLSTATE 42501 au DROP puis succès : succès en 2 tentatives, aucun avertissement | D-262 (2) RCI-2 | robustesse-ci | scripts/test/bases-worker.test.ts |
+| BPW-10 | Nettoyage, client simulé : 42501 trois fois de suite : 3 tentatives, un avertissement sur stderr, aucun rejet | D-262 (2) RCI-2 | robustesse-ci | scripts/test/bases-worker.test.ts |
+| BPW-11 | Nettoyage, client simulé : autre code d'erreur au DROP : rejet, une seule tentative | D-262 (2) RCI-2 | robustesse-ci | scripts/test/bases-worker.test.ts |
+| STB-3 | `remettreAdminSeul` sans navigateur (client `pg` direct) : transaction concurrente qui tient `assignation` (UPDATE) puis écrit dans `historique` une fois le TRUNCATE en attente sur `assignation` (observé dans `pg_locks`) : la remise à zéro se résout ; aucun projet, aucun historique, un seul utilisateur (l'administrateur e2e) ; transaction concurrente validée ou annulée proprement | D-262 (7) RCI-3 | robustesse-ci | e2e/tests/stabilite-helpers.spec.ts |
+
+### Révisions D-031 de robustesse-ci (D-262 (4), tag `tests-robustesse-ci-r1`)
+
+- E2E-197-r1 → E2E-197-r2 (`lot3f2.spec.ts`) : attente `toBeFocused()` de la zone après la fermeture par Échap, avant la touche Menu. Aucune assertion métier changée.
+- E2E-403 → E2E-403-r1 (`sortie.spec.ts`) : attente de la confirmation visible avant le second clic « Abandonner ». E2E-401 attend déjà la confirmation avant chaque clic : non révisé.
+- STB-3 → STB-3-r1 (`stabilite-helpers.spec.ts`, tag `tests-robustesse-ci-2-r1`) : l'URL de la base est obtenue par `exigerBaseTest` (scripts/lib/garde-base-test.mjs) au lieu de `process.env.TEST_DATABASE_URL` ; raison : GBT-9, décision du porteur. Scénario, synchronisation et attendus inchangés.

@@ -1,4 +1,5 @@
 import type { PeriodeTaux } from './couts.js';
+import { resoudreTaux } from './taux.js';
 
 /**
  * Coûts mensuels d'une ressource (SPEC §12.5 point 2, D-243). Fonctions pures : aucune base, aucune horloge.
@@ -31,33 +32,36 @@ export interface CoutTotal {
 /** Unité interne : 1/10 000 € (centième de jour × centime). */
 const enEuros = (u: number): number => Math.round(u / 100) / 100;
 
-function tauxEnVigueur(taux: PeriodeTaux[], jour: string): number | undefined {
-  return taux.find((p) => p.debut <= jour && (p.fin === null || jour <= p.fin))?.montant;
-}
-
 /** Coûts de chaque mois de `mois` (AAAA-MM) pour une ressource, ses imputations et son travail planifié. */
 export function coutsMensuels(entree: {
+  /** Taux propres. */
   taux: PeriodeTaux[];
+  /** Taux de l'équipe actuelle (§12.6 point 3). */
+  taux_equipe?: PeriodeTaux[];
   mois: string[];
   imputations: ChargeJour[];
   planifies: ChargeJour[];
 }): CoutMensuel[] {
   const { taux, mois } = entree;
+  const equipe = entree.taux_equipe ?? [];
   const reel = new Map<string, number>();
   const planifie = new Map<string, number>();
   const manquant = new Set<string>();
-  // Ressource sans aucune période : 0, sans marque (§12.3 point 6).
-  if (taux.length > 0) {
+  // Ressource sans aucune période, propre ou d'équipe : 0, sans marque (§12.3 points 6 et 8).
+  if (taux.length + equipe.length > 0) {
     const compter = (cible: Map<string, number>, charges: ChargeJour[]) => {
       for (const c of charges) {
         const m = c.jour.slice(0, 7);
         if (c.charge <= 0) continue;
-        const montant = tauxEnVigueur(taux, c.jour);
-        if (montant === undefined) {
+        const resolu = resoudreTaux(taux, equipe, c.jour);
+        if (!resolu) {
           manquant.add(m);
           continue;
         }
-        cible.set(m, (cible.get(m) ?? 0) + Math.round(c.charge * 100) * Math.round(montant * 100));
+        cible.set(
+          m,
+          (cible.get(m) ?? 0) + Math.round(c.charge * 100) * Math.round(resolu.montant * 100),
+        );
       }
     };
     compter(reel, entree.imputations);

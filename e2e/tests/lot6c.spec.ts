@@ -66,7 +66,7 @@ async function monde(request: APIRequestContext, suffixe: string, vendue: number
   return { ...m, tache };
 }
 
-test('E2E-358-r5 : parcours complet à l’écran (administrateur seul) : charge vendue et date client saisies à l’écran, vérifiées dans le Gantt (colonnes, Totaux, marqueur client)', async ({
+test('E2E-358-r6 : parcours complet à l’écran (administrateur seul) : charge vendue et date client saisies à l’écran, vérifiées dans le Gantt (colonnes, Totaux, marqueur client)', async ({
   page,
   request,
 }) => {
@@ -86,7 +86,7 @@ test('E2E-358-r5 : parcours complet à l’écran (administrateur seul) : charge
   const utilisateur = page.getByRole('dialog');
   await utilisateur.getByLabel('Nom').fill(CHEF);
   await utilisateur.getByLabel('Email').fill(EMAIL_CHEF);
-  await utilisateur.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await utilisateur.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await utilisateur.getByLabel('Rôle').selectOption({ label: 'Chef de projet' });
   await utilisateur.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: new RegExp(CHEF) })).toBeVisible();

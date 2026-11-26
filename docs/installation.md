@@ -35,7 +35,7 @@ Les deux services `db` et `app` doivent être `Up`, `db` avec la mention `health
 
 1. Ouvrir `http://<serveur>:<PORT>` dans un navigateur.
 2. Se connecter avec l'identifiant `admin` et le mot de passe `admin`. Ce compte est créé au premier démarrage, seulement si la base ne contient aucun utilisateur.
-3. Un bandeau rappelle que le mot de passe est celui d'origine. Aller dans **Utilisateurs**, cliquer sur l'icône crayon (« Modifier Administrateur ») de la ligne « Administrateur », saisir un **Nouveau mot de passe**, puis **Enregistrer**. Le bandeau disparaît à la connexion suivante.
+3. Un bandeau rappelle que le mot de passe est celui d'origine. Aller dans **Utilisateurs**, cliquer sur l'icône crayon (« Modifier Administrateur ») de la ligne « Administrateur », saisir un **Nouveau mot de passe**, puis **Enregistrer**. Le bandeau disparaît à la connexion suivante. Le bouton « Changer mon mot de passe » (pied de la barre latérale) permet à chaque utilisateur de changer le sien ; le changement ferme les autres sessions du compte et fait aussi disparaître le bandeau dès la session courante (D-254).
 
 - `<serveur>` : `localhost` sur le serveur lui-même ; depuis un autre poste, son adresse IP ou son nom sur le réseau ; derrière Caddy (section 4), l'adresse HTTPS du domaine, sans port.
 - `<PORT>` : la valeur de `PORT` dans `.env` (8080 par défaut).

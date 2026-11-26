@@ -6,7 +6,7 @@ import { DialogueCalcul, type ReponseCalcul } from '../calcul/DialogueCalcul';
 import { lignesAvertissements } from '../calcul/logique';
 import { nomsAssignations } from '../calcul/noms';
 import { Layout } from '../components/Layout';
-import { api, ROLE_LABELS } from '../api';
+import { api } from '../api';
 import { Badge } from '../components/Badge';
 import { BoutonIcone } from '../components/BoutonIcone';
 import { Button } from '../components/Button';
@@ -675,15 +675,7 @@ export function Accueil() {
   const user = etat.statut === 'connecte' ? etat.user : null;
   return (
     <Layout titre="Accueil">
-      <div className="flex flex-col gap-4">
-        {user && (
-          <p>
-            Connecté en tant que <span className="font-semibold">{user.nom}</span> (
-            {ROLE_LABELS[user.role]}).
-          </p>
-        )}
-        {user && <CorpsAccueil />}
-      </div>
+      <div className="flex flex-col gap-4">{user && <CorpsAccueil />}</div>
     </Layout>
   );
 }

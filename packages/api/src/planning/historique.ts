@@ -8,7 +8,8 @@ export type Entite =
   | 'dependance'
   | 'assignation'
   | 'calendrier'
-  | 'taux';
+  | 'taux'
+  | 'taux_equipe';
 
 export const ENTITES: readonly Entite[] = [
   'projet',
@@ -19,6 +20,7 @@ export const ENTITES: readonly Entite[] = [
   'assignation',
   'calendrier',
   'taux',
+  'taux_equipe',
 ];
 
 export type Objet = object;

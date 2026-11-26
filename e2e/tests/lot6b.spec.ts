@@ -198,7 +198,7 @@ test('E2E-352-r1 : chef de projet ressource : « Mes tâches » en tête, Accuei
   await expect(nav(page).getByRole('link', { name: 'Mes tâches', exact: true })).toHaveCount(0);
 });
 
-test('E2E-353-r2 : parcours complet à l’écran : l’administrateur crée ressource, chef et projet ; le chef affecte et assigne ; la ressource voit sa tâche dans Mes tâches', async ({
+test('E2E-353-r3 : parcours complet à l’écran : l’administrateur crée ressource, chef et projet ; le chef affecte et assigne ; la ressource voit sa tâche dans Mes tâches', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6B';
@@ -216,7 +216,7 @@ test('E2E-353-r2 : parcours complet à l’écran : l’administrateur crée res
   const utilisateur = page.getByRole('dialog');
   await utilisateur.getByLabel('Nom').fill(CHEF);
   await utilisateur.getByLabel('Email').fill(EMAIL_CHEF);
-  await utilisateur.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await utilisateur.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await utilisateur.getByLabel('Rôle').selectOption({ label: 'Chef de projet' });
   await utilisateur.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: new RegExp(CHEF) })).toBeVisible();

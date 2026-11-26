@@ -70,6 +70,11 @@ export function equipesRoutes(app: FastifyInstance, { pool }: AppDeps): void {
       return reply.code(204).send();
     } catch (err) {
       if (estReference(err)) {
+        // Membres d'abord (refus existant), puis taux d'équipe (§12.6 point 7) ; rien n'est écrit.
+        const membres = await pool.query('SELECT 1 FROM utilisateur WHERE equipe_id = $1', [id]);
+        if (!membres.rowCount) {
+          return reply.code(409).send({ erreur: 'Équipe avec des taux' });
+        }
         return reply.code(409).send({ erreur: 'Équipe utilisée : suppression refusée' });
       }
       throw err;

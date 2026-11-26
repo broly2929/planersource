@@ -1,5 +1,5 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Coins, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { api } from '../../api';
 import { useAnnuaire } from '../../annuaire';
 import { BoutonIcone } from '../../components/BoutonIcone';
@@ -13,8 +13,9 @@ import { Select } from '../../components/Select';
 import { Table } from '../../components/Table';
 import { FormulaireDialogue, useListe, type Affectation } from './commun';
 import { ChampTaux } from '../../components/ChampTaux';
-import { AIDE_TAUX_AFFECTATION } from '../../aidesTaux';
-import { aujourdhui, formatMontant, tauxEnVigueur, type Taux } from '../../couts';
+import { AIDE_TAUX_AFFECTATION, AIDE_TAUX_RESSOURCE } from '../../aidesTaux';
+import { useTauxDuJour } from '../../tauxDuJour';
+import { DialogueTaux } from '../TauxJournaliers';
 
 function FormulaireAffectation({
   affectation,
@@ -52,32 +53,6 @@ function FormulaireAffectation({
   );
 }
 
-/**
- * Taux journaliers des ressources affectées (D-225, SPEC §12.1 point 10), lus seulement si l'utilisateur écrit sur le
- * projet ; une lecture refusée ou en échec laisse la ressource sans taux (« — »).
- */
-function useTauxRessources(ids: number[], actif: boolean): Map<number, Taux[]> {
-  const [taux, setTaux] = useState<Map<number, Taux[]>>(new Map());
-  const cle = [...new Set(ids)].sort((a, b) => a - b).join(',');
-  useEffect(() => {
-    if (!actif || cle === '') return;
-    let vivant = true;
-    void Promise.all(
-      cle.split(',').map(async (id) => {
-        try {
-          return [Number(id), await api<Taux[]>(`/api/utilisateurs/${id}/taux`)] as const;
-        } catch {
-          return [Number(id), [] as Taux[]] as const;
-        }
-      }),
-    ).then((paires) => vivant && setTaux(new Map(paires)));
-    return () => {
-      vivant = false;
-    };
-  }, [cle, actif]);
-  return taux;
-}
-
 /** Onglet « Affectations » : ressources affectées au projet et leur taux. */
 export function AffectationsProjet({
   projetId,
@@ -96,12 +71,8 @@ export function AffectationsProjet({
 
   const nom = (id: number) => annuaire?.find((u) => u.id === id)?.nom ?? '…';
   const affectees = etat.statut === 'ok' ? etat.donnees.map((a) => a.ressource_id) : [];
-  const tauxRessources = useTauxRessources(affectees, peutEcrire);
-  const jour = aujourdhui();
-  const tauxDuJour = (id: number) => {
-    const montant = tauxEnVigueur(tauxRessources.get(id) ?? [], jour);
-    return montant === null ? '—' : formatMontant(montant);
-  };
+  const [tauxRessource, setTauxRessource] = useState<Affectation | null>(null);
+  const duJour = useTauxDuJour(peutEcrire);
   const candidates = (annuaire ?? []).filter(
     (u) => u.est_ressource && u.actif && !affectees.includes(u.id),
   );
@@ -146,12 +117,17 @@ export function AffectationsProjet({
                     titre: 'Taux du jour',
                     classeEntete: 'text-right',
                     classeCellule: 'text-right tabular-nums',
-                    cellule: (a: Affectation) => tauxDuJour(a.ressource_id),
+                    cellule: (a: Affectation) => duJour.texte(a.ressource_id),
                   },
                   {
                     titre: 'Actions',
                     cellule: (a: Affectation) => (
                       <div className="flex gap-1">
+                        <BoutonIcone
+                          libelle={`Modifier les taux de ${nom(a.ressource_id)}`}
+                          icone={Coins}
+                          onClick={() => setTauxRessource(a)}
+                        />
                         <BoutonIcone
                           libelle={`Modifier l'affectation de ${nom(a.ressource_id)}`}
                           icone={Pencil}
@@ -219,6 +195,18 @@ export function AffectationsProjet({
             onAnnuler={() => setEdition(null)}
           />
         </Dialog>
+      )}
+      {tauxRessource && (
+        <DialogueTaux
+          titre={`Taux de ${nom(tauxRessource.ressource_id)}`}
+          aide={AIDE_TAUX_RESSOURCE}
+          cible="ressource"
+          id={tauxRessource.ressource_id}
+          onFermer={() => {
+            setTauxRessource(null);
+            duJour.recharger();
+          }}
+        />
       )}
       {suppression && (
         <Confirmation

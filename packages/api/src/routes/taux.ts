@@ -1,9 +1,10 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { transaction } from '../db/transaction.js';
 import { identifiant } from '../planning/identifiant.js';
 import {
   chefLitTaux,
+  lireUnTaux,
   creerTaux,
   lireRessource,
   lireTaux,
@@ -12,7 +13,7 @@ import {
   supprimerTaux,
 } from '../planning/taux.js';
 import type { AppDeps } from '../app.js';
-import { requireAdmin, requireUser } from './acces.js';
+import { requireNonRessource, requireUser } from './acces.js';
 
 // Montant en euros (§12.1 point 2) : > 0, au plus 999999,99, deux décimales au plus exactement.
 const montant = z
@@ -21,11 +22,17 @@ const montant = z
   .max(999999.99)
   .refine((v) => Number(v.toFixed(2)) === v);
 const date = z.iso.date();
-const creation = z.strictObject({ debut: date, fin: date.nullable().default(null), montant });
-const modification = z.strictObject({ debut: date, fin: date.nullable(), montant }).partial();
+export const creation = z.strictObject({
+  debut: date,
+  fin: date.nullable().default(null),
+  montant,
+});
+export const modification = z
+  .strictObject({ debut: date, fin: date.nullable(), montant })
+  .partial();
 
 /** Retire les clés absentes du corps (exactOptionalPropertyTypes). */
-const definis = <T extends object>(o: T) =>
+export const definis = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as {
     [K in keyof T]?: Exclude<T[K], undefined>;
   };
@@ -33,9 +40,9 @@ const definis = <T extends object>(o: T) =>
 const interdit = { erreur: 'Interdit' };
 const utilisateurIntrouvable = { erreur: 'Utilisateur introuvable' };
 const tauxIntrouvable = { erreur: 'Taux introuvable' };
-const invalide = { erreur: 'Données invalides' };
+export const invalide = { erreur: 'Données invalides' };
 
-const REFUS = {
+export const REFUS = {
   non_ressource: [422, { erreur: 'Seule une ressource a un taux journalier' }],
   dates: [422, { erreur: 'La date de fin précède la date de début' }],
   chevauchement: [
@@ -45,6 +52,8 @@ const REFUS = {
 } as const;
 
 export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
+  const peutEcrire = async (user: NonNullable<FastifyRequest['user']>, ressourceId: number) =>
+    user.role === 'administrateur' || (await chefLitTaux(pool, user, ressourceId));
   // Lecture (§12.1 point 7) : 401, 403 rôle ressource, 404, 403 chef hors de sa portée.
   app.get<{ Params: { id: string } }>(
     '/api/utilisateurs/:id/taux',
@@ -63,15 +72,17 @@ export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     },
   );
 
-  // Écriture : administrateur seul. Ordre : 401, 403, 404, 400, 422, 409.
+  // Écriture : administrateur, ou chef de projet dans sa portée (§12.6 point 6). Ordre : 401, 403 (rôle
+  // ressource), 404, 403 (chef hors de sa portée), 400, 422, 409.
   app.post<{ Params: { id: string } }>(
     '/api/utilisateurs/:id/taux',
-    { preHandler: requireAdmin },
+    { preHandler: requireNonRessource },
     async (request, reply) => {
       const id = identifiant(request.params.id);
       if (id === null || !(await lireRessource(pool, id))) {
         return reply.code(404).send(utilisateurIntrouvable);
       }
+      if (!(await peutEcrire(request.user!, id))) return reply.code(403).send(interdit);
       const body = creation.safeParse(request.body);
       if (!body.success) return reply.code(400).send(invalide);
       try {
@@ -90,10 +101,14 @@ export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
 
   app.patch<{ Params: { id: string } }>(
     '/api/taux/:id',
-    { preHandler: requireAdmin },
+    { preHandler: requireNonRessource },
     async (request, reply) => {
       const id = identifiant(request.params.id);
-      if (id === null) return reply.code(404).send(tauxIntrouvable);
+      const lu = id === null ? null : await lireUnTaux(pool, id);
+      if (id === null || !lu) return reply.code(404).send(tauxIntrouvable);
+      if (!(await peutEcrire(request.user!, lu.utilisateur_id))) {
+        return reply.code(403).send(interdit);
+      }
       const body = modification.safeParse(request.body);
       try {
         // La transaction renvoie un verdict, jamais `reply` (thenable) : la route répond ensuite.
@@ -118,11 +133,15 @@ export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
 
   app.delete<{ Params: { id: string } }>(
     '/api/taux/:id',
-    { preHandler: requireAdmin },
+    { preHandler: requireNonRessource },
     async (request, reply) => {
       const id = identifiant(request.params.id);
-      const fait =
-        id !== null && (await transaction(pool, (db) => supprimerTaux(db, request.user!.id, id)));
+      const lu = id === null ? null : await lireUnTaux(pool, id);
+      if (id === null || !lu) return reply.code(404).send(tauxIntrouvable);
+      if (!(await peutEcrire(request.user!, lu.utilisateur_id))) {
+        return reply.code(403).send(interdit);
+      }
+      const fait = await transaction(pool, (db) => supprimerTaux(db, request.user!.id, id));
       return fait ? reply.code(204).send() : reply.code(404).send(tauxIntrouvable);
     },
   );

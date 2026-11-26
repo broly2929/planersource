@@ -22,6 +22,7 @@ const createBody = z.object({
   actif: z.boolean().default(true),
   calendrier_id: idCorps.optional(),
   equipe_id: idCorps.nullable().optional(),
+  doit_changer_mot_de_passe: z.boolean().default(false),
 });
 
 const patchBody = z
@@ -37,6 +38,7 @@ const patchBody = z
     actif: z.boolean(),
     calendrier_id: idCorps,
     equipe_id: idCorps.nullable(),
+    doit_changer_mot_de_passe: z.boolean(),
   })
   .partial();
 
@@ -79,8 +81,8 @@ export function utilisateursRoutes(
     if (!login) return reply.code(400).send({ erreur: 'Renseignez un identifiant ou un email' });
     try {
       const { rows } = await pool.query<UtilisateurRow>(
-        `INSERT INTO utilisateur (nom, login, email, initiales, mot_de_passe_hash, role, est_ressource, capacite, actif, calendrier_id, equipe_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING ${USER_COLUMNS}`,
+        `INSERT INTO utilisateur (nom, login, email, initiales, mot_de_passe_hash, role, est_ressource, capacite, actif, calendrier_id, equipe_id, doit_changer_mot_de_passe)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING ${USER_COLUMNS}`,
         [
           d.nom,
           login,
@@ -93,6 +95,7 @@ export function utilisateursRoutes(
           d.actif,
           d.calendrier_id ?? null,
           d.equipe_id ?? null,
+          d.doit_changer_mot_de_passe,
         ],
       );
       return reply.code(201).send(toPublicUser(rows[0]!));

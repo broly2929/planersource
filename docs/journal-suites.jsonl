@@ -64,3 +64,19 @@
 {"evenement":"fin","date":"2026-11-25T22:58:24.514Z","commit":"1f98ea8","lot":"pilotage-2","vitest":{"statut":"vert","duree_s":253.4},"e2e":{"statut":"vert","duree_s":840.1},"resultat":"vert"}
 {"evenement":"debut","date":"2026-11-26T06:35:28.340Z","commit":"e4075b7","arbre_propre":true,"lot":"onglets"}
 {"evenement":"fin","date":"2026-11-26T06:53:29.854Z","commit":"e4075b7","lot":"onglets","vitest":{"statut":"vert","duree_s":253.8},"e2e":{"statut":"vert","duree_s":827.7},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-26T09:09:07.690Z","commit":"5c63052","arbre_propre":true,"lot":"correctif-garde-focus"}
+{"evenement":"fin","date":"2026-11-26T09:27:08.810Z","commit":"5c63052","lot":"correctif-garde-focus","vitest":{"statut":"vert","duree_s":253.4},"e2e":{"statut":"vert","duree_s":827.7},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-26T10:20:27.818Z","commit":"03947cd","arbre_propre":true,"lot":"accueil-sans-bandeau"}
+{"evenement":"fin","date":"2026-11-26T10:38:14.103Z","commit":"03947cd","lot":"accueil-sans-bandeau","vitest":{"statut":"vert","duree_s":253.3},"e2e":{"statut":"vert","duree_s":813},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-26T12:56:11.045Z","commit":"d8cc0c3","arbre_propre":true,"lot":"mot-de-passe"}
+{"evenement":"fin","date":"2026-11-26T13:14:16.681Z","commit":"d8cc0c3","lot":"mot-de-passe","vitest":{"statut":"vert","duree_s":255.9},"e2e":{"statut":"vert","duree_s":829.7},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-26T13:58:13.713Z","commit":"ee76000","arbre_propre":true,"lot":"correctif-atterrissage"}
+{"evenement":"fin","date":"2026-11-26T14:02:27.231Z","commit":"ee76000","lot":"correctif-atterrissage","vitest":{"statut":"rouge","duree_s":253.5},"e2e":{"statut":"non lancé","duree_s":0},"resultat":"échec vitest"}
+{"evenement":"debut","date":"2026-11-26T14:02:55.306Z","commit":"ee76000","arbre_propre":false,"lot":"correctif-atterrissage","justification":"Première suite : 166 fichiers et 1361 tests vitest verts, code de sortie rouge à cause du teardown de global-setup (DROP DATABASE WITH FORCE : permission denied to terminate process, base vitest_w3). Aucun changement de code ; e2e non lancés."}
+{"evenement":"fin","date":"2026-11-26T14:21:05.443Z","commit":"ee76000","lot":"correctif-atterrissage","vitest":{"statut":"vert","duree_s":254.9},"e2e":{"statut":"rouge","duree_s":835.2},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-26T15:30:32.267Z","commit":"5c3fbf8","arbre_propre":true,"lot":"taux-1"}
+{"evenement":"fin","date":"2026-11-26T15:49:52.900Z","commit":"5c3fbf8","lot":"taux-1","vitest":{"statut":"vert","duree_s":275.4},"e2e":{"statut":"rouge","duree_s":885.2},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-26T17:20:00.435Z","commit":"fa5506a","arbre_propre":true,"lot":"taux-2"}
+{"evenement":"fin","date":"2026-11-26T17:38:32.845Z","commit":"fa5506a","lot":"taux-2","vitest":{"statut":"vert","duree_s":276.5},"e2e":{"statut":"vert","duree_s":835.9},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-26T19:10:06.090Z","commit":"a205934","arbre_propre":true,"lot":"robustesse-ci"}
+{"evenement":"fin","date":"2026-11-26T19:30:56.346Z","commit":"a205934","lot":"robustesse-ci","vitest":{"statut":"vert","duree_s":305.5},"e2e":{"statut":"vert","duree_s":944.7},"resultat":"vert"}

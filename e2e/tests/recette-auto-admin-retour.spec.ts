@@ -83,7 +83,7 @@ test('E2E-509 : ligne 173 : « Nouvel utilisateur » fermé sans saisie (Échap,
   await expect(confirmation(page)).toHaveCount(0);
 });
 
-test('E2E-510 : ligne 174 : « Nouvel utilisateur » : identifiant déjà utilisé, « Créer » (refus), puis « Annuler » : confirmation ; « Abandonner » ferme sans création', async ({
+test('E2E-510-r1 : ligne 174 : « Nouvel utilisateur » : identifiant déjà utilisé, « Créer » (refus), puis « Annuler » : confirmation ; « Abandonner » ferme sans création', async ({
   page,
   request,
 }) => {
@@ -104,7 +104,7 @@ test('E2E-510 : ligne 174 : « Nouvel utilisateur » : identifiant déjà utilis
   const dialogue = await ouvrirNouvelUtilisateur(page);
   await dialogue.getByLabel('Nom').fill('Autre Bob');
   await dialogue.getByLabel('Identifiant').fill('bob');
-  await dialogue.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await dialogue.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await dialogue.getByRole('button', { name: 'Créer' }).click();
   await expect(dialogue.getByText('Cet identifiant est déjà utilisé.')).toBeVisible();
   await fermerEnAbandonnant(page, dialogue, 'annuler');

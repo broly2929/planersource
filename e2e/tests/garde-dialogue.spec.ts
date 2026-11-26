@@ -141,11 +141,11 @@ async function ouvrirNouvelUtilisateur(page: Page) {
   return dialogue;
 }
 
-test('E2E-445-r2 : champ mot de passe (Nouvel utilisateur) : saisi puis Échap : confirmation ; effacé : aucune', async ({
+test('E2E-445-r3 : champ mot de passe (Nouvel utilisateur) : saisi puis Échap : confirmation ; effacé : aucune', async ({
   page,
 }) => {
   const dialogue = await ouvrirNouvelUtilisateur(page);
-  const mdp = dialogue.getByLabel('Mot de passe');
+  const mdp = dialogue.getByLabel('Mot de passe', { exact: true });
   await verifierGardeChamp(
     page,
     dialogue,

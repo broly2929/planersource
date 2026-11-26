@@ -76,6 +76,30 @@ export async function destroySession(
   await pool.query('DELETE FROM session WHERE jeton_hash = $1', [hashToken(token)]);
 }
 
+/**
+ * Ferme les autres sessions de l'utilisateur (D-254) : la session de la requête est gardée ; leurs
+ * indicateurs « mot de passe d'origine » sont retirés.
+ */
+export async function fermerAutresSessions(
+  client: Pick<pg.Pool, 'query'>,
+  request: FastifyRequest,
+  origine: SessionsOrigine,
+  utilisateurId: number,
+): Promise<void> {
+  const token = readToken(request);
+  const { rows } = await client.query<{ jeton_hash: string }>(
+    'DELETE FROM session WHERE utilisateur_id = $1 AND jeton_hash <> $2 RETURNING jeton_hash',
+    [utilisateurId, token ? hashToken(token) : ''],
+  );
+  for (const r of rows) origine.delete(r.jeton_hash);
+}
+
+/** Retire l'indicateur « mot de passe d'origine » de la session de la requête (D-254). */
+export function oublierOrigine(request: FastifyRequest, origine: SessionsOrigine): void {
+  const token = readToken(request);
+  if (token) origine.delete(hashToken(token));
+}
+
 /** Charge l'utilisateur de la session (valide, < 12 h, utilisateur actif), sinon null. */
 export async function loadUser(
   pool: pg.Pool,

@@ -680,7 +680,7 @@ test('E2E-243 : changement de semaine avec des modifications : confirmation ; «
   expect(f.feuille.id).toBeNull();
 });
 
-test('E2E-244-r7 : parcours complet à l’écran : saisie, soumission, validation par le chef, dévalidation puis nouvelle validation, lecture seule ; avancement dans le Gantt du projet', async ({
+test('E2E-244-r8 : parcours complet à l’écran : saisie, soumission, validation par le chef, dévalidation puis nouvelle validation, lecture seule ; avancement dans le Gantt du projet', async ({
   page,
 }) => {
   await colonnesCompletes(page);
@@ -701,7 +701,7 @@ test('E2E-244-r7 : parcours complet à l’écran : saisie, soumission, validati
   const chef = page.getByRole('dialog');
   await chef.getByLabel('Nom').fill('Chef 4B-244');
   await chef.getByLabel('Email').fill('chef-4b-244@lot4b.test');
-  await chef.getByLabel('Mot de passe').fill('mot-de-passe-e2e-lot1');
+  await chef.getByLabel('Mot de passe', { exact: true }).fill('mot-de-passe-e2e-lot1');
   await chef.getByLabel('Rôle').selectOption({ label: 'Chef de projet' });
   await chef.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: /Chef 4B-244/ })).toBeVisible();

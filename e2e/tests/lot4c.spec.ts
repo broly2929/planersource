@@ -571,7 +571,7 @@ async function parcoursJusquaSoumission(page: Page): Promise<void> {
   const utilisateur = page.getByRole('dialog');
   await utilisateur.getByLabel('Nom').fill(CHEF);
   await utilisateur.getByLabel('Email').fill(EMAIL_CHEF);
-  await utilisateur.getByLabel('Mot de passe').fill('mot-de-passe-e2e-lot1');
+  await utilisateur.getByLabel('Mot de passe', { exact: true }).fill('mot-de-passe-e2e-lot1');
   await utilisateur.getByLabel('Rôle').selectOption({ label: 'Chef de projet' });
   await utilisateur.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: new RegExp(CHEF) })).toBeVisible();

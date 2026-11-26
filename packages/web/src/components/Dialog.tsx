@@ -83,7 +83,11 @@ export function Dialog({
   const reference = useRef<Instantane | null>(null);
   const envoi = useRef(false);
   const pret = useRef(true);
-  const focusAuto = useRef(false);
+  /**
+   * Focus d'ouverture attendu : posé à `onOpenAutoFocus`, consommé par le premier `focusin`, qui est le focus que
+   * Radix (ou `focusInitial`) pose de façon synchrone sur son élément cible ; ce seul focus est ignoré (D-250).
+   */
+  const focusOuverture = useRef(false);
   const dernier = useRef({ onOuvertChange, modifieProp, sansGarde, titre });
   dernier.current = { onOuvertChange, modifieProp, sansGarde, titre };
   const [confirmation, setConfirmation] = useState(false);
@@ -154,9 +158,19 @@ export function Dialog({
         <RadixDialog.Overlay className="fixed inset-0 z-50 bg-gray-900/40" />
         <RadixDialog.Content
           ref={contenu}
-          onPointerDownCapture={prendreReference}
-          onKeyDownCapture={prendreReference}
-          onFocusCapture={() => !focusAuto.current && prendreReference()}
+          onPointerDownCapture={() => {
+            focusOuverture.current = false;
+            prendreReference();
+          }}
+          onKeyDownCapture={() => {
+            focusOuverture.current = false;
+            prendreReference();
+          }}
+          onFocusCapture={() => {
+            // Focus posé par l'ouverture sur l'élément cible : pas un geste de l'utilisateur (D-188 (11), D-250).
+            if (focusOuverture.current) focusOuverture.current = false;
+            else prendreReference();
+          }}
           onEscapeKeyDown={(e) => {
             if (!confirmationEnCours.current) return;
             // Échap reçu par ce dialogue alors que la confirmation est ouverte : Radix ne lui a pas encore
@@ -171,9 +185,9 @@ export function Dialog({
             focusRetour()?.focus();
           }}
           onOpenAutoFocus={(e) => {
-            // Focus automatique de Radix à l'ouverture : pas un geste de l'utilisateur (D-188 (11)).
-            focusAuto.current = true;
-            setTimeout(() => (focusAuto.current = false), 0);
+            // Radix focalise sa cible juste après ce rappel, dans la même pile d'appel ; `focusInitial` la
+            // focalise ici. Le `focusin` de cette cible est ignoré, aucun autre (D-250).
+            focusOuverture.current = true;
             const cible = focusInitial
               ? contenu.current?.querySelector<HTMLElement>(focusInitial)
               : null;

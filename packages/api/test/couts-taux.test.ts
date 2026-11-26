@@ -411,13 +411,15 @@ describe('Lot couts-1 : taux journalier (SPEC §12.1, D-225)', () => {
     await refus(ctx, () => appel(ctx).get(urlTaux(m.alice.id)), 401, undefined, 'sans session');
   });
 
-  it('TJ-8 : écriture : chef et ressource 403, taux inconnu 404, ordre 403 → 404 → 400 ; base inchangée', async () => {
+  it('TJ-8-r1 : écriture : ressource 403 (le chef dans sa portée écrit, D-258 (5)), taux inconnu 404, ordre 403 → 404 → 400 ; base inchangée', async () => {
     const m = await monde(ctx);
     const sien = await creerProjet(ctx, m.admin, { chef_id: m.chef.id });
     await affecter(ctx, sien.id, m.alice.id);
     const t = await ajouter(ctx, m.admin, m.alice.id, { debut: '2027-01-01', montant: 600 });
     const valide = { debut: '2028-01-01', montant: 600 };
-    for (const qui of [m.chef, m.alice]) {
+    // D-258 (5), révision D-031 : seule l'attente « le chef dans sa portée reçoit 403 » change ; le chef
+    // est couvert par TCH-1 à TCH-5.
+    for (const qui of [m.alice]) {
       await refus(ctx, () => appel(ctx, qui).post(urlTaux(m.alice.id), valide), 403, {
         erreur: 'Interdit',
       });

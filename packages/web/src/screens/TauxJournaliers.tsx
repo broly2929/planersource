@@ -11,10 +11,14 @@ import { analyserMontant, formatMontant, type Taux } from '../couts';
 import { formaterDate } from '../gantt/libelles';
 import { FormulaireDialogue, useListe } from './projet/commun';
 
-/** Taux journaliers d'une ressource dans le dialogue « Modifier <nom> » (D-225, SPEC §12.1 point 9). */
+/**
+ * Taux journaliers d'une ressource (D-225, SPEC §12.1 point 9) ou d'une équipe (D-260, §12.6 point 12) : section
+ * partagée, dans « Modifier <nom> », « Taux de <nom> » ou « Taux de l'équipe <nom> ».
+ */
 
 export const CHEVAUCHEMENT = 'Cette période chevauche un autre taux.';
 export const FIN_AVANT_DEBUT = 'La date de fin précède la date de début.';
+export const AIDE_FORMULAIRE = 'Facultatif. Sert au calcul des coûts.';
 const MONTANT_INVALIDE = 'Montant invalide.';
 
 /** Texte d'un refus de l'API sur un taux. */
@@ -31,12 +35,16 @@ function texteRefusTaux(err: unknown): string {
 }
 
 /** État partagé par la section (dans le formulaire) et les dialogues (hors du formulaire). */
-export function useTauxJournaliers(utilisateurId: number | string) {
-  const [liste, recharger] = useListe<Taux[]>(`/api/utilisateurs/${utilisateurId}/taux`);
+export function useTauxJournaliers(id: number | string, cible: CibleTaux = 'ressource') {
+  const base = cible === 'equipe' ? `/api/equipes/${id}/taux` : `/api/utilisateurs/${id}/taux`;
+  const chemin = (t: { id: number }) =>
+    cible === 'equipe' ? `/api/taux-equipe/${t.id}` : `/api/taux/${t.id}`;
+  const [liste, recharger] = useListe<Taux[]>(base);
   const [edition, setEdition] = useState<Taux | null>(null);
   const [suppression, setSuppression] = useState<Taux | null>(null);
-  return { utilisateurId, liste, recharger, edition, setEdition, suppression, setSuppression };
+  return { base, chemin, liste, recharger, edition, setEdition, suppression, setSuppression };
 }
+export type CibleTaux = 'ressource' | 'equipe';
 export type TauxCtl = ReturnType<typeof useTauxJournaliers>;
 
 /** Champs Du, Au, Montant ; montant invalide : `aria-invalid` et message. */
@@ -91,7 +99,7 @@ const corpsPeriode = (debut: string, fin: string, montant: string) => ({
 });
 
 /** Section « Taux journaliers » : à placer dans le formulaire de l'utilisateur. */
-export function SectionTaux({ ctl }: { ctl: TauxCtl }) {
+export function SectionTaux({ ctl, aide = AIDE_FORMULAIRE }: { ctl: TauxCtl; aide?: string }) {
   const idTitre = useId();
   const idAide = useId();
   const [debut, setDebut] = useState('');
@@ -107,7 +115,7 @@ export function SectionTaux({ ctl }: { ctl: TauxCtl }) {
     setErreur(null);
     setEnCours(true);
     try {
-      await api(`/api/utilisateurs/${ctl.utilisateurId}/taux`, {
+      await api(ctl.base, {
         method: 'POST',
         body: corpsPeriode(debut, fin, montant),
       });
@@ -132,7 +140,7 @@ export function SectionTaux({ ctl }: { ctl: TauxCtl }) {
         Taux journaliers
       </h3>
       <p id={idAide} className="text-petit text-gray-600">
-        Facultatif. Sert au calcul des coûts.
+        {aide}
       </p>
       {ctl.liste.statut === 'erreur' && (
         <Notification type="erreur">Impossible de charger les taux.</Notification>
@@ -220,10 +228,12 @@ export function SectionTaux({ ctl }: { ctl: TauxCtl }) {
 
 function FormulaireModifTaux({
   taux,
+  chemin,
   onSucces,
   onAnnuler,
 }: {
   taux: Taux;
+  chemin: string;
   onSucces: () => void;
   onAnnuler: () => void;
 }) {
@@ -234,9 +244,7 @@ function FormulaireModifTaux({
     <FormulaireDialogue
       libelle="Enregistrer"
       inactif={debut === '' || analyserMontant(montant) === null}
-      envoyer={() =>
-        api(`/api/taux/${taux.id}`, { method: 'PATCH', body: corpsPeriode(debut, fin, montant) })
-      }
+      envoyer={() => api(chemin, { method: 'PATCH', body: corpsPeriode(debut, fin, montant) })}
       onSucces={onSucces}
       onAnnuler={onAnnuler}
       texteErreur={texteRefusTaux}
@@ -266,6 +274,7 @@ export function DialoguesTaux({ ctl }: { ctl: TauxCtl }) {
         >
           <FormulaireModifTaux
             taux={ctl.edition}
+            chemin={ctl.chemin(ctl.edition)}
             onSucces={() => {
               ctl.setEdition(null);
               ctl.recharger();
@@ -277,7 +286,7 @@ export function DialoguesTaux({ ctl }: { ctl: TauxCtl }) {
       {ctl.suppression && (
         <Confirmation
           nom={`le taux du ${formaterDate(ctl.suppression.debut)}`}
-          action={() => api(`/api/taux/${ctl.suppression!.id}`, { method: 'DELETE' })}
+          action={() => api(ctl.chemin(ctl.suppression!), { method: 'DELETE' })}
           onSucces={() => {
             ctl.setSuppression(null);
             ctl.recharger();
@@ -286,5 +295,36 @@ export function DialoguesTaux({ ctl }: { ctl: TauxCtl }) {
         />
       )}
     </>
+  );
+}
+
+/**
+ * Dialogue « Taux de <nom> » / « Taux de l'équipe <nom> » : la section partagée, sans formulaire englobant (les
+ * taux s'enregistrent un à un) ; « Fermer » est la croix du dialogue, avec la garde D-188 (saisie d'ajout non envoyée).
+ */
+export function DialogueTaux({
+  titre,
+  aide,
+  cible,
+  id,
+  onFermer,
+}: {
+  titre: string;
+  aide: string;
+  cible: CibleTaux;
+  id: number;
+  onFermer: () => void;
+}) {
+  const ctl = useTauxJournaliers(id, cible);
+  return (
+    <Dialog
+      ouvert
+      onOuvertChange={(o) => !o && onFermer()}
+      titre={titre}
+      description="Périodes et montants journaliers, enregistrés un à un."
+    >
+      <SectionTaux ctl={ctl} aide={aide} />
+      <DialoguesTaux ctl={ctl} />
+    </Dialog>
   );
 }

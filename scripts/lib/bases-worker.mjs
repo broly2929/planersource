@@ -128,11 +128,15 @@ export async function creerBaseWorker(urlMaintenance, opts) {
   });
 }
 
-/** Supprime toutes les bases de worker de la famille ; garde le modèle. Renvoie les noms supprimés. */
+/**
+ * Supprime toutes les bases de worker de la famille ; garde le modèle. Renvoie les noms supprimés.
+ * `attente(ms)` : temporisation entre deux DROP refusés (42501), injectable pour les tests.
+ */
 export async function nettoyerBasesWorker(urlMaintenance, opts = {}) {
   const { modele } = nomsBases(urlMaintenance, { famille: opts.famille });
   const prefixe = modele.nom.slice(0, -'_modele_test'.length);
   const motif = `${prefixe.replaceAll('_', '\\_')}\\_w%\\_test`;
+  const attente = opts.attente ?? attendreParDefaut;
   return sousVerrou(urlMaintenance, opts, async (c) => {
     const r = await c.query('SELECT datname FROM pg_database WHERE datname LIKE $1 ORDER BY 1', [
       motif,
@@ -144,9 +148,35 @@ export async function nettoyerBasesWorker(urlMaintenance, opts = {}) {
       // Nom recalculé et revérifié : seule une base de worker exacte de la famille est supprimée.
       const { worker } = nomsBases(urlMaintenance, { famille: opts.famille, worker: n });
       if (worker.nom !== datname) continue;
-      await c.query(`DROP DATABASE IF EXISTS ${worker.nom} WITH (FORCE)`);
-      supprimees.push(worker.nom);
+      if (await supprimerAvecReprise(c, worker.nom, attente)) supprimees.push(worker.nom);
     }
     return supprimees;
   });
+}
+
+const TENTATIVES_DROP = 3;
+const ATTENTE_DROP_MS = 500;
+
+const attendreParDefaut = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * DROP repris sur SQLSTATE 42501 (D-262, RCI-2) : 3 tentatives, 500 ms entre elles ; après le
+ * dernier refus, avertissement sur stderr et `false`. Toute autre erreur est relancée.
+ */
+async function supprimerAvecReprise(c, nom, attente) {
+  for (let i = 1; ; i++) {
+    try {
+      await c.query(`DROP DATABASE IF EXISTS ${nom} WITH (FORCE)`);
+      return true;
+    } catch (e) {
+      if (e?.code !== '42501') throw e;
+      if (i === TENTATIVES_DROP) {
+        process.stderr.write(
+          `Avertissement : base ${nom} non supprimée après ${i} tentatives (SQLSTATE ${e.code}).\n`,
+        );
+        return false;
+      }
+      await attente(ATTENTE_DROP_MS);
+    }
+  }
 }

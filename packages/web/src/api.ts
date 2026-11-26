@@ -17,6 +17,8 @@ export interface Utilisateur {
   equipe_id: number | null;
   /** Session ouverte avec le mot de passe d'origine admin / admin (D-138 (2)), session seulement. */
   mot_de_passe_origine?: boolean;
+  /** Changement de mot de passe exigé à la prochaine action (D-254). */
+  doit_changer_mot_de_passe: boolean;
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -38,6 +40,16 @@ export class ApiError extends Error {
   }
 }
 
+let surChangementRequis: (() => void) | null = null;
+
+/** Enregistre le rappel appelé sur un 403 « Changement de mot de passe requis » (D-254) ; renvoie son retrait. */
+export function surMotDePasseRequis(rappel: () => void): () => void {
+  surChangementRequis = rappel;
+  return () => {
+    if (surChangementRequis === rappel) surChangementRequis = null;
+  };
+}
+
 export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown } = {},
@@ -56,6 +68,9 @@ export async function api<T>(
       code?: unknown;
       ids?: unknown;
     } | null;
+    if (response.status === 403 && corps?.erreur === 'Changement de mot de passe requis') {
+      surChangementRequis?.();
+    }
     throw new ApiError(
       response.status,
       typeof corps?.erreur === 'string' ? corps.erreur : undefined,

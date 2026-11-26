@@ -20,12 +20,15 @@ const maintenance = exigerBaseTest(process.env, 'PLANERSOURCE_E2E_MAINTENANCE');
 const n = numeroWorker();
 if (n !== undefined) process.env.TEST_DATABASE_URL = pileDuWorker(maintenance, n).base.url;
 
+// D-262 (3) : délais plus larges sur la CI (runner plus lent), inchangés en local ; aucune relance.
+const DELAI = process.env.CI ? 5000 : 3000;
+
 export default defineConfig({
   testDir: 'tests',
   globalSetup: './global-setup.ts',
   fullyParallel: false,
   workers: 2,
-  expect: { timeout: 3000 },
-  use: { baseURL: URL_WEB, actionTimeout: 3000 },
+  expect: { timeout: DELAI },
+  use: { baseURL: URL_WEB, actionTimeout: DELAI },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
 });

@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from './auth';
+import { ChangementMotDePasse } from './screens/ChangementMotDePasse';
 import { Chargement, Vide } from './components/Etat';
 import { Layout } from './components/Layout';
 import { Redirect, usePath, useSearch } from './router';
@@ -43,6 +44,7 @@ function Routes() {
     );
   }
   if (etat.statut === 'anonyme') return <Redirect to="/connexion" />;
+  if (etat.user.doit_changer_mot_de_passe) return <ChangementMotDePasse />;
   // Rôle ressource (D-148 (5)) : aucun accès aux projets, redirection vers « Mes tâches ».
   const restreint = etat.user.role === 'ressource';
   if (path === '/mes-taches') return <MesTaches />;

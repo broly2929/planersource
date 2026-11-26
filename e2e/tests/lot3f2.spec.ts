@@ -365,7 +365,7 @@ test('E2E-196 : entrées du menu dans l’ordre selon la ligne : activité (3), 
   }
 });
 
-test('E2E-197-r1 : Maj+F10 ou touche Menu sur la barre active ouvre le menu sur cette barre ; rien sans barre active ni pour un chef en lecture seule', async ({
+test('E2E-197-r2 : Maj+F10 ou touche Menu sur la barre active ouvre le menu sur cette barre ; rien sans barre active ni pour un chef en lecture seule', async ({
   page,
   request,
 }) => {
@@ -393,6 +393,7 @@ test('E2E-197-r1 : Maj+F10 ou touche Menu sur la barre active ouvre le menu sur 
   expect(mb.y, 'ordonnée du menu sur la barre').toBeLessThanOrEqual(b.y + b.height + 8);
   await page.keyboard.press('Escape');
   await expect(menu(page)).toHaveCount(0);
+  await expect(calendrier(page)).toBeFocused();
 
   // Touche Menu.
   await page.keyboard.press('ContextMenu');

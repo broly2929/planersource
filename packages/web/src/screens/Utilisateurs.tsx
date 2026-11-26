@@ -17,6 +17,7 @@ import { navigate, usePath, useSearch } from '../router';
 import { FormulaireDialogue, messageErreur, ONGLET } from './projet/commun';
 import { OngletCalendriers, type Calendrier } from './Calendriers';
 import { OngletEquipes, type Equipe } from './Equipes';
+import { useTauxDuJour } from '../tauxDuJour';
 import { DialoguesTaux, SectionTaux, useTauxJournaliers } from './TauxJournaliers';
 
 const ROLE_OPTIONS = (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({
@@ -97,6 +98,7 @@ function FormulaireCreation({ calendriers, equipes, onSucces, onAnnuler }: Commu
     String((calendriers.find((c) => c.est_defaut) ?? calendriers[0])?.id ?? ''),
   );
   const [equipe, setEquipe] = useState(AUCUNE);
+  const [doitChanger, setDoitChanger] = useState(false);
   return (
     <FormulaireDialogue
       libelle="Créer"
@@ -115,6 +117,7 @@ function FormulaireCreation({ calendriers, equipes, onSucces, onAnnuler }: Commu
             capacite: Number(capacite),
             ...(calendrier ? { calendrier_id: Number(calendrier) } : {}),
             ...(equipe !== AUCUNE ? { equipe_id: Number(equipe) } : {}),
+            ...(doitChanger ? { doit_changer_mot_de_passe: true } : {}),
           },
         });
       }}
@@ -149,6 +152,11 @@ function FormulaireCreation({ calendriers, equipes, onSucces, onAnnuler }: Commu
         required
         value={motDePasse}
         onChange={(e) => setMotDePasse(e.target.value)}
+      />
+      <Case
+        label="Doit changer son mot de passe à la prochaine connexion"
+        checked={doitChanger}
+        onChange={(e) => setDoitChanger(e.target.checked)}
       />
       <Select
         label="Rôle"
@@ -203,6 +211,7 @@ function FormulaireModification({
   const [calendrier, setCalendrier] = useState(String(u.calendrier_id));
   const [equipe, setEquipe] = useState(u.equipe_id === null ? AUCUNE : String(u.equipe_id));
   const [actif, setActif] = useState(u.actif);
+  const [doitChanger, setDoitChanger] = useState(u.doit_changer_mot_de_passe);
   const [motDePasse, setMotDePasse] = useState('');
   // Taux journaliers (D-225, SPEC §12.1 point 9) : utilisateur ressource seulement.
   const taux = useTauxJournaliers(u.id);
@@ -226,6 +235,9 @@ function FormulaireModification({
       : {}),
     ...(actif !== u.actif ? { actif } : {}),
     ...(motDePasse !== '' ? { mot_de_passe: motDePasse } : {}),
+    ...(doitChanger !== u.doit_changer_mot_de_passe
+      ? { doit_changer_mot_de_passe: doitChanger }
+      : {}),
   });
 
   return (
@@ -300,6 +312,11 @@ function FormulaireModification({
           value={motDePasse}
           onChange={(e) => setMotDePasse(e.target.value)}
         />
+        <Case
+          label="Doit changer son mot de passe à la prochaine connexion"
+          checked={doitChanger}
+          onChange={(e) => setDoitChanger(e.target.checked)}
+        />
         {u.est_ressource && <SectionTaux ctl={taux} />}
       </FormulaireDialogue>
       {u.est_ressource && <DialoguesTaux ctl={taux} />}
@@ -354,6 +371,7 @@ function OngletUtilisateurs() {
   const [liste, setListe] = useState<Liste>({ statut: 'chargement' });
   const [creation, setCreation] = useState(false);
   const [aModifier, setAModifier] = useState<Utilisateur | null>(null);
+  const duJour = useTauxDuJour(true);
 
   const charger = useCallback(() => {
     Promise.all([
@@ -394,6 +412,12 @@ function OngletUtilisateurs() {
     {
       titre: 'Équipe',
       cellule: (u) => equipes.find((e) => e.id === u.equipe_id)?.nom ?? '—',
+    },
+    {
+      titre: 'Taux du jour',
+      classeEntete: 'text-right',
+      classeCellule: 'text-right tabular-nums',
+      cellule: (u) => (u.est_ressource ? duJour.texte(Number(u.id)) : '—'),
     },
     {
       titre: 'Statut',
@@ -445,12 +469,19 @@ function OngletUtilisateurs() {
           calendriers={calendriers}
           equipes={equipes}
           onAnnuler={() => setCreation(false)}
-          onSucces={apres(() => setCreation(false))}
+          onSucces={apres(() => {
+            setCreation(false);
+            duJour.recharger();
+          })}
         />
       </Dialog>
       <Dialog
         ouvert={aModifier !== null}
-        onOuvertChange={(ouvert) => !ouvert && setAModifier(null)}
+        onOuvertChange={(ouvert) => {
+          if (ouvert) return;
+          setAModifier(null);
+          duJour.recharger();
+        }}
         titre={aModifier ? `Modifier ${aModifier.nom}` : 'Modifier l’utilisateur'}
         description="Modifiez les informations du compte. Un mot de passe vide reste inchangé."
       >
@@ -459,8 +490,14 @@ function OngletUtilisateurs() {
             utilisateur={aModifier}
             calendriers={calendriers}
             equipes={equipes}
-            onAnnuler={() => setAModifier(null)}
-            onSucces={apres(() => setAModifier(null))}
+            onAnnuler={() => {
+              setAModifier(null);
+              duJour.recharger();
+            }}
+            onSucces={apres(() => {
+              setAModifier(null);
+              duJour.recharger();
+            })}
           />
         )}
       </Dialog>

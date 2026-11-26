@@ -20,7 +20,7 @@ test('E2E-2 : mauvais mot de passe → message d’erreur, pas de navigation', a
   await expect(page).toHaveURL('/connexion');
 });
 
-test('E2E-3 : l’administrateur crée un utilisateur par le formulaire et le voit dans la liste', async ({
+test('E2E-3-r1 : l’administrateur crée un utilisateur par le formulaire et le voit dans la liste', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -30,7 +30,7 @@ test('E2E-3 : l’administrateur crée un utilisateur par le formulaire et le vo
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Nom').fill('Bob E2E');
   await dialog.getByLabel('Email').fill('bob-e2e@example.test');
-  await dialog.getByLabel('Mot de passe').fill('mot-de-passe-de-bob-e2e');
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill('mot-de-passe-de-bob-e2e');
   await dialog.getByLabel('Rôle').selectOption({ label: 'Ressource' });
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: /bob-e2e@example\.test/ })).toBeVisible();

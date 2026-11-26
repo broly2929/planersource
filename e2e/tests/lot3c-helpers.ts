@@ -19,16 +19,23 @@ export async function remettreAdminSeul(): Promise<void> {
   const client = new pg.Client({ connectionString: url });
   await client.connect();
   try {
-    await client.query('BEGIN');
-    await client.query('TRUNCATE projet, historique RESTART IDENTITY CASCADE');
-    await client.query('DELETE FROM utilisateur WHERE email IS DISTINCT FROM $1', [
-      E2E_ADMIN.email,
-    ]);
-    await client.query('DELETE FROM calendrier WHERE NOT est_defaut');
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
+    for (let essai = 1; ; essai++) {
+      try {
+        await client.query('BEGIN');
+        await client.query('TRUNCATE projet, historique RESTART IDENTITY CASCADE');
+        await client.query('DELETE FROM utilisateur WHERE email IS DISTINCT FROM $1', [
+          E2E_ADMIN.email,
+        ]);
+        await client.query('DELETE FROM calendrier WHERE NOT est_defaut');
+        await client.query('COMMIT');
+        return;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        // D-262 (7) : deadlock (40P01), nouvel essai de la transaction entière, 3 essais au total.
+        if ((err as { code?: string }).code !== '40P01' || essai >= 3) throw err;
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
   } finally {
     await client.end();
   }
@@ -61,7 +68,7 @@ export async function creerRessourceParEcran(
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Nom').fill(nom);
   await dialog.getByLabel('Email').fill(email);
-  await dialog.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await expect(dialog.getByRole('checkbox', { name: 'Ressource planifiable' })).toBeChecked();
   await dialog.getByLabel('Calendrier').selectOption({ label: calendrier });
   await dialog.getByRole('button', { name: 'Créer' }).click();

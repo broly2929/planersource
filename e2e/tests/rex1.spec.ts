@@ -57,7 +57,7 @@ async function creerUtilisateur(page: Page, u: NouvelUtilisateur): Promise<void>
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Nom').fill(u.nom);
   await dialog.getByLabel('Email').fill(u.email);
-  await dialog.getByLabel('Mot de passe').fill(u.motDePasse ?? MOT_DE_PASSE);
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(u.motDePasse ?? MOT_DE_PASSE);
   if (u.role) await dialog.getByLabel('Rôle').selectOption({ label: u.role });
   const ressource = dialog.getByRole('checkbox', { name: 'Ressource planifiable' });
   if (u.ressource === false) await ressource.uncheck();

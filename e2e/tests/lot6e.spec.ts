@@ -326,7 +326,7 @@ test('E2E-381-r3 : adresse (zoom conservé, valeurs invalides corrigées sans re
   ]);
 });
 
-test('E2E-382-r2 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran ; Accueil : choix de la ressource, sa barre, retour à « Tous les projets »', async ({
+test('E2E-382-r3 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran ; Accueil : choix de la ressource, sa barre, retour à « Tous les projets »', async ({
   page,
   request,
 }) => {
@@ -349,7 +349,7 @@ test('E2E-382-r2 : parcours complet à l’écran (administrateur seul) : entit�
   const utilisateur = page.getByRole('dialog');
   await utilisateur.getByLabel('Nom').fill(RESSOURCE);
   await utilisateur.getByLabel('Email').fill(EMAIL_RES);
-  await utilisateur.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await utilisateur.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await utilisateur.getByLabel('Calendrier').selectOption({ label: 'Cal 6E' });
   await utilisateur.getByLabel('Équipe', { exact: true }).selectOption({ label: 'Équipe 6E' });
   await utilisateur.getByRole('button', { name: 'Créer' }).click();
@@ -359,7 +359,7 @@ test('E2E-382-r2 : parcours complet à l’écran (administrateur seul) : entit�
   const chef = page.getByRole('dialog');
   await chef.getByLabel('Nom').fill(CHEF);
   await chef.getByLabel('Email').fill(EMAIL_CHEF);
-  await chef.getByLabel('Mot de passe').fill(MOT_DE_PASSE);
+  await chef.getByLabel('Mot de passe', { exact: true }).fill(MOT_DE_PASSE);
   await chef.getByLabel('Rôle').selectOption({ label: 'Chef de projet' });
   await chef.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: new RegExp(CHEF) })).toBeVisible();

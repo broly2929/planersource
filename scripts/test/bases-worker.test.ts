@@ -255,3 +255,83 @@ describe('BPW-7 base de maintenance hors règle : refus avant toute connexion', 
     },
   );
 });
+
+// Nettoyage tolérant au refus 42501 (D-262, RCI-2), client simulé, sans vraie base.
+describe('BPW-9 à BPW-11 nettoyage et SQLSTATE 42501', () => {
+  const MAINTENANCE = 'postgres://u:p@h:5432/planersource_test';
+  const erreur = (code: string) => Object.assign(new Error(`erreur ${code}`), { code });
+
+  /** Client simulé : `reponsesDrop` donne, tentative après tentative, l'erreur du DROP (null = succès). */
+  function simuler(reponsesDrop: (string | null)[]) {
+    const drops: string[] = [];
+    const client = {
+      async query(sql: string) {
+        if (/pg_advisory_lock/.test(sql)) return { rows: [], rowCount: 0 };
+        if (/FROM pg_database/.test(sql)) {
+          return { rows: [{ datname: 'planersource_vitest_w3_test' }], rowCount: 1 };
+        }
+        if (/^DROP DATABASE/.test(sql)) {
+          drops.push(sql);
+          const code = reponsesDrop[drops.length - 1] ?? null;
+          if (code) throw erreur(code);
+          return { rows: [], rowCount: 0 };
+        }
+        throw new Error(`requête inattendue : ${sql}`);
+      },
+      async end() {},
+    };
+    const attentes: number[] = [];
+    const opts = {
+      connecter: async () => client,
+      attente: async (ms: number) => {
+        attentes.push(ms);
+      },
+    };
+    return { drops, attentes, opts };
+  }
+
+  async function avecStderr<T>(f: () => Promise<T>): Promise<{ resultat: T; ecrit: string }> {
+    let ecrit = '';
+    const orig = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((morceau: string | Uint8Array) => {
+      ecrit += String(morceau);
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      return { resultat: await f(), ecrit };
+    } finally {
+      process.stderr.write = orig;
+    }
+  }
+
+  it('BPW-9 42501 puis succès : succès en 2 tentatives, une attente de 500 ms, aucun avertissement', async () => {
+    const { nettoyerBasesWorker } = await bw();
+    const s = simuler(['42501', null]);
+    const { resultat, ecrit } = await avecStderr(() => nettoyerBasesWorker(MAINTENANCE, s.opts));
+    expect(s.drops).toHaveLength(2);
+    expect(s.attentes).toEqual([500]);
+    expect(resultat).toEqual(['planersource_vitest_w3_test']);
+    expect(ecrit).toBe('');
+  });
+
+  it('BPW-10 42501 trois fois : 3 tentatives à 500 ms, un avertissement sur stderr, aucun rejet', async () => {
+    const { nettoyerBasesWorker } = await bw();
+    const s = simuler(['42501', '42501', '42501']);
+    const { resultat, ecrit } = await avecStderr(() => nettoyerBasesWorker(MAINTENANCE, s.opts));
+    expect(s.drops).toHaveLength(3);
+    expect(s.attentes).toEqual([500, 500]);
+    expect(resultat).toEqual([]);
+    expect(ecrit).toMatch(/planersource_vitest_w3_test/);
+    expect(ecrit).toMatch(/42501/);
+  });
+
+  it('BPW-11 autre code d’erreur : rejet, une seule tentative, aucune attente', async () => {
+    const { nettoyerBasesWorker } = await bw();
+    const s = simuler(['55006']);
+    await expect(nettoyerBasesWorker(MAINTENANCE, s.opts)).rejects.toMatchObject({
+      code: '55006',
+    });
+    expect(s.drops).toHaveLength(1);
+    expect(s.attentes).toEqual([]);
+  });
+});

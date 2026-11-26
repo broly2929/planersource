@@ -4,7 +4,7 @@ import type { ChargeJour, CoutMensuel, CoutTotal } from './couts-mensuels.js';
 import { lireOtpProjets } from './otp.js';
 import { listerMois, type FiltreEquipe } from './plan-de-charge.js';
 import { projetsVisibles, type Acteur } from './projets.js';
-import { lireTaux } from './taux.js';
+import { lireTauxRessources } from './taux.js';
 
 /** Coûts mensuels par projet et par ressource (SPEC §12.5, D-243) : lecture seule. */
 
@@ -98,8 +98,7 @@ export async function lireCoutsPilotage(
     [idsRessources],
   );
   const parId = new Map(utilisateurs.map((u) => [u.id, u]));
-  const taux = new Map<number, Awaited<ReturnType<typeof lireTaux>>>();
-  for (const id of idsRessources) taux.set(id, await lireTaux(db, id));
+  const taux = await lireTauxRessources(db, idsRessources);
 
   const parProjet = new Map<number, Map<number, { imp: ChargeJour[]; plan: ChargeJour[] }>>();
   for (const c of charges) {
@@ -124,7 +123,8 @@ export async function lireCoutsPilotage(
       const ressources: LigneRessourceCouts[] = [...parProjet.get(p.id)!.entries()]
         .map(([id, l]) => {
           const m = coutsMensuels({
-            taux: taux.get(id)!,
+            taux: taux.get(id)!.propres,
+            taux_equipe: taux.get(id)!.equipe,
             mois,
             imputations: l.imp,
             planifies: l.plan,

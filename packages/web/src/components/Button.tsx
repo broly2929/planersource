@@ -1,11 +1,12 @@
 import { Loader2 } from 'lucide-react';
 import type { ButtonHTMLAttributes } from 'react';
 
-type Variante = 'primaire' | 'secondaire' | 'danger';
+type Variante = 'primaire' | 'secondaire' | 'danger' | 'discrete';
 
 const VARIANTES: Record<Variante, string> = {
   primaire: 'bg-accent text-white hover:bg-accent-hover border-transparent',
   secondaire: 'bg-white text-gray-800 hover:bg-gray-100 border-gray-300',
+  discrete: 'bg-transparent text-gray-700 hover:bg-gray-100 border-transparent',
   danger: 'bg-danger text-white hover:bg-danger/90 border-transparent',
 };
 

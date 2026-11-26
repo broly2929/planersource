@@ -1,6 +1,7 @@
 import {
   ClipboardList,
   FolderKanban,
+  KeyRound,
   LogOut,
   Users,
   Home,
@@ -10,7 +11,9 @@ import {
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '../auth';
 import { Link, sortir, usePath } from '../router';
+import { FormulaireMotDePasse } from '../screens/ChangementMotDePasse';
 import { Button } from './Button';
+import { Dialog } from './Dialog';
 import { Notification } from './Notification';
 import { COMMIT, VERSION, useNouvelleVersion } from '../version';
 
@@ -56,6 +59,8 @@ export function Layout({
 }) {
   const { etat, logout } = useAuth();
   const [erreur, setErreur] = useState(false);
+  const [dialogueMdp, setDialogueMdp] = useState(false);
+  const [mdpChange, setMdpChange] = useState(false);
   const user = etat.statut === 'connecte' ? etat.user : null;
   const nouvelleVersion = useNouvelleVersion();
 
@@ -114,6 +119,14 @@ export function Layout({
             </p>
           )}
           {erreur && <Notification type="erreur">Déconnexion impossible.</Notification>}
+          <Button
+            variante="discrete"
+            className="justify-start px-2 text-petit font-normal! whitespace-nowrap"
+            onClick={() => setDialogueMdp(true)}
+          >
+            <KeyRound aria-hidden className="size-4 shrink-0" />
+            Changer mon mot de passe
+          </Button>
           <Button variante="secondaire" onClick={deconnecter}>
             <LogOut aria-hidden className="size-4" />
             Se déconnecter
@@ -121,6 +134,20 @@ export function Layout({
           <p className="text-petit text-gray-600">{`v${VERSION} · ${COMMIT}`}</p>
         </div>
       </aside>
+      <Dialog
+        ouvert={dialogueMdp}
+        onOuvertChange={setDialogueMdp}
+        titre="Changer mon mot de passe"
+        description="Saisissez votre mot de passe actuel, puis le nouveau."
+      >
+        <FormulaireMotDePasse
+          onSucces={() => {
+            setDialogueMdp(false);
+            setMdpChange(true);
+          }}
+          onAnnuler={() => setDialogueMdp(false)}
+        />
+      </Dialog>
       <main className="flex min-w-0 flex-1 flex-col">
         {nouvelleVersion && (
           <div
@@ -142,6 +169,11 @@ export function Layout({
             <Notification type="avertissement">
               Le mot de passe de l’administrateur est celui d’origine : changez-le.
             </Notification>
+          </div>
+        )}
+        {mdpChange && (
+          <div className="px-6 pt-4">
+            <Notification type="succes">Mot de passe changé.</Notification>
           </div>
         )}
         <div className="flex-1 overflow-auto p-6">{children}</div>

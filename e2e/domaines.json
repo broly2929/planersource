@@ -4,6 +4,7 @@
     "lot3b-connexion.spec.ts",
     "lot5b.spec.ts",
     "lot5i.spec.ts",
+    "mot-de-passe.spec.ts",
     "pile-worker.spec.ts",
     "rex2.spec.ts",
     "rex2d.spec.ts",
@@ -14,13 +15,15 @@
     "couts-1.spec.ts",
     "lot1.spec.ts",
     "lot6a.spec.ts",
+    "mot-de-passe.spec.ts",
     "nettoyage-couts.spec.ts",
     "recette-auto-admin-retour.spec.ts",
     "recette-auto-admin.spec.ts",
     "rex1.spec.ts",
     "rex2.spec.ts",
     "rex2d.spec.ts",
-    "rex5.spec.ts"
+    "rex5.spec.ts",
+    "taux-2.spec.ts"
   ],
   "projets": [
     "charge-lisible.spec.ts",
@@ -40,7 +43,8 @@
     "rex1.spec.ts",
     "rex2b.spec.ts",
     "rex2c.spec.ts",
-    "saisie-activites.spec.ts"
+    "saisie-activites.spec.ts",
+    "taux-2.spec.ts"
   ],
   "gantt": [
     "charge-lisible.spec.ts",
@@ -74,7 +78,8 @@
     "rex3b-r2.spec.ts",
     "rex3b-r4.spec.ts",
     "rex3b.spec.ts",
-    "saisie-activites.spec.ts"
+    "saisie-activites.spec.ts",
+    "taux-2.spec.ts"
   ],
   "planning-manuel": [
     "lot2e-bouton.spec.ts",
@@ -86,6 +91,7 @@
   ],
   "accueil": [
     "accueil-g2.spec.ts",
+    "accueil-sans-bandeau.spec.ts",
     "accueil-g3.spec.ts",
     "accueil-g4.spec.ts",
     "colonne-ressources.spec.ts",
@@ -134,11 +140,13 @@
     "couts-1.spec.ts",
     "garde-dialogue-focus.spec.ts",
     "garde-dialogue.spec.ts",
+    "garde-focus-auto.spec.ts",
     "recette-auto-admin-retour.spec.ts",
     "retours-deploiement-2.spec.ts",
     "saisie-activites.spec.ts",
     "sortie.spec.ts",
     "stabilite-helpers.spec.ts",
+    "taux-2.spec.ts",
     "version.spec.ts"
   ],
   "plan-de-charge": [

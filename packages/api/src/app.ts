@@ -15,6 +15,8 @@ import { calculRoutes } from './routes/calcul.js';
 import { calendriersRoutes } from './routes/calendriers.js';
 import { dependancesRoutes } from './routes/dependances.js';
 import { tauxRoutes } from './routes/taux.js';
+import { tauxEquipeRoutes } from './routes/taux-equipe.js';
+import { tauxDuJourRoutes } from './routes/taux-du-jour.js';
 import { equipesRoutes } from './routes/equipes.js';
 import { elementsRoutes } from './routes/elements.js';
 import { feuillesRoutes } from './routes/feuilles.js';
@@ -31,6 +33,15 @@ import { projetsRoutes } from './routes/projets.js';
 import { saisiesRoutes } from './routes/saisies.js';
 import { utilisateursRoutes } from './routes/utilisateurs.js';
 import { lireVersion } from './version.js';
+
+/** Routes accessibles tant que le changement de mot de passe est requis (D-254) ; login : session périmée. */
+const ROUTES_SANS_CHANGEMENT = new Set([
+  'GET /api/auth/me',
+  'POST /api/auth/logout',
+  'POST /api/auth/mot-de-passe',
+  'POST /api/auth/login',
+  'GET /api/version',
+]);
 
 export interface AppDeps {
   pool: pg.Pool;
@@ -95,11 +106,19 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.get('/api/version', async () => info);
   app.register(cookie, { secret: deps.config.sessionSecret });
   app.decorateRequest('user', null);
-  app.addHook('preHandler', async (request) => {
+  app.addHook('preHandler', async (request, reply) => {
     // Session lue pour /api seulement (D-140 (5) (c)) : ni fichier statique ni index.html.
     const chemin = request.url.split('?')[0] ?? '';
     if (chemin !== '/api' && !chemin.startsWith('/api/')) return;
     request.user = await loadUser(deps.pool, request, sessionsOrigine);
+    // Changement de mot de passe requis (D-254) : contrôle commun à toutes les routes /api, après le
+    // 401 (sans session, request.user est nul et la route répond elle-même).
+    if (
+      request.user?.doit_changer_mot_de_passe &&
+      !ROUTES_SANS_CHANGEMENT.has(`${request.method} ${chemin}`)
+    ) {
+      return reply.code(403).send({ erreur: 'Changement de mot de passe requis' });
+    }
   });
   const limiteur = deps.limiteurConnexion ?? creerLimiteur(Date.now);
   const verifier = deps.verifierMotDePasse ?? verifyPassword;
@@ -109,6 +128,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => calendriersRoutes(instance, deps));
   app.register(async (instance) => equipesRoutes(instance, deps));
   app.register(async (instance) => tauxRoutes(instance, deps));
+  app.register(async (instance) => tauxEquipeRoutes(instance, deps));
+  app.register(async (instance) => tauxDuJourRoutes(instance, deps));
   app.register(async (instance) => projetsRoutes(instance, deps));
   app.register(async (instance) => affectationsRoutes(instance, deps));
   app.register(async (instance) => elementsRoutes(instance, deps));
