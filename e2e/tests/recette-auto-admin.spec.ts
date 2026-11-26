@@ -39,20 +39,12 @@ const titreDe = (cellule: Locator): Promise<string | null> =>
     return null;
   });
 
-test('E2E-468 : ligne 1 : menu de l’administrateur non ressource, liste complète', async ({
+test('E2E-468-r2 : ligne 1 : menu de l’administrateur non ressource, liste complète', async ({
   page,
 }) => {
   await loginAsAdmin(page);
   const noms = (await nav(page).getByRole('link').allTextContents()).map((t) => t.trim());
-  expect(noms).toEqual([
-    'Accueil',
-    'Projets',
-    'Plan de charge',
-    'Imputations',
-    'Validation',
-    'Modèles',
-    'Utilisateurs',
-  ]);
+  expect(noms).toEqual(['Accueil', 'Projets', 'Pilotage', 'Imputations', 'Utilisateurs']);
   for (const absent of ['Équipes', 'Calendriers', 'Mes tâches']) expect(noms).not.toContain(absent);
 });
 
@@ -71,7 +63,7 @@ test('E2E-469 : ligne 23 : onglet Calendriers, « Calendrier par défaut » avec
   await expect(page).toHaveURL(/\/calendriers\/\d+$/);
 });
 
-test('E2E-470 : ligne 30 : « Plan de charge » après « Projets », 12 colonnes MM/AAAA depuis le mois courant, ressources repliées', async ({
+test('E2E-470-r1 : ligne 30 : « Plan de charge » après « Projets », 12 colonnes MM/AAAA depuis le mois courant, ressources repliées', async ({
   page,
   request,
 }) => {
@@ -81,8 +73,8 @@ test('E2E-470 : ligne 30 : « Plan de charge » après « Projets », 12 colonne
   await api.utilisateur('Chef B', 'chefb-470@recette.test', 'chef_de_projet', true);
   await loginAsAdmin(page);
   const noms = (await nav(page).getByRole('link').allTextContents()).map((t) => t.trim());
-  expect(noms.indexOf('Plan de charge')).toBe(noms.indexOf('Projets') + 1);
-  await nav(page).getByRole('link', { name: 'Plan de charge', exact: true }).click();
+  expect(noms.indexOf('Pilotage')).toBe(noms.indexOf('Projets') + 1);
+  await nav(page).getByRole('link', { name: 'Pilotage', exact: true }).click();
   await expect(tableauPlan(page)).toBeVisible();
   const entetes = (await tableauPlan(page).getByRole('columnheader').allTextContents()).map((t) =>
     t.trim(),

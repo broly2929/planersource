@@ -16,28 +16,28 @@ export function lireFiltreEquipe(equipe: unknown): FiltreEquipe | null {
   return null;
 }
 
+/** Mêmes droits, refus et ordre des refus pour la lecture et l'export (plan de charge et coûts). */
+export function lireParametresPlan(
+  role: string,
+  query: { debut?: unknown; equipe?: unknown },
+): { debut: string; filtre: FiltreEquipe } | { statut: 400 | 403; erreur: string } {
+  if (role === 'ressource') return { statut: 403, erreur: 'Interdit' };
+  const { debut, equipe } = query;
+  const m = typeof debut === 'string' ? DEBUT.exec(debut) : null;
+  const annee = m ? Number(m[1]) : 0;
+  const filtre = lireFiltreEquipe(equipe);
+  if (!m || annee < 2000 || annee > 2099 || filtre === null) {
+    return { statut: 400, erreur: 'Données invalides' };
+  }
+  return { debut: debut as string, filtre };
+}
+
 /** Plan de charge (lot 6d, D-154 (2)) et son export CSV (lot 6f, D-160 (3)) : lecture seule. */
 export function planDeChargeRoutes(app: FastifyInstance, { pool }: AppDeps): void {
   type Requete = { Querystring: { debut?: unknown; equipe?: unknown } };
-  /** Mêmes droits, refus et ordre des refus pour la lecture et l'export. */
-  const lireParametres = (
-    role: string,
-    query: Requete['Querystring'],
-  ): { debut: string; filtre: FiltreEquipe } | { statut: 400 | 403; erreur: string } => {
-    if (role === 'ressource') return { statut: 403, erreur: 'Interdit' };
-    const { debut, equipe } = query;
-    const m = typeof debut === 'string' ? DEBUT.exec(debut) : null;
-    const annee = m ? Number(m[1]) : 0;
-    const filtre = lireFiltreEquipe(equipe);
-    if (!m || annee < 2000 || annee > 2099 || filtre === null) {
-      return { statut: 400, erreur: 'Données invalides' };
-    }
-    return { debut: debut as string, filtre };
-  };
-
   app.get<Requete>('/api/plan-de-charge', { preHandler: requireUser }, async (request, reply) => {
     const user = request.user!;
-    const p = lireParametres(user.role, request.query);
+    const p = lireParametresPlan(user.role, request.query);
     if ('erreur' in p) return reply.code(p.statut).send({ erreur: p.erreur });
     return lirePlanDeCharge(pool, user, p.debut, p.filtre);
   });
@@ -47,7 +47,7 @@ export function planDeChargeRoutes(app: FastifyInstance, { pool }: AppDeps): voi
     { preHandler: requireUser },
     async (request, reply) => {
       const user = request.user!;
-      const p = lireParametres(user.role, request.query);
+      const p = lireParametresPlan(user.role, request.query);
       if ('erreur' in p) return reply.code(p.statut).send({ erreur: p.erreur });
       const corps = await exporterPlanDeCharge(pool, user, p.debut, p.filtre);
       return reply

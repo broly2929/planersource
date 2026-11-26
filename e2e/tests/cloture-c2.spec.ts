@@ -4,7 +4,7 @@
 // parcours complet, tout à l'écran.
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
-import { preparer } from './lot1-helpers.js';
+import { ouvrirModeles, preparer } from './lot1-helpers.js';
 import { activiteAvec, jalonAvec, sousProjet } from './lot3b-helpers.js';
 import {
   allerA,
@@ -316,7 +316,7 @@ test('E2E-120-r1 sous-activité sous une activité close : texte, aucune ligne c
   expect(await nomsPlanning(page)).toEqual(['Activité A120']);
 });
 
-test('E2E-121-r1 modèle avec une activité ouverte, Clos coché depuis Modèles : texte, Clos relu non coché', async ({
+test('E2E-121-r2 modèle avec une activité ouverte, Clos coché depuis Modèles : texte, Clos relu non coché', async ({
   page,
   request,
 }) => {
@@ -325,7 +325,7 @@ test('E2E-121-r1 modèle avec une activité ouverte, Clos coché depuis Modèles
   await api.activite(m.id, 'Activité 121');
 
   await loginAsAdmin(page);
-  await allerA(page, 'Modèles');
+  await ouvrirModeles(page);
   const dialog = await ouvrir(page, 'Modifier Modèle 121');
   await caseCochee(dialog, 'Clos').check();
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();

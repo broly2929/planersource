@@ -11,6 +11,7 @@ import { Chargement, Vide } from '../components/Etat';
 import { Layout } from '../components/Layout';
 import { NavigationSemaine } from '../components/NavigationSemaine';
 import { Notification } from '../components/Notification';
+import { Onglets } from '../components/Onglets';
 import { Table } from '../components/Table';
 import { DialogueExport } from '../export/DialogueExport';
 import { periodeSemaine } from '../export/logique';
@@ -45,7 +46,7 @@ import {
   type FeuilleValidation,
 } from '../validation/logique';
 
-const adresse = (semaine: string) => `/validation?semaine=${semaine}`;
+const adresse = (semaine: string) => `/imputations?onglet=validation&semaine=${semaine}`;
 
 const messageDe = (err: unknown): string =>
   err instanceof ApiError
@@ -56,18 +57,23 @@ export function Validation() {
   const { etat } = useAuth();
   const role = etat.statut === 'connecte' ? etat.user.role : null;
   const autorise = role === 'administrateur' || role === 'chef_de_projet';
-  const param = useSearch().get('semaine');
+  const recherche = useSearch();
+  const param = recherche.get('semaine');
   const aujourdhui = aujourdhuiLocal();
   const { semaine, corrigee } = semaineAffichee(param, aujourdhui);
+  // D-247 : l'adresse porte toujours `onglet=validation` ; sans lui (ancienne adresse, onglet par défaut), correction.
+  const aCorriger = corrigee || recherche.get('onglet') !== 'validation';
 
   return (
     <Layout titre="Validation des feuilles de temps">
-      <Redirect to={adresse(semaine)} when={corrigee} />
-      {!autorise ? (
-        <Vide>Accès réservé aux chefs de projet et aux administrateurs.</Vide>
-      ) : corrigee ? null : (
-        <Liste semaine={semaine} aujourdhui={aujourdhui} />
-      )}
+      <Onglets>
+        <Redirect to={adresse(semaine)} when={aCorriger} />
+        {!autorise ? (
+          <Vide>Accès réservé aux chefs de projet et aux administrateurs.</Vide>
+        ) : aCorriger ? null : (
+          <Liste semaine={semaine} aujourdhui={aujourdhui} />
+        )}
+      </Onglets>
     </Layout>
   );
 }

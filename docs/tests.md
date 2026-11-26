@@ -2445,11 +2445,11 @@ Les deux routes sont en lecture seule : aucun champ modifiable nouveau.
 
 | Champ de l'API | Champ d'écran | Test |
 |---|---|---|
-| GET /api/plan-de-charge/export `debut` (lecture seule) | champ « Mois de départ » de l'écran Plan de charge, repris par « Exporter CSV » | E2E-383 |
-| GET /api/plan-de-charge/export `equipe` (lecture seule) | liste « Équipe » de l'écran Plan de charge, reprise par « Exporter CSV » | E2E-383 |
+| GET /api/plan-de-charge/export `debut` (lecture seule) | champ « Mois de départ » de l'écran Plan de charge, repris par « Exporter CSV » | E2E-383-r1, E2E-657 |
+| GET /api/plan-de-charge/export `equipe` (lecture seule) | liste « Équipe » de l'écran Plan de charge, reprise par « Exporter CSV » | E2E-383-r1 |
 | GET /api/imputations/export `du`, `au` (lecture seule) | champs « Du » et « Au » du dialogue « Exporter les imputations » | E2E-384, E2E-385 |
 | GET /api/imputations/export `equipe` (lecture seule) | liste « Équipe » du dialogue | E2E-384 |
-| Colonnes des deux fichiers (lecture seule) | fichiers téléchargés ; aucun affichage à l'écran | E2E-383, E2E-384, E2E-387 |
+| Colonnes des deux fichiers (lecture seule) | fichiers téléchargés ; aucun affichage à l'écran | E2E-383-r1, E2E-384, E2E-387-r3, E2E-657 |
 
 ### Preuves de la phase rouge de 6f (D-160)
 
@@ -3847,3 +3847,114 @@ Décisions du porteur (claude.ai) : révisions dues à la colonne Ressources par
 - Accueil : E2E-87-r1 → r2, E2E-92-r9 → r10, E2E-100-r7 → r8, E2E-109-r6 → r7 (poignée « Ressources » dans l'ordre de tabulation).
 - Gantt d'un projet, ordre de tabulation (poignée et boutons d'assignation) : E2E-43-r8 → r9, E2E-179-r6 → r7, E2E-191-r6 → r7.
 - `ressources: false` posé avant le chargement (assistant `sansColonneRessources`, colonnes-completes.ts), assertions inchangées (D-238 (1), (4)) : E2E-93-r4 → r5, E2E-289-r2 → r3, E2E-366-r3 → r4.
+
+## Correctif-149 (D-240, tag `tests-correctif-149`)
+
+Décision du porteur (claude.ai, D-031) : E2E-149-r1 appuyait sur une touche avant le retour du focus à la zone après la fermeture du dialogue.
+
+- E2E-149-r1 → E2E-149-r2 : `await expect(zone(page)).toBeFocused();` après chacun des deux `toHaveCount(0)` du dialogue ; aucune autre ligne modifiée.
+
+## Export du plan de charge (D-241, lot export-plan-de-charge)
+
+Valeurs recopiées de SPEC §7 (Exports CSV, point 3, exemple). Fichier API : `packages/api/test/export-plan-de-charge.test.ts` (PCX-1 à PCX-3, mêmes aides que `lot6f-csv.test.ts` ; fichier lu tel qu'envoyé : BOM, CRLF). E2E : `e2e/tests/export-plan-de-charge.spec.ts`. Domaines : plan-de-charge, feuille-de-temps.
+
+| ID | Cas | Source | Lot | Fichier |
+|---|---|---|---|---|
+| PCX-1 | Administrateur, `debut=2027-01` : corps exact de l'exemple de la SPEC (BOM, « ; », CRLF, en-tête de 15 colonnes, 5 lignes) | §7 Exports CSV point 3 | export-plan-de-charge | packages/api/test/export-plan-de-charge.test.ts |
+| PCX-2 | Chef de projet : « Autres projets » (projet illisible regroupé, sans code ni nom dans le fichier) ; ressource inactive « (inactif) » ; ressource sans équipe (Équipe vide) ; valeur nulle « 0 » ; écart négatif sans apostrophe | §7 Exports CSV point 3 | export-plan-de-charge | packages/api/test/export-plan-de-charge.test.ts |
+| PCX-3 | Filtre équipe ; équipe inconnue : en-tête seul (nouvelle forme) ; refus et ordre des refus inchangés (401, 403 rôle ressource avant 400, 400) ; base inchangée (empreinte) | §7 Exports CSV point 3 | export-plan-de-charge | packages/api/test/export-plan-de-charge.test.ts |
+| E2E-657 | Écran Plan de charge, « Exporter CSV » : fichier téléchargé, en-tête aux 12 mois de l'écran ; lignes Charge, Disponible, Écart et projet de la ressource, valeurs égales aux cellules de l'écran (ressource dépliée) et à leur `title` ; ni Réel ni Planifié | §7 Exports CSV points 3 et 5 | export-plan-de-charge | e2e/tests/export-plan-de-charge.spec.ts |
+
+Tests sous tag qui ont cassé en phase verte (D-241 (4)) : CSV-5 à CSV-11, E2E-383, E2E-386, E2E-387-r2 (révisés ci-dessous).
+
+### Révisions D-031 de export-plan-de-charge (D-241 (3), tag `tests-export-plan-de-charge-r1`)
+
+Seules les attentes de contenu du fichier du plan de charge changent (en-tête `Ressource;Équipe;Ligne;` + 12 mois, lignes Charge, Disponible, Écart et projet) ; un commit par fichier.
+
+| Ancien | Nouveau | Fichier |
+|---|---|---|
+| CSV-5, CSV-6, CSV-7, CSV-8, CSV-9, CSV-10, CSV-11 | CSV-5-r1 à CSV-11-r1 (CSV-7-r1 : lignes Charge 2, Disponible 21, Écart 19, projet 2 ; CSV-8-r1 : lignes Charge et Écart de Carl et de Bob) | packages/api/test/lot6f-csv.test.ts |
+| E2E-383 | E2E-383-r1 (en-têtes de 2027-01 et 2027-05, lignes Charge, Disponible, Écart, 7 lignes au total) | e2e/tests/lot6f.spec.ts |
+| E2E-386 | E2E-386-r1 (lignes de projet, « Autres projets » et Charge exactes) | e2e/tests/lot6f.spec.ts |
+| E2E-387-r2 | E2E-387-r3 (parcours complet : en-tête 2026-01 et ligne `Ressource 6F;Équipe 6F;Charge;1;0;…`) | e2e/tests/lot6f.spec.ts |
+
+Retrait de la constante `MOIS_2027`, devenue inutile (lint), dans le même fichier de CSV.
+
+## Pilotage, tranche 1 (D-243, lot pilotage, sous-lot pilotage-1)
+
+Valeurs recopiées de SPEC §12.5 (points 5 et 6 : cas PIL-A à PIL-E et exemple de fichier). Aucun e2e en tranche 1. Fichiers : `packages/api/test/pilotage-calcul.test.ts` (fonctions pures, sans base), `packages/api/test/pilotage-couts.test.ts` (route), `packages/api/test/pilotage-export.test.ts` (export), aides communes `packages/api/test/pilotage-helpers.ts`. Travail planifié et imputations posés par SQL (comme PCX). Les « cas » PIL-A à PIL-E de la SPEC sont des jeux de données, distincts des identifiants de test ci-dessous.
+
+| ID | Cas | Source | Lot | Fichier |
+|---|---|---|---|---|
+| PIL-1 | Calcul pur, PIL-A : Alice, 2 imputations et 1 planifié → janvier 600/0/600, février 700/350/1050, total 1650, taux manquant non | §12.5 points 2 et 6 | pilotage-1 | packages/api/test/pilotage-calcul.test.ts |
+| PIL-2 | Calcul pur, PIL-B : Alice, planifié 0,25 j le 05/01 → janvier coût 150 | §12.5 points 2 et 6 | pilotage-1 | packages/api/test/pilotage-calcul.test.ts |
+| PIL-3 | Calcul pur, PIL-C : Bob sans aucune période → coûts 0, taux manquant non | §12.5 points 2 et 6 | pilotage-1 | packages/api/test/pilotage-calcul.test.ts |
+| PIL-4 | Calcul pur, PIL-D : Carol → mars 500, avril 0 et taux manquant oui, total manquant oui | §12.5 points 2 et 6 | pilotage-1 | packages/api/test/pilotage-calcul.test.ts |
+| PIL-5 | Agrégats purs : somme des ressources de P1 (janvier 750, février 1050, mars 500, total 2300), taux manquant = OU ; total général 1350, 1050, 500, 2900 | §12.5 points 2 et 6 | pilotage-1 | packages/api/test/pilotage-calcul.test.ts |
+| PIL-6 | `GET /api/couts`, administrateur : PIL-A à PIL-E de bout en bout, forme exacte de la réponse | §12.5 points 3, 4 et 6 | pilotage-1 | packages/api/test/pilotage-couts.test.ts |
+| PIL-7 | Périmètre : projet clos présent, modèle absent, projet sans charge dans la période absent, charge hors période absente, ressource inactive présente, tri des projets et des ressources | §12.5 point 4 | pilotage-1 | packages/api/test/pilotage-couts.test.ts |
+| PIL-8 | Filtre équipe, « aucune », équipe inconnue (`projets` vide, `total` à 0) | §12.5 point 4 | pilotage-1 | packages/api/test/pilotage-couts.test.ts |
+| PIL-9 | Chef de projet : seulement ses projets `peut_ecrire`, `total` limité à ceux-ci, aucun code ni nom d'un autre projet dans la réponse | §12.5 point 4 | pilotage-1 | packages/api/test/pilotage-couts.test.ts |
+| PIL-10 | Refus et ordre : 401, 403 rôle ressource avant 400, 400 ; base inchangée (empreinte) | §12.5 point 3 | pilotage-1 | packages/api/test/pilotage-couts.test.ts |
+| PIL-11 | Export, administrateur : corps exact de l'exemple de la SPEC (BOM, « ; », CRLF), en-têtes HTTP, nom `couts-2027-01.csv` | §12.5 point 5 | pilotage-1 | packages/api/test/pilotage-export.test.ts |
+| PIL-12 | Export sans projet : en-tête puis ligne « Total » à 0 ; équipe inconnue, même forme | §12.5 point 5 | pilotage-1 | packages/api/test/pilotage-export.test.ts |
+| PIL-13 | Export, chef de projet : seulement ses projets, aucun code ni nom des autres ; ressource inactive « (inactif) » | §12.5 points 4 et 5 | pilotage-1 | packages/api/test/pilotage-export.test.ts |
+| PIL-14 | Export, refus et ordre (401, 403, 400) ; base inchangée | §12.5 point 5 | pilotage-1 | packages/api/test/pilotage-export.test.ts |
+
+### Couverture des champs, pilotage-1
+
+Aucun champ modifiable : les routes `GET /api/couts` et `GET /api/couts/export` sont en lecture seule (rien à saisir à l'écran). Écran de la tranche 2.
+
+## Pilotage, tranche 2 (D-245, lot pilotage, sous-lot pilotage-2)
+
+Valeurs fixes recopiées de SPEC §12.3 et §12.5 ; valeurs de l'écran comparées à `GET /api/couts` (tranche 1). Fichier : `e2e/tests/pilotage-2.spec.ts`. Domaines : plan-de-charge, gantt, projets, accueil. Règle de révision des tests sous tag : D-245 (6).
+
+| ID | Cas | Source | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-658 | Menu « Pilotage » (administrateur et chef de projet, à la place de « Plan de charge », qui disparaît) ; rôle ressource redirigé vers /mes-taches ; onglets « Plan de charge » et « Coûts » ; adresse `onglet=charge|couts`, onglet inconnu ou absent = Plan de charge ; « Mois de départ » et « Équipe » conservés au changement d'onglet et au rechargement | §12.5 point 1 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+| E2E-659-r1 | Une ressource créée par l'API (le tableau existe) ; `/plan-de-charge?debut=2027-01&equipe=aucune` redirige vers `/pilotage?onglet=charge` avec `debut` et `equipe` conservés | §12.5 point 1 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+| E2E-660-r1 | Onglet Coûts, administrateur : colonnes 12 « MM/AAAA » puis « Total » ; ligne « <code> · <nom> » avec OTP effectif, tout replié ; « Déplier <code> » (aria-expanded) montre les lignes de ressource (« (inactif) » si inactive) ; ligne finale « Total » ; cellules « 1 234,50 € » égales à `GET /api/couts`, montant fixe « 2 400,00 € » ; `title` « Réel X, planifié Y » ; marque « incomplet » (title « Taux manquant ») sur une cellule à taux manquant ; sous-projet sur sa propre ligne | §12.5 points 2, 3 et 8 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+| E2E-661 | Onglet Coûts, chef de projet : ses projets seulement ; un projet lu sans `peut_ecrire` est absent (ni code ni nom dans la page) | §12.5 points 4 et 8 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+| E2E-662-r1 | « Exporter CSV » de l'onglet Coûts : fichier `couts-AAAA-MM.csv`, contenu égal à `GET /api/couts/export` avec les filtres courants, lignes cohérentes avec les cellules de l'écran | §12.5 points 5 et 8 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+| E2E-663 | Mois sans charge : « Aucun coût sur la période. » ; zone `role="region"` « Coûts » focalisable ; page sans défilement horizontal à 1440 et 1024 px | §12.5 point 8 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+| E2E-664 | Gantt d'un projet : « Exporter les coûts » au bout de la région « Totaux du projet », plus dans la barre d'outils ; téléchargement fonctionnel ; absent sans `peut_ecrire` | §12.5 point 7 ; §12.4 point 3 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+| E2E-665 | Extension du parcours complet (administrateur seul, tout à l'écran, gestes d'E2E-635-r1) : Pilotage → Coûts, ligne du projet du parcours (OTP, ressource, coût planifié « 2 400,00 € ») | §12.5 points 1 et 8 | pilotage-2 | e2e/tests/pilotage-2.spec.ts |
+
+### Couverture des champs, pilotage-2
+
+Aucun champ modifiable : l'onglet « Coûts » est en lecture seule ; les filtres « Mois de départ » et « Équipe » sont ceux de GET /api/couts et GET /api/couts/export (E2E-658, E2E-662). E2E-665 : entités créées à l'écran (parcours complet).
+
+### Révisions D-031 de pilotage-2 (D-245)
+
+- `tests-pilotage-2-r1` (décision du porteur, D-245 (8)) : E2E-659-r1, E2E-660-r1, E2E-662-r1 (`pilotage-2.spec.ts`), donnée de départ et montants.
+- `tests-pilotage-2-r2` (règle D-245 (6), attentes de navigation et d'emplacement seulement) :
+  - `packages/web/test/lot6d.test.ts` : GEO-43-r1 (adresse `/pilotage?onglet=charge&debut=…`).
+  - `lot6d.spec.ts` : E2E-368-r1, E2E-370-r1 (menu « Pilotage », titre « Pilotage »), E2E-376-r3.
+  - `lot6f.spec.ts` : E2E-387-r4. `recette-auto-admin.spec.ts` : E2E-468-r1, E2E-470-r1. `recette-auto-chefa.spec.ts` : E2E-477-r1, E2E-484-r2. `recette-auto-chefb.spec.ts` : E2E-493-r1.
+  - `lot3b-focus.spec.ts` : E2E-43-r10. `lot3e.spec.ts` : E2E-179-r8. `lot3f1.spec.ts` : E2E-191-r8. `lot3f2.spec.ts` : E2E-204-r3 (« Exporter les coûts » dans « Totaux du projet », ordre de tabulation). `lot6c.spec.ts` : E2E-358-r5, E2E-362-r4 (texte de la région « Totaux du projet »).
+
+## Onglets Modèles et Validation (D-247, lot onglets)
+
+| id | énoncé | section SPEC | lot | fichier |
+|---|---|---|---|---|
+| E2E-666 | Administrateur et chef de projet : menu sans « Modèles » ni « Validation » ; Projets a les onglets « Projets » et « Modèles » ; `?onglet=modeles` active Modèles, valeur invalide → Projets ; l'administrateur crée un modèle à l'écran (onglet Modèles) et le voit dans la liste ; le chef lit la liste, sans bouton « Nouveau modèle » | onglets (D-247) point 1 et 3 | onglets | e2e/tests/onglets.spec.ts |
+| E2E-667 | `/modeles` → `/projets?onglet=modeles` (administrateur, chef de projet), sans entrée d'historique (retour arrière : pas de retour sur /modeles) ; rôle ressource → /mes-taches | onglets (D-247) point 3 | onglets | e2e/tests/onglets.spec.ts |
+| E2E-668 | Administrateur ressource : Imputations a les onglets « Feuille de temps » et « Validation » ; `semaine` conservée au changement d'onglet et au rechargement | onglets (D-247) point 2 | onglets | e2e/tests/onglets.spec.ts |
+| E2E-669 | Parcours à l'écran, sans API pour la feuille : une ressource saisit et soumet sa feuille ; un chef de projet non ressource ouvre « Imputations », voit directement la validation (aucune liste d'onglets) et valide ; la ressource voit sa feuille « Validée » | onglets (D-247) point 2 | onglets | e2e/tests/onglets.spec.ts |
+| E2E-670 | Chef de projet ressource : Imputations a les deux onglets, « Feuille de temps » par défaut | onglets (D-247) point 2 | onglets | e2e/tests/onglets.spec.ts |
+| E2E-671 | Rôle ressource : Imputations sans liste d'onglets ; `?onglet=validation` → feuille de temps ; aucun texte de validation dans la page | onglets (D-247) point 2 | onglets | e2e/tests/onglets.spec.ts |
+| E2E-672 | `/validation?semaine=X` → `/imputations?onglet=validation&semaine=X` (administrateur, chef de projet), sans entrée d'historique ; rôle ressource → /mes-taches | onglets (D-247) point 3 | onglets | e2e/tests/onglets.spec.ts |
+| E2E-673 | Liens internes : la suppression d'un modèle depuis sa fiche mène à `/projets?onglet=modeles` ; l'entrée « Projets » est active sur cet onglet | onglets (D-247) point 3 | onglets | e2e/tests/onglets.spec.ts |
+
+### Couverture des champs, onglets
+
+Aucun champ modifiable nouveau : les onglets reprennent les écrans Modèles et Validation sans changer l'API. E2E-666 : création d'un modèle à l'écran (onglet Modèles) ; E2E-669 : saisie et soumission de la feuille, validation, à l'écran.
+
+### Révisions D-031 du lot onglets (D-247 (5), D-248)
+
+- `tests-onglets-r1` (attentes de navigation seulement : menu, adresses, onglets) :
+  - aides : `lot1-helpers.ts` (`ouvrirModeles`), `lot4c-helpers.ts` (`adresseValidation`, `ouvrirValidationParMenu`) ; E2E-300 et E2E-301 gardent leur identifiant.
+  - `lot1b.spec.ts` : E2E-12-r1, E2E-13-r2. `lot1b-c.spec.ts` : E2E-15-r1, E2E-16-r1, E2E-23-r2, E2E-24-r2. `rex1.spec.ts` : E2E-57-r1. `rex2b.spec.ts` : E2E-77-r1, E2E-78-r1. `cloture-c2.spec.ts` : E2E-121-r2. `couts-1.spec.ts` : E2E-619-r1, E2E-621-r1.
+  - `autrui-e.spec.ts` : E2E-429-r1. `lot3f2.spec.ts` : E2E-207-r1. `lot6b.spec.ts` : E2E-352-r1. `lot6f.spec.ts` : E2E-387-r5.
+  - `lot4b.spec.ts` : E2E-221-r2, E2E-244-r7. `lot4c.spec.ts` : E2E-299-r1, E2E-317-r2, E2E-318-r2.
+  - `recette-auto-admin.spec.ts` : E2E-468-r2. `recette-auto-chefa.spec.ts` : E2E-477-r2. `recette-auto-chefb.spec.ts` : E2E-493-r2.

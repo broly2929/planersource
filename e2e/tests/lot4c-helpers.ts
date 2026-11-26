@@ -31,8 +31,25 @@ export const EMAIL_BOB = 'bob-4c@lot4c.test';
 export const EMAIL_CARLA = 'carla-4c@lot4c.test';
 export const EMAIL_DINA = 'dina-4c@lot4c.test';
 
+// Révision D-031 (D-247) : « Validation » est un onglet de l'écran Imputations.
 export const adresseValidation = (semaine?: string) =>
-  semaine === undefined ? '/validation' : `/validation?semaine=${semaine}`;
+  semaine === undefined
+    ? '/imputations?onglet=validation'
+    : `/imputations?onglet=validation&semaine=${semaine}`;
+
+/** Ouvre la validation par le menu : « Imputations », puis l'onglet « Validation » s'il y a une liste d'onglets. */
+export async function ouvrirValidationParMenu(page: Page): Promise<void> {
+  await page
+    .getByRole('navigation', { name: 'Navigation principale' })
+    .getByRole('link', { name: 'Imputations', exact: true })
+    .click();
+  const onglet = page.getByRole('tab', { name: 'Validation', exact: true });
+  await page.getByRole('heading', { level: 1 }).first().waitFor();
+  if (await onglet.count()) await onglet.click();
+  await expect(
+    page.getByRole('heading', { name: 'Validation des feuilles de temps', level: 1 }),
+  ).toBeVisible();
+}
 
 export const LIBELLE_S = 'Semaine du 12/01/2026 au 18/01/2026';
 export const VIDE_SEMAINE = 'Aucune feuille de temps pour cette semaine.';

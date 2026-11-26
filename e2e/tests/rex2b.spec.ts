@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import pg from 'pg';
 import { loginAsAdmin } from './helpers.js';
-import { preparer } from './lot1-helpers.js';
+import { ouvrirModeles, preparer } from './lot1-helpers.js';
 
 const NOM_ADMIN_E2E = 'Admin E2E';
 const J06 = '2027-01-06T10:00:00';
@@ -127,7 +127,7 @@ test('E2E-76 liste Projets : colonne « Début » = « — » avant calcul, puis
   await expect(await cellule(page, 'R2B-76', 'Début')).toHaveText(relu!.debut_planifie!);
 });
 
-test('E2E-77 « Modifier le projet » : « Pas avant le » pour un projet ordinaire, « Date de début » pour un modèle, une création de modèle et une copie', async ({
+test('E2E-77-r1 « Modifier le projet » : « Pas avant le » pour un projet ordinaire, « Date de début » pour un modèle, une création de modèle et une copie', async ({
   page,
   request,
 }) => {
@@ -151,7 +151,7 @@ test('E2E-77 « Modifier le projet » : « Pas avant le » pour un projet ordina
   await expect(page.getByRole('dialog').getByLabel('Pas avant le')).toHaveValue('2027-03-01');
   await page.getByRole('dialog').getByRole('button', { name: 'Annuler' }).click();
 
-  await allerA(page, 'Modèles');
+  await ouvrirModeles(page);
   await page.getByRole('button', { name: 'Modifier Modèle R2B-77', exact: true }).click();
   dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Date de début')).toHaveValue('2027-01-04');
@@ -171,7 +171,7 @@ test('E2E-77 « Modifier le projet » : « Pas avant le » pour un projet ordina
   await expect(dialog.getByLabel('Pas avant le')).toHaveCount(0);
 });
 
-test('E2E-78 écran Modèles : « Créer un projet depuis <nom> » affiche « Créer un projet » et ouvre le dialogue de création', async ({
+test('E2E-78-r1 écran Modèles : « Créer un projet depuis <nom> » affiche « Créer un projet » et ouvre le dialogue de création', async ({
   page,
   request,
 }) => {
@@ -179,7 +179,7 @@ test('E2E-78 écran Modèles : « Créer un projet depuis <nom> » affiche « Cr
   await api.modele('MOD-R2B78', 'Modèle R2B-78');
 
   await loginAsAdmin(page);
-  await allerA(page, 'Modèles');
+  await ouvrirModeles(page);
   const bouton = page.getByRole('button', {
     name: 'Créer un projet depuis Modèle R2B-78',
     exact: true,

@@ -42,7 +42,7 @@ async function ouvrir(
 }
 
 for (const largeur of LARGEURS) {
-  test(`E2E-43-r9 (${largeur} px) : zones à défilement en région focalisable, ordre de tabulation, barres et jalons hors tabulation`, async ({
+  test(`E2E-43-r10 (${largeur} px) : zones à défilement en région focalisable, ordre de tabulation, barres et jalons hors tabulation`, async ({
     page,
     request,
   }) => {
@@ -93,6 +93,9 @@ for (const largeur of LARGEURS) {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Copier', exact: true })).toBeFocused();
     expect(await horsBarre()).toBe(true);
+    // Révision -r10 (D-031, D-245 (6)) : « Exporter les coûts » est dans « Totaux du projet », avant le tableau.
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Exporter les coûts', exact: true })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(tableau).toBeFocused();
     expect(await horsBarre()).toBe(true);

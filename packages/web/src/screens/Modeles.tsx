@@ -11,6 +11,7 @@ import { Chargement, Vide } from '../components/Etat';
 import { Field } from '../components/Field';
 import { Layout } from '../components/Layout';
 import { Notification } from '../components/Notification';
+import { Onglets } from '../components/Onglets';
 import { Table, type Colonne } from '../components/Table';
 import { dateLocale } from '../gantt/echelle';
 import { Link } from '../router';
@@ -135,53 +136,55 @@ export function Modeles() {
         )
       }
     >
-      {etat.statut === 'chargement' && <Chargement libelle="Chargement des modèles…" />}
-      {etat.statut === 'erreur' && (
-        <Notification type="erreur">Impossible de charger les modèles.</Notification>
-      )}
-      {etat.statut === 'ok' && etat.donnees.length === 0 && (
-        <Vide>Aucun modèle pour le moment.</Vide>
-      )}
-      {etat.statut === 'ok' && etat.donnees.length > 0 && (
-        <Table
-          legende="Liste des modèles"
-          colonnes={colonnes(peutCreer ? setACopier : null, setAModifier)}
-          lignes={etat.donnees}
-          cle={(m) => m.id}
-        />
-      )}
-      {aModifier && (
-        <DialogueModifProjet
-          projetId={aModifier.id}
-          onFermer={() => setAModifier(null)}
-          onSucces={() => {
-            setAModifier(null);
-            recharger();
-          }}
-        />
-      )}
-      {aCopier && (
-        <DialogueCopie
-          source={aCopier}
-          depuisModele
-          admin={admin}
-          onFermer={() => setACopier(null)}
-        />
-      )}
-      <Dialog
-        ouvert={dialogue}
-        onOuvertChange={setDialogue}
-        titre="Nouveau modèle"
-        description="Renseignez le code, le nom et la date de début."
-      >
-        <FormulaireModele
-          onAnnuler={() => setDialogue(false)}
-          onCree={() => {
-            setDialogue(false);
-            recharger();
-          }}
-        />
-      </Dialog>
+      <Onglets>
+        {etat.statut === 'chargement' && <Chargement libelle="Chargement des modèles…" />}
+        {etat.statut === 'erreur' && (
+          <Notification type="erreur">Impossible de charger les modèles.</Notification>
+        )}
+        {etat.statut === 'ok' && etat.donnees.length === 0 && (
+          <Vide>Aucun modèle pour le moment.</Vide>
+        )}
+        {etat.statut === 'ok' && etat.donnees.length > 0 && (
+          <Table
+            legende="Liste des modèles"
+            colonnes={colonnes(peutCreer ? setACopier : null, setAModifier)}
+            lignes={etat.donnees}
+            cle={(m) => m.id}
+          />
+        )}
+        {aModifier && (
+          <DialogueModifProjet
+            projetId={aModifier.id}
+            onFermer={() => setAModifier(null)}
+            onSucces={() => {
+              setAModifier(null);
+              recharger();
+            }}
+          />
+        )}
+        {aCopier && (
+          <DialogueCopie
+            source={aCopier}
+            depuisModele
+            admin={admin}
+            onFermer={() => setACopier(null)}
+          />
+        )}
+        <Dialog
+          ouvert={dialogue}
+          onOuvertChange={setDialogue}
+          titre="Nouveau modèle"
+          description="Renseignez le code, le nom et la date de début."
+        >
+          <FormulaireModele
+            onAnnuler={() => setDialogue(false)}
+            onCree={() => {
+              setDialogue(false);
+              recharger();
+            }}
+          />
+        </Dialog>
+      </Onglets>
     </Layout>
   );
 }

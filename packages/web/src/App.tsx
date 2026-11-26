@@ -1,18 +1,27 @@
 import { AuthProvider, useAuth } from './auth';
 import { Chargement, Vide } from './components/Etat';
 import { Layout } from './components/Layout';
-import { Redirect, usePath } from './router';
+import { Redirect, usePath, useSearch } from './router';
 import { Accueil } from './screens/Accueil';
 import { CalendrierDetail } from './screens/Calendriers';
 import { Connexion } from './screens/Connexion';
-import { FeuilleTemps } from './screens/FeuilleTemps';
-import { Validation } from './screens/Validation';
+import { Imputations } from './screens/Imputations';
 import { MesTaches } from './screens/MesTaches';
-import { Modeles } from './screens/Modeles';
-import { PlanDeCharge } from './screens/PlanDeCharge';
+import { Pilotage, RedirectionPlanDeCharge } from './screens/Pilotage';
 import { PlanningManuel } from './screens/PlanningManuel';
-import { ProjetDetail, Projets } from './screens/Projets';
+import { Projets } from './screens/EcranProjets';
+import { ProjetDetail } from './screens/Projets';
 import { Utilisateurs } from './screens/Utilisateurs';
+
+/** Ancienne adresse /validation[?semaine=…] (D-247) : onglet Validation de l'écran Imputations. */
+function AncienneValidation() {
+  const semaine = useSearch().get('semaine');
+  return (
+    <Redirect
+      to={`/imputations?onglet=validation${semaine === null ? '' : `&semaine=${semaine}`}`}
+    />
+  );
+}
 
 function Routes() {
   const path = usePath();
@@ -39,7 +48,7 @@ function Routes() {
   if (path === '/mes-taches') return <MesTaches />;
   if (
     restreint &&
-    (path === '/' || /^\/(projets|modeles|validation|plan-de-charge)(\/|$)/.test(path))
+    (path === '/' || /^\/(projets|modeles|validation|plan-de-charge|pilotage)(\/|$)/.test(path))
   ) {
     return <Redirect to="/mes-taches" />;
   }
@@ -55,10 +64,12 @@ function Routes() {
   const detail = /^\/calendriers\/(\d+)$/.exec(path);
   if (detail) return <CalendrierDetail id={detail[1]!} />;
   if (path === '/projets') return <Projets />;
-  if (path === '/modeles') return <Modeles />;
-  if (path === '/plan-de-charge') return <PlanDeCharge />;
-  if (path === '/imputations') return <FeuilleTemps />;
-  if (path === '/validation') return <Validation />;
+  // D-247 : anciens écrans Modèles et Validation, devenus des onglets (redirections sans entrée d'historique).
+  if (path === '/modeles') return <Redirect to="/projets?onglet=modeles" />;
+  if (path === '/plan-de-charge') return <RedirectionPlanDeCharge />;
+  if (path === '/pilotage') return <Pilotage />;
+  if (path === '/imputations') return <Imputations />;
+  if (path === '/validation') return <AncienneValidation />;
   const projet = /^\/projets\/(\d+)$/.exec(path);
   if (projet) return <ProjetDetail id={projet[1]!} />;
   const manuel = /^\/projets\/(\d+)\/planning-manuel\/(\d+)$/.exec(path);

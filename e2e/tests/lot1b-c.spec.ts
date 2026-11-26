@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
-import { connecterAvec, preparer } from './lot1-helpers.js';
+import { connecterAvec, ouvrirModeles, preparer } from './lot1-helpers.js';
 import { ouvrirCalendriers } from './lot3c-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { fermerEnAbandonnant } from './garde-dialogue-helpers.js';
@@ -100,14 +100,14 @@ test('E2E-14 : l’administrateur copie un projet depuis la liste, options par d
   await expect(page.getByRole('row', { name: /C-E2E14.*Copie de Projet E2E14/ })).toBeVisible();
 });
 
-test('E2E-15 : un chef crée un projet depuis un modèle', async ({ page, request }) => {
+test('E2E-15-r1 : un chef crée un projet depuis un modèle', async ({ page, request }) => {
   const api = await preparer(request);
   await api.utilisateur('Chef E2E15', 'chef-e2e15@example.test', 'chef_de_projet');
   const modele = await api.modele('MOD-E2E15', 'Modèle E2E15');
   await api.activite(modele.id, 'Étude E2E15');
 
   await connecterAvec(page, 'chef-e2e15@example.test');
-  await page.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(page);
   await page
     .getByRole('button', { name: 'Créer un projet depuis Modèle E2E15', exact: true })
     .click();
@@ -121,12 +121,12 @@ test('E2E-15 : un chef crée un projet depuis un modèle', async ({ page, reques
   await expect(page.getByRole('row', { name: /1 Étude E2E15/ })).toBeVisible();
   await page.getByRole('link', { name: 'Projets' }).click();
   await expect(page.getByRole('row', { name: /P-E2E15.*Projet E2E15/ })).toBeVisible();
-  await page.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(page);
   await expect(page.getByRole('heading', { name: 'Modèles', level: 1 })).toBeVisible();
   await expect(page.getByRole('row', { name: /P-E2E15/ })).toHaveCount(0);
 });
 
-test('E2E-16 : « Enregistrer comme modèle » (administrateur seul)', async ({
+test('E2E-16-r1 : « Enregistrer comme modèle » (administrateur seul)', async ({
   page,
   request,
   browser,
@@ -145,7 +145,7 @@ test('E2E-16 : « Enregistrer comme modèle » (administrateur seul)', async ({
   await expect(
     page.getByRole('heading', { name: 'Copie de Projet E2E16', level: 1 }),
   ).toBeVisible();
-  await page.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(page);
   await expect(page.getByRole('row', { name: /M-E2E16.*Copie de Projet E2E16/ })).toBeVisible();
   await page.getByRole('link', { name: 'Projets' }).click();
   await expect(page.getByRole('heading', { name: 'Projets', level: 1 })).toBeVisible();
@@ -405,7 +405,7 @@ test('E2E-22 : l’administrateur supprime un projet depuis sa fiche ; Annuler n
   expect((await request.get(`/api/projets/${projet.id}`)).status()).toBe(404);
 });
 
-test('E2E-23-r1 : lecture seule — un chef affecté au projet d’un autre chef sans bouton d’écriture, un chef sur un modèle', async ({
+test('E2E-23-r2 : lecture seule — un chef affecté au projet d’un autre chef sans bouton d’écriture, un chef sur un modèle', async ({
   page,
   request,
   browser,
@@ -439,7 +439,7 @@ test('E2E-23-r1 : lecture seule — un chef affecté au projet d’un autre chef
   const contexte = await browser.newContext();
   const pageChef = await contexte.newPage();
   await connecterAvec(pageChef, 'chef-e2e23@example.test');
-  await pageChef.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(pageChef);
   await expect(
     pageChef.getByRole('button', { name: 'Créer un projet depuis Modèle E2E23', exact: true }),
   ).toBeVisible();
@@ -452,7 +452,7 @@ test('E2E-23-r1 : lecture seule — un chef affecté au projet d’un autre chef
   await contexte.close();
 });
 
-test('E2E-24-r1 : code déjà utilisé dans la copie et dans « Nouveau modèle »', async ({
+test('E2E-24-r2 : code déjà utilisé dans la copie et dans « Nouveau modèle »', async ({
   page,
   request,
 }) => {
@@ -473,7 +473,7 @@ test('E2E-24-r1 : code déjà utilisé dans la copie et dans « Nouveau modèle 
   expect(projets.filter((p) => p.nom === 'Copie de Projet E2E24')).toHaveLength(0);
   await fermerEnAbandonnant(page, dialog);
 
-  await page.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(page);
   await page.getByRole('button', { name: 'Nouveau modèle' }).click();
   dialog = page.getByRole('dialog');
   await dialog.getByLabel('Code').fill('M-E2E24');

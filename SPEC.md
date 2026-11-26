@@ -154,6 +154,15 @@ Règles de structure :
 - Menu du rôle ressource : « Mes tâches » et « Imputations ». Un chef de projet non ressource n'a plus d'écran de lecture des calendriers (accepté).
 - Le moteur, l'API et la base ne changent pas.
 
+### Écrans Projets et Imputations : onglets Modèles et Validation (onglets, D-247)
+
+Droits inchangés (option A du porteur) : aucun changement d'API.
+
+1. **Projets.** L'écran `/projets` a deux onglets (Radix Tabs, comme l'écran Utilisateurs) : « Projets » (par défaut) et « Modèles », pour tous les rôles qui voient Projets (administrateur, chef de projet). Adresse `?onglet=modeles` ; sans paramètre ou valeur invalide : Projets ; changer d'onglet met à jour l'adresse comme D-165. L'onglet Modèles reprend tel quel l'ancien écran Modèles (textes, tableau, dialogues, droits : seul l'administrateur crée et modifie ; le chef lit). Activer un onglet relit ses données.
+2. **Imputations.** L'entrée « Imputations » est visible pour tout utilisateur `est_ressource`, l'administrateur et le chef de projet. Onglets « Feuille de temps » (si `est_ressource` ou administrateur, comme aujourd'hui) et « Validation » (administrateur, chef de projet). La liste d'onglets n'est affichée que s'il y a au moins deux onglets disponibles ; sinon, le contenu du seul onglet s'affiche directement. Onglet par défaut : Feuille de temps s'il est disponible, sinon Validation. Adresse `/imputations?onglet=validation&semaine=AAAA-MM-JJ` ; onglet inconnu ou indisponible pour l'utilisateur : onglet par défaut. Le paramètre `semaine` est commun (même règle de correction) et conservé au changement d'onglet. L'onglet Validation reprend tel quel l'ancien écran Validation (textes, tableau, dialogues, export, refus).
+3. **Suppression des entrées de menu** « Modèles » et « Validation » pour tous les rôles. Redirections sans entrée d'historique : `/modeles` → `/projets?onglet=modeles` (administrateur, chef) ; `/validation[?semaine=…]` → `/imputations?onglet=validation[&semaine=…]` (administrateur, chef) ; rôle ressource : « / » (donc /mes-taches), comme aujourd'hui. Tout lien interne vers `/modeles` ou `/validation` pointe vers la nouvelle adresse. L'entrée « Projets » est marquée active sur `/projets?onglet=modeles`.
+4. **Marques incrémentales.** §11 (« l'écran Modèles » → « l'onglet Modèles de l'écran Projets, D-247 ») et §7 « Écran Validation » point 1 (« modifié par D-247 : onglet Validation de l'écran Imputations »).
+
 ### Charge vendue et date client (lot 6c, D-149)
 
 - Migration 014 : `activite.charge_vendue numeric(10,2)` nullable, CHECK ≥ 0 ; `jalon.date_client date` nullable. Champs historisés comme les autres champs de saisie ; une valeur inchangée n'est pas historisée. Le moteur est inchangé ; aucune route nouvelle.
@@ -726,7 +735,7 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 
 ### Écran Validation (lot 4c, D-135)
 
-1. Accès : entrée « Validation » de la Navigation principale pour l'administrateur et le chef de projet ; adresse `/validation?semaine=AAAA-MM-JJ` (un lundi) ; absente ou invalide : lundi de la semaine courante du navigateur, adresse corrigée sans rechargement (même code que 4b, partagé). Aucune route d'API nouvelle.
+1. (modifié par D-247 : onglet Validation de l'écran Imputations, entrée de menu supprimée) Accès : entrée « Validation » de la Navigation principale pour l'administrateur et le chef de projet ; adresse `/validation?semaine=AAAA-MM-JJ` (un lundi) ; absente ou invalide : lundi de la semaine courante du navigateur, adresse corrigée sans rechargement (même code que 4b, partagé). Aucune route d'API nouvelle.
 2. En-tête : titre « Validation des feuilles de temps » ; « Semaine du JJ/MM/AAAA au JJ/MM/AAAA » ; boutons « Semaine précédente », « Cette semaine », « Semaine suivante » (composant partagé avec 4b).
 3. Tableau (GET /api/validations, ordre de l'API) : colonnes Ressource, Statut (mêmes badges que 4b), Projets, Actions. Projets : un badge par projet « <code> · Validé » (succès), « <code> · À valider » (si `peut_valider` et non validé), « <code> · Non autorisé » (neutre, si non `peut_valider` et non validé) ; `projets` vide : « Aucune imputation ». Liste vide : « Aucune feuille de temps pour cette semaine. ». Quatre états : Chargement, Vide, Notification erreur, nominal.
 4. « Voir » (nom accessible « Voir la feuille de <ressource> ») : dialogue « Feuille de <ressource>, semaine du JJ/MM/AAAA au JJ/MM/AAAA », GET /api/feuilles?semaine=…&ressource_id=…, tableau de 4b en lecture seule (lignes visibles seulement, total, « Dépassement »), commentaire de rejet affiché si rejetée ; focus rendu au bouton à la fermeture.
@@ -790,7 +799,18 @@ PROJ-2 à PROJ-14 : Alice affectée à 50 % au projet P, sauf mention. PROJ-12 e
 
 1. **Périmètre** : un cycle, deux volets : A, export du plan de charge ; B, export des imputations. Lecture seule, aucune écriture en base. Pas d'import. La charge vendue n'est jamais exportée.
 2. **Format commun** (serveur, fonctions pures du module `export/csv.ts`) : UTF-8 avec BOM, séparateur « ; », fin de ligne CRLF, une ligne d'en-tête. Champ entre guillemets s'il contient « ; », un guillemet, CR ou LF, guillemets doublés. Nombres à 2 décimales au plus, virgule décimale, sans séparateur de milliers, zéros non significatifs retirés (12,5 ; 3 ; -1, signe moins ASCII). Dates JJ/MM/AAAA, mois MM/AAAA. Un champ texte (jamais un nombre) qui commence par =, +, -, @, tabulation ou CR est préfixé d'une apostrophe. En-têtes HTTP : `Content-Type: text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="<nom>"`.
-3. **Volet A** : `GET /api/plan-de-charge/export?debut=AAAA-MM[&equipe=<id>|aucune]`. Paramètres, droits, refus et ordre des refus de `GET /api/plan-de-charge` (§7, Plan de charge, D-154) ; le chef de projet voit « Autres projets ». Fichier `plan-de-charge-AAAA-MM.csv`. Colonnes : Ressource;Équipe;Projet;Mois;Disponible;Réel;Planifié;Charge;Écart. Par ressource, dans l'ordre de l'API : 12 lignes de total (Projet = « Total »), puis 12 lignes par projet (Projet = « <code> · <nom> » ou « Autres projets », Disponible et Écart vides). Équipe : nom, vide sans équipe. Ressource inactive : suffixe « (inactif) ». Aucune ressource : en-tête seul.
+3. **Volet A** : `GET /api/plan-de-charge/export?debut=AAAA-MM[&equipe=<id>|aucune]`. Paramètres, droits, refus et ordre des refus de `GET /api/plan-de-charge` (§7, Plan de charge, D-154) ; le chef de projet voit « Autres projets ». Fichier `plan-de-charge-AAAA-MM.csv`. Contenu (D-241, révise D-160) : colonnes Ressource;Équipe;Ligne puis les 12 mois de la réponse de l'API, en-têtes au format MM/AAAA (mêmes mois que l'écran). Par ressource, dans l'ordre de l'API : une ligne « Charge » (charge du mois), une ligne « Disponible », une ligne « Écart » (négatif possible), puis une ligne par projet dans l'ordre de l'API, Ligne = « <code> · <nom> » ou « Autres projets », valeurs = charge du projet dans le mois. Ressource et Équipe sont répétées sur chaque ligne. Équipe : nom, vide sans équipe. Ressource inactive : suffixe « (inactif) ». Valeur nulle : « 0 ». Aucune ressource : en-tête seul. Réel et Planifié ne sont plus exportés ; ils restent dans l'API et à l'écran (infobulle) inchangés.
+
+   Exemple (`debut=2027-01`, administrateur, calendrier par défaut, capacité 1 ; Alice, équipe « Dev », projets P1 « Projet un » : planifié 1,5 le 05/01/2027 et imputé 0,5 le 12/01/2027 ; P2 « Projet deux » : planifié 19,5 le 06/01/2027) ; lignes séparées par CRLF, BOM en tête :
+
+   ```
+   Ressource;Équipe;Ligne;01/2027;02/2027;03/2027;04/2027;05/2027;06/2027;07/2027;08/2027;09/2027;10/2027;11/2027;12/2027
+   Alice;Dev;Charge;21,5;0;0;0;0;0;0;0;0;0;0;0
+   Alice;Dev;Disponible;21;20;23;22;21;22;22;22;22;21;22;23
+   Alice;Dev;Écart;-0,5;20;23;22;21;22;22;22;22;21;22;23
+   Alice;Dev;P1 · Projet un;2;0;0;0;0;0;0;0;0;0;0;0
+   Alice;Dev;P2 · Projet deux;19,5;0;0;0;0;0;0;0;0;0;0;0
+   ```
 4. **Volet B** : `GET /api/imputations/export?du=AAAA-MM-JJ&au=AAAA-MM-JJ[&equipe=<id>|aucune]`. Administrateur : toutes les imputations ; chef de projet : celles des projets sur lesquels il écrit (D-118 (5)) ; rôle ressource : 403 `{ erreur: 'Interdit' }` après le 401. 400 : `du` ou `au` absent ou mal formé, année hors 2000 à 2099, `au` antérieur à `du`, période de plus de 366 jours, `equipe` mal formé. Équipe inconnue : en-tête seul. Fichier `imputations-AAAA-MM-JJ-AAAA-MM-JJ.csv`. Colonnes : Ressource;Équipe;Semaine;Statut;Projet;Activité;Jour;Charge. Semaine = lundi (JJ/MM/AAAA) ; Statut = Brouillon, Soumise, Validée ou Rejetée ; Projet = « <code> · <nom> » ; Activité = « <wbs> <nom> ». Toutes les imputations de la période, quel que soit le statut de la feuille. Tri : nom de la ressource (casse ignorée), id, jour, code du projet (casse ignorée), ordre WBS (calcul de Mes tâches, D-158 (2)).
 5. **Écran Plan de charge** : bouton « Exporter CSV » dans la barre des filtres ; télécharge l'export avec les filtres courants (lien de téléchargement, aucun état modifié).
 6. **Écran Validation** : bouton « Exporter CSV » qui ouvre le dialogue « Exporter les imputations » : champs Du et Au (type date) préremplis avec le lundi et le dimanche de la semaine affichée, liste « Équipe » comme dans le plan de charge, bouton « Exporter ». Au antérieur à Du, ou période de plus de 366 jours : « Période invalide. », `aria-invalid`, bouton désactivé. Le téléchargement ferme le dialogue ; le focus revient au bouton d'ouverture.
@@ -861,7 +881,7 @@ Chaque question a une valeur par défaut, appliquée tant qu'elle n'est pas tran
 - Un modèle est un projet dont `est_modele` est vrai.
 - Un modèle n'est jamais planifié par le moteur, n'accepte aucune
   imputation et n'apparaît pas dans les listes de projets, sauf dans
-  l'écran « Modèles ».
+  l'écran « Modèles » (modifié par D-247 : l'onglet Modèles de l'écran Projets).
 - Droits : l'administrateur crée, modifie et supprime les modèles. Le chef
   de projet les lit et crée des projets à partir d'eux.
 - Un modèle n'a pour parent et pour enfants que des modèles ; un projet
@@ -876,7 +896,7 @@ Chaque question a une valeur par défaut, appliquée tant qu'elle n'est pas tran
 ### 11.2 Copie
 
 - Action « Copier » sur un projet ou un modèle, depuis la liste des projets
-  et l'écran « Modèles » (depuis le Gantt : lot 3).
+  et l'écran « Modèles » (modifié par D-247 : l'onglet Modèles de l'écran Projets) (depuis le Gantt : lot 3).
 - Depuis le Gantt du projet : bouton « Copier » (3f-2).
 - Dialogue : nom, code, date de début, options « inclure les sous-projets »
   (défaut oui), « copier les affectations et assignations » (défaut oui).
@@ -1008,6 +1028,37 @@ WBS;Activité;OTP;Charge assignée;Charge réelle;Reste;Coût planifié;Coût im
 1.2;F2;OTP-A;2;0;2;0;0;0;oui
 Total;;;7;0;7;3000;0;3000;oui
 ```
+
+### 12.5 Pilotage (pilotage, D-243)
+
+1. **Écran « Pilotage »** (tranche 2) : l'entrée « Pilotage » remplace « Plan de charge » dans le menu, même place, mêmes rôles (administrateur, chef de projet ; rôle ressource redirigé vers /mes-taches). Onglets « Plan de charge » et « Coûts », au modèle des onglets de la fiche projet. Adresse `/pilotage?onglet=charge|couts&debut=AAAA-MM&equipe=…` (onglet inconnu ou absent = charge). `/plan-de-charge` redirige vers `/pilotage?onglet=charge` en conservant `debut` et `equipe`. Onglet « Plan de charge » : contenu de §7 « Plan de charge » et « Exports CSV » point 5, inchangé. Filtres communs aux deux onglets, conservés au changement d'onglet.
+2. **Calcul mensuel** (tranche 1). Pour une ressource, un projet et un mois : réel = Σ imputations du mois × taux en vigueur au jour de l'imputation (tout statut de feuille) ; planifié = Σ travail planifié du mois (dernier calcul) × taux en vigueur au jour planifié ; coût = réel + planifié. Taux (§12.1 point 4), conversions D-044 (5), montants exacts au centime, sans arrondi intermédiaire. `taux_manquant` : vrai si une charge comptée tombe un jour hors de toute période d'une ressource qui a au moins une période ; ressource sans aucune période : 0, sans marque (§12.3 point 6). Agrégats : ligne de projet = somme de ses ressources ; total = somme des 12 mois ; `taux_manquant` d'un agrégat = OU de ses parties. Écart à connaître : sur une période, ce coût peut différer du « Coût réel » du Gantt, qui valorise le reste à faire au taux du jour (§12.3).
+3. **Route** (tranche 1) : `GET /api/couts?debut=AAAA-MM[&equipe=<id>|aucune]`. Paramètres, 401, 403 `{ erreur: 'Interdit' }` pour le rôle ressource, 400 et leur ordre : ceux de `GET /api/plan-de-charge` (§7). N'écrit rien. Réponse : `{ mois: ['AAAA-MM' ×12], projets: [{ projet_id, code, nom, otp_effectif, clos, mois: [{ mois, reel, planifie, cout, taux_manquant }], total: { reel, planifie, cout, taux_manquant }, ressources: [{ ressource_id, nom, actif, mois: [...], total: {...} }] }], total: { mois: [...], total: {...} } }`. Montants : nombres à 2 décimales au plus.
+4. **Périmètre** : projets ordinaires (jamais de modèle), clos compris, ayant une charge (imputation ou travail planifié) dans la période, même à coût nul. Sous-projets : une ligne chacun, sans cumul dans le parent. Ressources d'un projet : celles qui ont une charge sur ce projet dans la période, actives ou non. Filtre équipe : seules les charges des ressources de l'équipe (appartenance actuelle) ; « aucune » : sans équipe ; équipe inconnue : `projets` vide. Tri : projets par code (casse ignorée) puis id ; ressources par nom (casse ignorée) puis id. Droits : l'administrateur voit tout ; le chef de projet ne voit que les projets sur lesquels il écrit (`peut_ecrire`), sans ligne regroupée ; `total` porte sur les projets renvoyés.
+5. **Export** (tranche 1) : `GET /api/couts/export`, mêmes paramètres, droits, refus et ordre. Fichier `couts-AAAA-MM.csv`, format commun (§7 « Exports CSV » point 2). Colonnes : Projet;OTP;Ressource;MM/AAAA ×12;Total;Taux manquant. Par projet, dans l'ordre de l'API : une ligne Ressource = « Total », puis une ligne par ressource (suffixe « (inactif) » si inactive). Dernière ligne : Projet = « Total », OTP et Ressource vides. Projet = « <code> · <nom> » ; OTP = valeur effective, vide sinon ; valeurs = coût, sans symbole ; Taux manquant = oui ou non. Aucun projet : en-tête puis ligne « Total » à 0.
+
+   Exemple (`debut=2027-01`, données du point 6) ; lignes séparées par CRLF, BOM en tête :
+
+   ```
+   Projet;OTP;Ressource;01/2027;02/2027;03/2027;04/2027;05/2027;06/2027;07/2027;08/2027;09/2027;10/2027;11/2027;12/2027;Total;Taux manquant
+   P1 · Projet un;OTP-A;Total;750;1050;500;0;0;0;0;0;0;0;0;0;2300;oui
+   P1 · Projet un;OTP-A;Alice;750;1050;0;0;0;0;0;0;0;0;0;0;1800;non
+   P1 · Projet un;OTP-A;Bob;0;0;0;0;0;0;0;0;0;0;0;0;0;non
+   P1 · Projet un;OTP-A;Carol;0;0;500;0;0;0;0;0;0;0;0;0;500;oui
+   P1.1 · Sous-projet un;OTP-A;Total;600;0;0;0;0;0;0;0;0;0;0;0;600;non
+   P1.1 · Sous-projet un;OTP-A;Alice;600;0;0;0;0;0;0;0;0;0;0;0;600;non
+   Total;;;1350;1050;500;0;0;0;0;0;0;0;0;0;2900;oui
+   ```
+   Aucun projet : en-tête, puis `Total;;;0;0;0;0;0;0;0;0;0;0;0;0;0;non`.
+6. **Cas** (tranche 1, `debut=2027-01`, administrateur). Données de §12.3 : Alice 600 € du 01/01/2027 au 31/01/2027, puis 700 € à partir du 01/02/2027 ; Bob sans taux ; Carol 500 € du 01/03/2027 au 31/03/2027. Projet P1 (OTP « OTP-A ») :
+   - PIL-A : Alice, imputé 1 j le 29/01/2027 et 1 j le 01/02/2027, planifié 0,5 j le 15/02/2027 → janvier : réel 600, planifié 0, coût 600 ; février : réel 700, planifié 350, coût 1050 ; total 1650 ; taux manquant non.
+   - PIL-B : Alice, planifié 0,25 j le 05/01/2027 → janvier : coût 150.
+   - PIL-C : Bob, imputé 1 j le 11/01/2027, planifié 2 j le 10/03/2027 → coûts 0 partout, taux manquant non, ligne présente.
+   - PIL-D : Carol, planifié 1 j le 15/03/2027 et 1 j le 02/04/2027 → mars : 500 ; avril : 0 et taux manquant oui ; projet : avril et total en taux manquant oui.
+   - PIL-E : sous-projet P1.1 (OTP hérité « OTP-A ») avec Alice planifiée 1 j le 04/01/2027 → ligne propre à 600 en janvier, rien ajouté à P1.
+7. **Gantt d'un projet** (tranche 2) : le bouton « Exporter les coûts » quitte la barre d'outils et se place au bout de la région « Totaux du projet », mêmes conditions (`peut_ecrire`) ; §12.4 point 3 inchangé par ailleurs.
+8. **Onglet « Coûts »** (tranche 2) : filtres de l'onglet Plan de charge ; tableau « Coûts », colonne « Projet » sticky (« <code> · <nom> », OTP effectif en texte secondaire), bouton « Déplier <code> » / « Replier <code> » (tout replié), lignes de ressource indentées ; 12 colonnes « MM/AAAA » puis « Total » ; ligne finale « Total » ; cellule au format « 1 234,50 € », `title` « Réel X €, planifié Y € », marque « incomplet » (`title` « Taux manquant ») si `taux_manquant`. Bouton « Exporter CSV » (export du point 5, filtres courants). Vide : « Aucun coût sur la période. » ; échec : « Impossible de charger les coûts. ». Zone `role="region"`, `aria-label` « Coûts », focalisable, défilement horizontal ; la page ne défile pas en horizontal à 1440 ni à 1024 px. Parcours complet e2e étendu.
+9. **Découpage** : tranche 1 = points 2 à 6 ; tranche 2 = points 1, 7 et 8 ; une clôture et une suite complète par tranche.
 
 ## 13. Version de l'application (D-231)
 

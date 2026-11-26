@@ -731,7 +731,7 @@ test('E2E-190 : refus dans le dialogue « Déplacer » : texte affiché, dialogu
   await expect.poll(() => ordre(page)).toEqual(ORDRE_INITIAL);
 });
 
-test('E2E-191-r7 : poignées hors tabulation, ordre de tabulation de la fiche inchangé', async ({
+test('E2E-191-r8 : poignées hors tabulation, ordre de tabulation de la fiche inchangé', async ({
   page,
   request,
 }) => {
@@ -763,6 +763,9 @@ test('E2E-191-r7 : poignées hors tabulation, ordre de tabulation de la fiche in
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Copier', exact: true })).toBeFocused();
   expect(await surPoignee()).toBe(false);
+  // Révision -r8 (D-031, D-245 (6)) : « Exporter les coûts » est dans « Totaux du projet », avant le tableau.
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Exporter les coûts', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(region).toBeFocused();
   // Révision -r5 (D-216 (3)) : poignées de largeur, dans l'ordre des en-têtes, avant le contenu des lignes.

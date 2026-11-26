@@ -39,6 +39,7 @@ import {
   intercepter,
   ligneValidation,
   monde4c,
+  ouvrirValidationParMenu,
   ouvrirValidation,
   soumettreAlice,
   statutOk,
@@ -57,34 +58,37 @@ test.afterEach(remettreAdminSeul4b);
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Navigation principale' });
 const lienValidation = (page: Page) =>
   nav(page).getByRole('link', { name: 'Validation', exact: true });
+const lienImputations = (page: Page) =>
+  nav(page).getByRole('link', { name: 'Imputations', exact: true });
 const VOIR = 'Voir la feuille de Alice 4B';
 const VALIDER = 'Valider la feuille de Alice 4B';
 const REJETER = 'Rejeter la feuille de Alice 4B';
 
-test('E2E-299 : entrée « Validation » pour l’administrateur et le chef, pas pour une ressource', async ({
+test('E2E-299-r1 : entrée « Validation » pour l’administrateur et le chef (onglet d’Imputations), pas pour une ressource', async ({
   page,
   request,
 }) => {
+  // Révision D-031 (D-247) : plus d'entrée de menu « Validation » ; onglet de l'écran Imputations.
   await monde4c(request);
   await loginAsAdmin(page);
-  await expect(lienValidation(page)).toBeVisible();
-  await lienValidation(page).click();
-  await expect(
-    page.getByRole('heading', { name: 'Validation des feuilles de temps', level: 1 }),
-  ).toBeVisible();
+  await expect(lienValidation(page)).toHaveCount(0);
+  await ouvrirValidationParMenu(page);
   await expect(page).toHaveURL(adresseValidation(S));
-  await expect(lienValidation(page)).toHaveAttribute('aria-current', 'page');
+  await expect(lienImputations(page)).toHaveAttribute('aria-current', 'page');
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page).toHaveURL('/connexion');
 
   await connecterAvec(page, EMAIL_CHEF_P);
-  await expect(lienValidation(page)).toBeVisible();
+  await expect(lienValidation(page)).toHaveCount(0);
+  await ouvrirValidationParMenu(page);
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page).toHaveURL('/connexion');
 
   await connecterAvec(page, EMAIL_ALICE);
-  await expect(nav(page).getByRole('link', { name: 'Imputations', exact: true })).toBeVisible();
+  await expect(lienImputations(page)).toBeVisible();
   await expect(lienValidation(page)).toHaveCount(0);
+  await lienImputations(page).click();
+  await expect(page.getByRole('tab', { name: 'Validation', exact: true })).toHaveCount(0);
 });
 
 test('E2E-300 : adresse absente ou invalide → lundi courant, adresse corrigée sans rechargement ; lundi valide gardé', async ({
@@ -613,12 +617,12 @@ async function parcoursJusquaSoumission(page: Page): Promise<void> {
   await expect(page).toHaveURL('/connexion');
 }
 
-test('E2E-317-r1 : parcours complet à l’écran : saisie, soumission, validation par le chef, lecture seule chez la ressource', async ({
+test('E2E-317-r2 : parcours complet à l’écran : saisie, soumission, validation par le chef, lecture seule chez la ressource', async ({
   page,
 }) => {
   await parcoursJusquaSoumission(page);
   await connecterAvec(page, EMAIL_CHEF);
-  await lienValidation(page).click();
+  await ouvrirValidationParMenu(page);
   await expect(page).toHaveURL(adresseValidation(S));
   const ligne = ligneValidation(page, RESSOURCE);
   await expect(ligne.getByText('Soumise', { exact: true })).toBeVisible();
@@ -641,12 +645,12 @@ test('E2E-317-r1 : parcours complet à l’écran : saisie, soumission, validati
   await expect(bouton(page, 'Soumettre')).toHaveCount(0);
 });
 
-test('E2E-318-r1 : parcours complet à l’écran avec rejet : commentaire visible, saisie de nouveau possible', async ({
+test('E2E-318-r2 : parcours complet à l’écran avec rejet : commentaire visible, saisie de nouveau possible', async ({
   page,
 }) => {
   await parcoursJusquaSoumission(page);
   await connecterAvec(page, EMAIL_CHEF);
-  await lienValidation(page).click();
+  await ouvrirValidationParMenu(page);
   const ligne = ligneValidation(page, RESSOURCE);
   await boutonDe(ligne, `Rejeter la feuille de ${RESSOURCE}`).click();
   await page.getByRole('dialog').getByLabel('Commentaire').fill('Imputation du lundi à revoir');

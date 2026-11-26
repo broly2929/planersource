@@ -13,6 +13,7 @@ import { Chargement, Vide } from '../components/Etat';
 import { Field } from '../components/Field';
 import { Layout } from '../components/Layout';
 import { Notification } from '../components/Notification';
+import { Onglets } from '../components/Onglets';
 import { Select } from '../components/Select';
 import { Table, type Colonne } from '../components/Table';
 import { dateLocale } from '../gantt/echelle';
@@ -221,7 +222,8 @@ type LigneEcran =
   | LigneArbre<Projet, ElementProjet>
   | { type: 'message'; cle: string; texte: string; profondeur: number };
 
-export function Projets() {
+/** Contenu de l'onglet « Projets » (D-247, voir EcranProjets). */
+export function ListeProjets() {
   const { etat: auth } = useAuth();
   const peutCreer =
     auth.statut === 'connecte' &&
@@ -393,59 +395,61 @@ export function Projets() {
         </>
       }
     >
-      {etat.statut === 'chargement' && <Chargement libelle="Chargement des projets…" />}
-      {etat.statut === 'erreur' && <Notification type="erreur">{etat.message}</Notification>}
-      {etat.statut === 'ok' && etat.donnees.length === 0 && (
-        <Vide>Aucun projet pour le moment.</Vide>
-      )}
-      {etat.statut === 'ok' && etat.donnees.length > 0 && (
-        <Table
-          legende="Liste des projets"
-          colonnes={colonnes}
-          lignes={lignes}
-          cle={(l) =>
-            l.type === 'projet'
-              ? `p${l.projet.id}`
-              : l.type === 'element'
-                ? `e${l.element.id}`
-                : l.cle
-          }
-        />
-      )}
-      {aModifier && (
-        <DialogueModifProjet
-          projetId={aModifier.id}
-          onFermer={() => setAModifier(null)}
-          onSucces={() => {
-            setAModifier(null);
-            charger();
-          }}
-        />
-      )}
-      {aCopier && (
-        <DialogueCopie
-          source={aCopier}
-          depuisModele={false}
-          admin={admin}
-          onFermer={() => setACopier(null)}
-        />
-      )}
-      <Dialog
-        ouvert={dialogue}
-        onOuvertChange={setDialogue}
-        titre="Nouveau projet"
-        description="Renseignez le code, le nom, le chef de projet (vous par défaut) et la date « pas avant le »."
-      >
-        <FormulaireProjet
-          annuaire={annuaire}
-          projets={projets}
-          onAnnuler={() => setDialogue(false)}
-          onCree={() => {
-            setDialogue(false);
-            charger();
-          }}
-        />
-      </Dialog>
+      <Onglets>
+        {etat.statut === 'chargement' && <Chargement libelle="Chargement des projets…" />}
+        {etat.statut === 'erreur' && <Notification type="erreur">{etat.message}</Notification>}
+        {etat.statut === 'ok' && etat.donnees.length === 0 && (
+          <Vide>Aucun projet pour le moment.</Vide>
+        )}
+        {etat.statut === 'ok' && etat.donnees.length > 0 && (
+          <Table
+            legende="Liste des projets"
+            colonnes={colonnes}
+            lignes={lignes}
+            cle={(l) =>
+              l.type === 'projet'
+                ? `p${l.projet.id}`
+                : l.type === 'element'
+                  ? `e${l.element.id}`
+                  : l.cle
+            }
+          />
+        )}
+        {aModifier && (
+          <DialogueModifProjet
+            projetId={aModifier.id}
+            onFermer={() => setAModifier(null)}
+            onSucces={() => {
+              setAModifier(null);
+              charger();
+            }}
+          />
+        )}
+        {aCopier && (
+          <DialogueCopie
+            source={aCopier}
+            depuisModele={false}
+            admin={admin}
+            onFermer={() => setACopier(null)}
+          />
+        )}
+        <Dialog
+          ouvert={dialogue}
+          onOuvertChange={setDialogue}
+          titre="Nouveau projet"
+          description="Renseignez le code, le nom, le chef de projet (vous par défaut) et la date « pas avant le »."
+        >
+          <FormulaireProjet
+            annuaire={annuaire}
+            projets={projets}
+            onAnnuler={() => setDialogue(false)}
+            onCree={() => {
+              setDialogue(false);
+              charger();
+            }}
+          />
+        </Dialog>
+      </Onglets>
     </Layout>
   );
 }
@@ -555,7 +559,7 @@ export function ProjetDetail({ id }: { id: string }) {
             <Confirmation
               nom={projet.nom}
               action={() => api(`/api/projets/${projet.id}`, { method: 'DELETE' })}
-              onSucces={() => navigate(projet.est_modele ? '/modeles' : '/projets')}
+              onSucces={() => navigate(projet.est_modele ? '/projets?onglet=modeles' : '/projets')}
               onAnnuler={() => setSuppression(false)}
             />
           )}

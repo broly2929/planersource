@@ -16,7 +16,7 @@ import { analyserChargeVendue } from '../src/gantt/vendu.js';
  * Lot 6d (D-154), contrat proposé (à relire) : packages/web/src/plan-de-charge/logique.ts
  *   parametresPlan(search: URLSearchParams, moisCourant: string)
  *     → { debut: 'AAAA-MM', equipe: 'toutes' | 'aucune' | number, corrige: boolean }
- *   adressePlan(debut, equipe) → '/plan-de-charge?debut=AAAA-MM[&equipe=…]'
+ *   adressePlan(debut, equipe) → '/pilotage?onglet=charge&debut=AAAA-MM[&equipe=…]' (révision GEO-43-r1, D-245)
  *   decalerMois(debut, n) → 'AAAA-MM' ; moisDe('AAAA-MM-JJ') → 'AAAA-MM' ; enteteMois('AAAA-MM') → 'MM/AAAA'
  *   boutonsMois(debut) → { precedent: boolean, suivant: boolean } (D-155 (3) : bornes 2000-01 et 2099-12)
  *   libelleProjet({ code, nom }) → '<code> · <nom>' ou 'Autres projets' (code et nom null)
@@ -61,10 +61,12 @@ describe('Paramètres de l’adresse (D-154 (8))', () => {
     }
   });
 
-  it('GEO-43 : adresse des filtres', () => {
-    expect(adressePlan('2027-01', 'toutes')).toBe('/plan-de-charge?debut=2027-01');
-    expect(adressePlan('2027-01', 'aucune')).toBe('/plan-de-charge?debut=2027-01&equipe=aucune');
-    expect(adressePlan('2027-01', 7)).toBe('/plan-de-charge?debut=2027-01&equipe=7');
+  it('GEO-43-r1 : adresse des filtres', () => {
+    expect(adressePlan('2027-01', 'toutes')).toBe('/pilotage?onglet=charge&debut=2027-01');
+    expect(adressePlan('2027-01', 'aucune')).toBe(
+      '/pilotage?onglet=charge&debut=2027-01&equipe=aucune',
+    );
+    expect(adressePlan('2027-01', 7)).toBe('/pilotage?onglet=charge&debut=2027-01&equipe=7');
   });
 
   it('GEO-44 : décalage de mois et mois d’une date', () => {

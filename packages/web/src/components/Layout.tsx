@@ -1,8 +1,6 @@
 import {
-  ClipboardCheck,
   ClipboardList,
   FolderKanban,
-  LayoutTemplate,
   LogOut,
   Users,
   Home,
@@ -92,23 +90,15 @@ export function Layout({
             </NavLink>
           )}
           {(user?.role === 'administrateur' || user?.role === 'chef_de_projet') && (
-            <NavLink to="/plan-de-charge" icone={ChartNoAxesGantt}>
-              Plan de charge
+            <NavLink to="/pilotage" icone={ChartNoAxesGantt}>
+              Pilotage
             </NavLink>
           )}
-          {(user?.est_ressource || user?.role === 'administrateur') && (
+          {(user?.est_ressource ||
+            user?.role === 'administrateur' ||
+            user?.role === 'chef_de_projet') && (
             <NavLink to="/imputations" icone={ClipboardList}>
               Imputations
-            </NavLink>
-          )}
-          {(user?.role === 'administrateur' || user?.role === 'chef_de_projet') && (
-            <NavLink to="/validation" icone={ClipboardCheck}>
-              Validation
-            </NavLink>
-          )}
-          {(user?.role === 'administrateur' || user?.role === 'chef_de_projet') && (
-            <NavLink to="/modeles" icone={LayoutTemplate}>
-              Modèles
             </NavLink>
           )}
           {user?.role === 'administrateur' && (

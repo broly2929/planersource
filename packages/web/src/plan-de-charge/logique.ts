@@ -33,8 +33,15 @@ export function parametresPlan(
   return { debut, equipe, corrige };
 }
 
-export function adressePlan(debut: string, equipe: FiltreEquipe): string {
-  const base = `/plan-de-charge?debut=${debut}`;
+export type OngletPilotage = 'charge' | 'couts';
+
+/** Adresse canonique de l'écran Pilotage (D-245) : onglet, mois de départ, équipe si filtrée. */
+export function adressePlan(
+  debut: string,
+  equipe: FiltreEquipe,
+  onglet: OngletPilotage = 'charge',
+): string {
+  const base = `/pilotage?onglet=${onglet}&debut=${debut}`;
   return equipe === 'toutes' ? base : `${base}&equipe=${equipe}`;
 }
 

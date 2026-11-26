@@ -162,7 +162,7 @@ test('E2E-351 : écran Mes tâches, échec de chargement (500) : « Impossible d
   await expect(tableauMesTaches(page)).toHaveCount(0);
 });
 
-test('E2E-352 : chef de projet ressource : « Mes tâches » en tête, Accueil, Projets, Validation et Modèles gardés, sa tâche affichée ; administrateur non ressource : pas d’entrée « Mes tâches »', async ({
+test('E2E-352-r1 : chef de projet ressource : « Mes tâches » en tête, Accueil, Projets et Imputations gardés, ni Validation ni Modèles, sa tâche affichée ; administrateur non ressource : pas d’entrée « Mes tâches »', async ({
   page,
   request,
 }) => {
@@ -180,8 +180,12 @@ test('E2E-352 : chef de projet ressource : « Mes tâches » en tête, Accueil, 
   await connecterAvec(page, 'chef-r-6b@lot6b.test');
   await expect(page).toHaveURL('/');
   await expect(nav(page).getByRole('link').first()).toHaveText('Mes tâches');
-  for (const lien of ['Accueil', 'Projets', 'Validation', 'Modèles']) {
+  // Révision D-031 (D-247) : « Validation » et « Modèles » sont des onglets, « Imputations » reste au menu.
+  for (const lien of ['Accueil', 'Projets', 'Imputations']) {
     await expect(nav(page).getByRole('link', { name: lien, exact: true }), lien).toBeVisible();
+  }
+  for (const lien of ['Validation', 'Modèles']) {
+    await expect(nav(page).getByRole('link', { name: lien, exact: true }), lien).toHaveCount(0);
   }
   await nav(page).getByRole('link', { name: 'Mes tâches', exact: true }).click();
   await expect(page).toHaveURL('/mes-taches');

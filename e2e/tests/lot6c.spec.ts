@@ -66,7 +66,7 @@ async function monde(request: APIRequestContext, suffixe: string, vendue: number
   return { ...m, tache };
 }
 
-test('E2E-358-r4 : parcours complet à l’écran (administrateur seul) : charge vendue et date client saisies à l’écran, vérifiées dans le Gantt (colonnes, Totaux, marqueur client)', async ({
+test('E2E-358-r5 : parcours complet à l’écran (administrateur seul) : charge vendue et date client saisies à l’écran, vérifiées dans le Gantt (colonnes, Totaux, marqueur client)', async ({
   page,
   request,
 }) => {
@@ -151,7 +151,7 @@ test('E2E-358-r4 : parcours complet à l’écran (administrateur seul) : charge
   await expect(await cellule(page, 'Tâche 6C', 'Vendu')).toHaveText('6,5');
   await expect(await cellule(page, 'Tâche 6C', 'Marge')).toHaveText('2,5');
   await expect(regionTotaux(page)).toHaveText(
-    'Vendu 6,5 j · Assigné 4 j · Marge 2,5 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+    'Vendu 6,5 j · Assigné 4 j · Marge 2,5 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €Exporter les coûts',
   );
   const g = await lireElements(page, projetId);
   const jalon = g.elements.find((e) => e.type === 'jalon')!;
@@ -317,7 +317,7 @@ test('E2E-361-r1 : refus : sous-activité sous une activité vendue (écran) et 
   await expect(modif).toBeVisible();
 });
 
-test('E2E-362-r3 : Gantt du projet (administrateur) : colonnes « Vendu » et « Marge » après « Charge », marge négative en couleur flag, « — », parent = somme, jalon vide, région « Totaux du projet »', async ({
+test('E2E-362-r4 : Gantt du projet (administrateur) : colonnes « Vendu » et « Marge » après « Charge », marge négative en couleur flag, « — », parent = somme, jalon vide, région « Totaux du projet »', async ({
   page,
   request,
 }) => {
@@ -358,7 +358,7 @@ test('E2E-362-r3 : Gantt du projet (administrateur) : colonnes « Vendu » et «
 
   const region = regionTotaux(page);
   await expect(region).toHaveText(
-    'Vendu 13 j · Assigné 8 j · Marge 5 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+    'Vendu 13 j · Assigné 8 j · Marge 5 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €Exporter les coûts',
   );
   const boiteRegion = await region.boundingBox();
   const boiteTableau = await page.getByRole('table').first().boundingBox();
@@ -369,7 +369,7 @@ test('E2E-362-r3 : Gantt du projet (administrateur) : colonnes « Vendu » et «
   // Projet sans élément : état vide, sans SVG (SPEC §6, 3b point 9).
   await page.goto(`/projets/${vide.projet.id}?onglet=gantt`);
   await expect(regionTotaux(page)).toHaveText(
-    'Vendu — j · Assigné 0 j · Marge — j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+    'Vendu — j · Assigné 0 j · Marge — j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €Exporter les coûts',
   );
 });
 

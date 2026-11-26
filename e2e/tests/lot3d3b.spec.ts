@@ -318,7 +318,7 @@ test('E2E-148-r1 : Entrée puis Annuler : focus rendu à la zone, barre active g
   expect(patchs.length).toBe(0);
 });
 
-test('E2E-149-r1 : le dialogue s’ouvre aussi sur un parent et sur une activité close', async ({
+test('E2E-149-r2 : le dialogue s’ouvre aussi sur un parent et sur une activité close', async ({
   page,
   request,
 }) => {
@@ -334,6 +334,7 @@ test('E2E-149-r1 : le dialogue s’ouvre aussi sur un parent et sur une activit�
   await expect(dialogue).toBeVisible();
   await dialogue.getByRole('button', { name: 'Annuler' }).click();
   await expect(dialogue).toHaveCount(0);
+  await expect(zone(page)).toBeFocused();
 
   await appuyer(page, 'ArrowDown');
   await activeEst(page, m.e.id);
@@ -341,6 +342,7 @@ test('E2E-149-r1 : le dialogue s’ouvre aussi sur un parent et sur une activit�
   await expect(dialogue).toBeVisible();
   await dialogue.getByRole('button', { name: 'Annuler' }).click();
   await expect(dialogue).toHaveCount(0);
+  await expect(zone(page)).toBeFocused();
 });
 
 test('E2E-150-r2 : sans droit d’écriture, la barre est active et annoncée mais aucun dialogue ne s’ouvre', async ({

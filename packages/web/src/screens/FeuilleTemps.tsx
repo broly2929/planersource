@@ -9,6 +9,7 @@ import { GardeSortie } from '../components/GardeSortie';
 import { Layout } from '../components/Layout';
 import { NavigationSemaine } from '../components/NavigationSemaine';
 import { Notification } from '../components/Notification';
+import { Onglets } from '../components/Onglets';
 import { Select } from '../components/Select';
 import {
   adresseImputations,
@@ -50,24 +51,31 @@ export function FeuilleTemps() {
   const recherche = useSearch();
   const { semaine, corrigee } = semaineAffichee(recherche.get('semaine'), aujourdhui);
   const paramRessource = recherche.get('ressource');
+  // D-247 : l'onglet par défaut « Feuille de temps » n'a pas de paramètre `onglet`.
+  const paramOnglet = recherche.get('onglet');
 
   if (admin && user)
     return (
       <FeuilleAdmin
         user={{ id: Number(user.id), est_ressource: user.est_ressource }}
         semaine={semaine}
-        corrigee={corrigee}
+        corrigee={corrigee || paramOnglet !== null}
         aujourdhui={aujourdhui}
       />
     );
   return (
     <Layout titre="Feuille de temps">
-      <Redirect to={adresseImputations(semaine, null)} when={corrigee || paramRessource !== null} />
-      {!ressource ? (
-        <Vide>Cette page est réservée aux ressources.</Vide>
-      ) : corrigee || paramRessource !== null ? null : (
-        <Feuille semaine={semaine} aujourdhui={aujourdhui} ressourceId={null} />
-      )}
+      <Onglets>
+        <Redirect
+          to={adresseImputations(semaine, null)}
+          when={corrigee || paramRessource !== null || paramOnglet !== null}
+        />
+        {!ressource ? (
+          <Vide>Cette page est réservée aux ressources.</Vide>
+        ) : corrigee || paramRessource !== null || paramOnglet !== null ? null : (
+          <Feuille semaine={semaine} aujourdhui={aujourdhui} ressourceId={null} />
+        )}
+      </Onglets>
     </Layout>
   );
 }
@@ -106,23 +114,25 @@ function FeuilleAdmin({
   );
   return (
     <Layout titre={titreFeuille(nom, estSoi)} actions={liste}>
-      <Redirect
-        to={adresseImputations(semaine, param !== null && !ressourceCorrigee ? ressource : null)}
-        when={aCorriger}
-      />
-      {!prete || aCorriger ? (
-        <Chargement />
-      ) : ressource === null ? (
-        <Vide>{MESSAGE_CHOIX}</Vide>
-      ) : (
-        <Feuille
-          key={ressource}
-          semaine={semaine}
-          aujourdhui={aujourdhui}
-          ressourceId={estSoi ? null : ressource}
-          ressource={ressource}
+      <Onglets>
+        <Redirect
+          to={adresseImputations(semaine, param !== null && !ressourceCorrigee ? ressource : null)}
+          when={aCorriger}
         />
-      )}
+        {!prete || aCorriger ? (
+          <Chargement />
+        ) : ressource === null ? (
+          <Vide>{MESSAGE_CHOIX}</Vide>
+        ) : (
+          <Feuille
+            key={ressource}
+            semaine={semaine}
+            aujourdhui={aujourdhui}
+            ressourceId={estSoi ? null : ressource}
+            ressource={ressource}
+          />
+        )}
+      </Onglets>
     </Layout>
   );
 }

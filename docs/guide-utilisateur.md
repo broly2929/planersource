@@ -18,7 +18,7 @@ Chaque règle de ce guide est reprise de `SPEC.md`, avec le renvoi entre parenth
 - Le code est le libellé court du projet dans « Mes tâches » (colonne « Projet », le nom en `title`, §3), dans la colonne « Projet » de la feuille de temps (§7, écran Feuille de temps, point 3) et dans le dialogue « Calculer le planning » (« <code> — <nom> », §6, Calcul, point 5).
 - Le code sert aussi de clé de tri : dans la liste des projets, les frères sont triés par code, sans tenir compte de la casse (§3, arborescence de l'écran Projets) ; dans le Plan de charge, les projets d'une ressource sont triés par code (§7, Plan de charge, point 5).
 - La date de début du projet (« Pas avant le » pour un projet ordinaire) entre dans la date de début au plus tôt de ses éléments, avec la date de début du calcul et les dépendances (§3, formulaire projet ; §5.3).
-- Un modèle est un projet dont `est_modele` est vrai ; il n'est jamais planifié, n'accepte aucune imputation et n'apparaît que dans l'écran « Modèles » (§11.1). La date de début d'un modèle est obligatoire : c'est la référence du décalage à la copie (§6, Retouches REX-6, point 1 ; §11.2).
+- Un modèle est un projet dont `est_modele` est vrai ; il n'est jamais planifié, n'accepte aucune imputation et n'apparaît que dans l'onglet « Modèles » de l'écran Projets (§11.1 ; onglets, D-247). La date de début d'un modèle est obligatoire : c'est la référence du décalage à la copie (§6, Retouches REX-6, point 1 ; §11.2).
 
 ## 3. Activités et modes
 
@@ -84,6 +84,7 @@ Chaque règle de ce guide est reprise de `SPEC.md`, avec le renvoi entre parenth
 
 ## 6. Imputations et validation
 
+- L'entrée « Imputations » du menu ouvre un écran à onglets : « Feuille de temps » (ressource ou administrateur) et « Validation » (administrateur, chef de projet). Sans droit sur l'un des deux, il n'y a pas de liste d'onglets : l'écran de l'autre s'affiche seul. La semaine choisie est gardée quand on change d'onglet (SPEC, onglets, D-247, point 2). Il n'y a plus d'entrée de menu « Validation » ni « Modèles » : les modèles sont l'onglet « Modèles » de l'écran Projets, ouvert par l'adresse `/projets?onglet=modeles` ; les anciennes adresses `/modeles` et `/validation` y redirigent.
 - La ressource saisit sa charge réelle par jour dans sa feuille de temps, semaine par semaine (§7, écran Feuille de temps). Un jour futur ne peut pas être imputé (§7, écran Feuille de temps, point 6).
 - Le réel compte dès l'enregistrement : le calcul prend toutes les imputations des assignations des projets calculés, quel que soit le statut de la feuille (§7, API et règles, point 9) ; le Plan de charge compte de même le réel de tout statut (§7, Plan de charge, point 3).
 - Cycle de la feuille : brouillon, soumise, validée ou rejetée (§3, §7, API et règles, point 7). La ressource soumet, puis rappelle sa feuille tant qu'aucune validation n'existe.
@@ -93,13 +94,15 @@ Chaque règle de ce guide est reprise de `SPEC.md`, avec le renvoi entre parenth
 - Saisie pour autrui : l'administrateur peut saisir, soumettre et rappeler la feuille d'une ressource (§7, Saisie pour autrui).
 - L'avancement d'une activité est le réel ÷ (réel + reste à faire) (§5.8).
 
-## 7. Plan de charge
+## 7. Pilotage : plan de charge et coûts
 
-- Écran « Plan de charge » : administrateur et chef de projet ; la ressource n'y a pas accès (§7, Plan de charge, point 6).
+- Écran « Pilotage » (entrée de menu qui remplace « Plan de charge ») : administrateur et chef de projet ; la ressource n'y a pas accès (§7, Plan de charge, point 6 ; §12.5, point 1). Deux onglets, « Plan de charge » et « Coûts » ; l'adresse est `/pilotage?onglet=charge|couts&debut=AAAA-MM&equipe=…`, l'ancienne adresse `/plan-de-charge` y redirige. Les filtres « Mois de départ » et « Équipe » sont communs aux deux onglets et conservés quand on change d'onglet.
+- Onglet « Coûts » (§12.5, points 2 à 5 et 8) : une ligne par projet (« <code> · <nom> », OTP effectif dessous), repliée ; « Déplier <code> » montre ses ressources (« (inactif) » si inactive). 12 colonnes « MM/AAAA », puis « Total », puis une ligne « Total ». Chaque cellule affiche le coût du mois (« 1 234,50 € ») ; l'infobulle donne « Réel … , planifié … ». La marque « incomplet » (infobulle « Taux manquant ») signale une charge tombée hors de toute période de taux d'une ressource qui a des taux. Le chef de projet ne voit que les projets sur lesquels il écrit. « Exporter CSV » télécharge `couts-AAAA-MM.csv` avec les filtres courants. Sans projet ayant une charge sur la période : « Aucun coût sur la période. ». Le coût mensuel peut différer du « Coût réel » du Gantt, qui valorise le reste à faire au taux du jour.
 - Tableau en lecture seule : une ligne par ressource, 12 colonnes mensuelles à partir du « Mois de départ » ; filtre « Équipe » (« Toutes », « Sans équipe », équipes par nom) (§7, Plan de charge, points 6 et 7).
 - Charge = réel + planifié du mois. Disponible = jours ouvrés du mois × capacité ; les dates et taux d'affectation sont ignorés. Écart = disponible − charge, négatif possible (§7, Plan de charge, point 3).
 - Un écart négatif est signalé en couleur d'alerte et par le texte « , surcharge » pour les lecteurs d'écran (§7, Plan de charge, point 7).
 - En dépliant une ressource : ses projets avec une charge non nulle, triés par code (§7, Plan de charge, points 5 et 7).
+- « Exporter CSV » télécharge `plan-de-charge-AAAA-MM.csv` avec les filtres courants : colonnes Ressource, Équipe, Ligne, puis les 12 mois (MM/AAAA, ceux de l'écran). Par ressource : une ligne « Charge », une ligne « Disponible », une ligne « Écart » (négatif possible), puis une ligne par projet (« <code> · <nom> » ou « Autres projets », charge du projet). Réel et Planifié ne sont pas exportés ; ils restent dans l'infobulle des cellules (§7, Exports CSV, point 3 ; D-241).
 
 ## 8. Gantt
 
@@ -133,7 +136,7 @@ Chaque règle de ce guide est reprise de `SPEC.md`, avec le renvoi entre parenth
 - Les coûts ne sont visibles que de qui écrit sur le projet (administrateur, chef du projet ou d'un projet parent). Les autres ne reçoivent pas ces données (§12.3, point 7). La colonne « OTP » (valeur héritée comprise) est visible de tout lecteur de l'élément.
 - Colonnes au choix du menu « Colonnes », masquées par défaut : « OTP », « Coût planifié » et « Coût réel » dans le Gantt d'un projet et sur l'Accueil (lignes d'activités seulement ; lignes de projet vides). Les montants s'écrivent « 1 234,50 € » (§12.4, point 1).
 - La région « Totaux du projet » ajoute « Coût planifié » et « Coût réel » (§12.4, point 2).
-- « Exporter les coûts » (Gantt d'un projet, pour qui écrit sur le projet) télécharge `couts-<code>-AAAA-MM-JJ.csv` : une ligne par activité dans l'ordre WBS, puis une ligne « Total » ; colonnes WBS, Activité, OTP, Charge assignée, Charge réelle, Reste, Coût planifié, Coût imputé, Coût réel, Taux manquant (« oui » ou « non »). La charge vendue n'est jamais exportée (§12.4, point 3 ; §7).
+- « Exporter les coûts » (au bout de la région « Totaux du projet » du Gantt d'un projet, pour qui écrit sur le projet) télécharge `couts-<code>-AAAA-MM-JJ.csv` : une ligne par activité dans l'ordre WBS, puis une ligne « Total » ; colonnes WBS, Activité, OTP, Charge assignée, Charge réelle, Reste, Coût planifié, Coût imputé, Coût réel, Taux manquant (« oui » ou « non »). La charge vendue n'est jamais exportée (§12.4, point 3 ; §7).
 
 ## 10. Version de l'application
 

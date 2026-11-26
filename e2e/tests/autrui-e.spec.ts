@@ -23,7 +23,13 @@ import {
   sessionDe,
   statutFeuille,
 } from './lot4b-helpers.js';
-import { adresseValidation, boutonDe, ligneValidation, statutOk } from './lot4c-helpers.js';
+import {
+  adresseValidation,
+  boutonDe,
+  ligneValidation,
+  ouvrirValidationParMenu,
+  statutOk,
+} from './lot4c-helpers.js';
 import {
   EMAIL_ADMIN_RESSOURCE,
   MESSAGE_CHOIX,
@@ -283,7 +289,7 @@ test('E2E-428 : sans modification, ou après un enregistrement réussi, le chang
   await expect(confirmation(page)).toHaveCount(0);
 });
 
-test('E2E-429 : parcours IHM : l’administrateur saisit et soumet pour Alice, le chef valide, Alice voit « Validée » avec la charge', async ({
+test('E2E-429-r1 : parcours IHM : l’administrateur saisit et soumet pour Alice, le chef valide, Alice voit « Validée » avec la charge', async ({
   page,
   request,
 }) => {
@@ -298,7 +304,7 @@ test('E2E-429 : parcours IHM : l’administrateur saisit et soumet pour Alice, l
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
 
   await connecterAvec(page, EMAIL_CHEF_P);
-  await nav(page).getByRole('link', { name: 'Validation', exact: true }).click();
+  await ouvrirValidationParMenu(page);
   await expect(page).toHaveURL(adresseValidation(S));
   const ligne = ligneValidation(page, 'Alice 4B');
   await expect(ligne.getByText('Soumise', { exact: true })).toBeVisible();

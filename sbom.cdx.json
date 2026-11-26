@@ -10,12 +10,12 @@
       }
     ],
     "component": {
-      "bom-ref": "planersource@1.0.0",
+      "bom-ref": "planersource@1.1.0",
       "type": "library",
       "name": "planersource",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "scope": "required",
-      "purl": "pkg:npm/planersource@1.0.0",
+      "purl": "pkg:npm/planersource@1.1.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -5342,7 +5342,7 @@
       ]
     },
     {
-      "ref": "planersource@1.0.0",
+      "ref": "planersource@1.1.0",
       "dependsOn": [
         "@planersource/api@0.0.0",
         "@planersource/engine@0.0.0",

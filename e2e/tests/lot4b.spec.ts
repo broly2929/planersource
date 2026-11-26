@@ -42,7 +42,13 @@ import {
   tableauFeuille,
   totalJour,
 } from './lot4b-helpers.js';
-import { adresseValidation, boutonDe, ligneValidation, statutOk } from './lot4c-helpers.js';
+import {
+  adresseValidation,
+  boutonDe,
+  ligneValidation,
+  ouvrirValidationParMenu,
+  statutOk,
+} from './lot4c-helpers.js';
 
 const A = '1 Tâche A';
 const B = '1 Tâche B';
@@ -68,7 +74,7 @@ async function ouvrir(page: Page, semaine = S): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Feuille de temps', level: 1 })).toBeVisible();
 }
 
-test('E2E-221-r1 : entrée « Imputations » pour une ressource et pour un administrateur, absente pour un chef non ressource ; semaine courante du navigateur, statut Brouillon', async ({
+test('E2E-221-r2 : entrée « Imputations » pour une ressource et pour un administrateur, absente pour un chef non ressource ; semaine courante du navigateur, statut Brouillon', async ({
   page,
   request,
 }) => {
@@ -93,8 +99,9 @@ test('E2E-221-r1 : entrée « Imputations » pour une ressource et pour un admin
   await expect(page).toHaveURL('/connexion');
 
   await connecterAvec(page, EMAIL_CHEF_P);
-  await expect(nav.getByRole('link', { name: 'Validation', exact: true })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Imputations', exact: true })).toHaveCount(0);
+  // Révision D-031 (D-247) : « Imputations » est aussi l'entrée d'un chef non ressource (validation seule).
+  await expect(nav.getByRole('link', { name: 'Imputations', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Validation', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Se déconnecter' }).click();
   await expect(page).toHaveURL('/connexion');
 
@@ -673,7 +680,7 @@ test('E2E-243 : changement de semaine avec des modifications : confirmation ; «
   expect(f.feuille.id).toBeNull();
 });
 
-test('E2E-244-r6 : parcours complet à l’écran : saisie, soumission, validation par le chef, dévalidation puis nouvelle validation, lecture seule ; avancement dans le Gantt du projet', async ({
+test('E2E-244-r7 : parcours complet à l’écran : saisie, soumission, validation par le chef, dévalidation puis nouvelle validation, lecture seule ; avancement dans le Gantt du projet', async ({
   page,
 }) => {
   await colonnesCompletes(page);
@@ -752,10 +759,7 @@ test('E2E-244-r6 : parcours complet à l’écran : saisie, soumission, validati
 
   // Le chef du projet valide la feuille (menu « Validation »).
   await connecterAvec(page, 'chef-4b-244@lot4b.test');
-  await page
-    .getByRole('navigation', { name: 'Navigation principale' })
-    .getByRole('link', { name: 'Validation', exact: true })
-    .click();
+  await ouvrirValidationParMenu(page);
   await expect(page).toHaveURL(adresseValidation(S));
   const ligneVal = ligneValidation(page, 'Ressource 4B-244');
   await expect(ligneVal.getByText('Soumise', { exact: true })).toBeVisible();

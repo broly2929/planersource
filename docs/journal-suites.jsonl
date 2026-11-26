@@ -56,3 +56,11 @@
 {"evenement":"fin","date":"2026-11-25T17:01:04.117Z","commit":"3e134d0","lot":"retours-deploiement-2","vitest":{"statut":"vert","duree_s":243.9},"e2e":{"statut":"vert","duree_s":775},"resultat":"vert"}
 {"evenement":"debut","date":"2026-11-25T18:42:26.851Z","commit":"65056f1","arbre_propre":false,"lot":"colonne-ressources"}
 {"evenement":"fin","date":"2026-11-25T19:00:14.762Z","commit":"65056f1","lot":"colonne-ressources","vitest":{"statut":"vert","duree_s":245.3},"e2e":{"statut":"vert","duree_s":822.6},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T21:05:46.610Z","commit":"1b0d448","arbre_propre":true,"lot":"export-plan-de-charge"}
+{"evenement":"fin","date":"2026-11-25T21:23:24.321Z","commit":"1b0d448","lot":"export-plan-de-charge","vitest":{"statut":"vert","duree_s":247.2},"e2e":{"statut":"vert","duree_s":810.5},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T21:44:06.791Z","commit":"f24c506","arbre_propre":true,"lot":"pilotage-1"}
+{"evenement":"fin","date":"2026-11-25T22:02:12.721Z","commit":"f24c506","lot":"pilotage-1","vitest":{"statut":"vert","duree_s":252},"e2e":{"statut":"vert","duree_s":833.9},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-25T22:40:10.947Z","commit":"1f98ea8","arbre_propre":true,"lot":"pilotage-2"}
+{"evenement":"fin","date":"2026-11-25T22:58:24.514Z","commit":"1f98ea8","lot":"pilotage-2","vitest":{"statut":"vert","duree_s":253.4},"e2e":{"statut":"vert","duree_s":840.1},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-26T06:35:28.340Z","commit":"e4075b7","arbre_propre":true,"lot":"onglets"}
+{"evenement":"fin","date":"2026-11-26T06:53:29.854Z","commit":"e4075b7","lot":"onglets","vitest":{"statut":"vert","duree_s":253.8},"e2e":{"statut":"vert","duree_s":827.7},"resultat":"vert"}

@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(remettreAdminSeul6b);
 
-const titrePlan = (page: Page) => page.getByRole('heading', { name: 'Plan de charge', level: 1 });
+const titrePlan = (page: Page) => page.getByRole('heading', { name: 'Pilotage', level: 1 });
 const regionPlan = (page: Page) => page.getByRole('region', { name: 'Plan de charge' });
 const tableauPlan = (page: Page) => page.getByRole('table', { name: 'Plan de charge' });
 const lignes = (page: Page) => tableauPlan(page).locator('tbody tr');
@@ -78,7 +78,7 @@ async function monde(request: APIRequestContext): Promise<Monde> {
   return { api, chef, alice, p1, p2 };
 }
 
-test('E2E-368 : entrée « Plan de charge » juste après « Projets » (administrateur, chef de projet), absente de la ressource ; le clic ouvre l’écran', async ({
+test('E2E-368-r1 : entrée « Plan de charge » juste après « Projets » (administrateur, chef de projet), absente de la ressource ; le clic ouvre l’écran', async ({
   page,
   request,
 }) => {
@@ -89,11 +89,11 @@ test('E2E-368 : entrée « Plan de charge » juste après « Projets » (adminis
   await loginAsAdmin(page);
   for (const role of ['administrateur', 'chef']) {
     const noms = (await nav(page).getByRole('link').allTextContents()).map((t) => t.trim());
-    expect(noms.indexOf('Plan de charge'), `${role} : ${noms.join(', ')}`).toBe(
+    expect(noms.indexOf('Pilotage'), `${role} : ${noms.join(', ')}`).toBe(
       noms.indexOf('Projets') + 1,
     );
-    await nav(page).getByRole('link', { name: 'Plan de charge', exact: true }).click();
-    await expect(page).toHaveURL(/\/plan-de-charge/);
+    await nav(page).getByRole('link', { name: 'Pilotage', exact: true }).click();
+    await expect(page).toHaveURL(/\/pilotage/);
     await expect(titrePlan(page)).toBeVisible();
     if (role === 'administrateur') {
       await page.context().clearCookies();
@@ -104,7 +104,7 @@ test('E2E-368 : entrée « Plan de charge » juste après « Projets » (adminis
   await page.context().clearCookies();
   await connecterAvec(page, 'ressource-368@lot6d.test');
   await expect(nav(page).getByRole('link', { name: 'Mes tâches', exact: true })).toBeVisible();
-  await expect(nav(page).getByRole('link', { name: 'Plan de charge', exact: true })).toHaveCount(0);
+  await expect(nav(page).getByRole('link', { name: 'Pilotage', exact: true })).toHaveCount(0);
 });
 
 test('E2E-369 : la ressource qui ouvre /plan-de-charge (avec ou sans paramètres) est redirigée vers /mes-taches, sans requête à /api/plan-de-charge', async ({
@@ -131,7 +131,7 @@ test('E2E-369 : la ressource qui ouvre /plan-de-charge (avec ou sans paramètres
   expect(appels).toEqual([]);
 });
 
-test('E2E-370 : tableau « Plan de charge » : colonnes, ligne repliée par défaut, cellule et title, dépliage des projets, « 0 », lecture seule', async ({
+test('E2E-370-r1 : tableau « Plan de charge » : colonnes, ligne repliée par défaut, cellule et title, dépliage des projets, « 0 », lecture seule', async ({
   page,
   request,
 }) => {
@@ -413,7 +413,7 @@ for (const largeur of [1440, 1024]) {
   });
 }
 
-test('E2E-376-r2 : parcours complet à l’écran (administrateur seul) : équipe, ressource et chef créés à l’écran, assignation ; Plan de charge filtré sur l’équipe, ligne de la ressource et dépliage du projet', async ({
+test('E2E-376-r3 : parcours complet à l’écran (administrateur seul) : équipe, ressource et chef créés à l’écran, assignation ; Plan de charge filtré sur l’équipe, ligne de la ressource et dépliage du projet', async ({
   page,
   request,
 }) => {
@@ -489,7 +489,7 @@ test('E2E-376-r2 : parcours complet à l’écran (administrateur seul) : équip
   // Effet dans l'écran consommateur : calcul par l'API (hors entité saisie), puis Plan de charge.
   await preparer(request);
   await calculer(request, [projetId]);
-  await allerA(page, 'Plan de charge');
+  await allerA(page, 'Pilotage');
   await champMois(page).fill('2027-01');
   await listeEquipe(page).selectOption({ label: 'Équipe 6D' });
   await expect(lignes(page)).toHaveCount(1);

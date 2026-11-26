@@ -32,7 +32,7 @@ test.afterEach(remettreAdminSeul6b);
 const noms = async (page: Page) =>
   (await nav(page).getByRole('link').allTextContents()).map((t) => t.trim());
 
-test('E2E-477 : ligne 57 : menu du chef de projet non ressource, liste complète', async ({
+test('E2E-477-r2 : ligne 57 : menu du chef de projet non ressource, liste complète', async ({
   page,
   request,
 }) => {
@@ -40,8 +40,8 @@ test('E2E-477 : ligne 57 : menu du chef de projet non ressource, liste complète
   await api.utilisateur('Chef A', 'chefa-477@recette.test', 'chef_de_projet');
   await connecterAvec(page, 'chefa-477@recette.test');
   const liste = await noms(page);
-  expect(liste).toEqual(['Accueil', 'Projets', 'Plan de charge', 'Validation', 'Modèles']);
-  for (const absent of ['Utilisateurs', 'Mes tâches', 'Imputations'])
+  expect(liste).toEqual(['Accueil', 'Projets', 'Pilotage', 'Imputations']);
+  for (const absent of ['Utilisateurs', 'Mes tâches', 'Validation', 'Modèles'])
     expect(liste).not.toContain(absent);
 });
 
@@ -244,7 +244,7 @@ test('E2E-483-r1 : ligne 73 : chef, Gantt du projet, colonnes Vendu et Marge (Ca
   await expect(await cellule(page, 'Fin de phase 1', 'Marge')).toHaveText('');
 });
 
-test('E2E-484-r1 : ligne 74 : chef, région « Totaux du projet » : « Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j », marge négative en couleur flag', async ({
+test('E2E-484-r2 : ligne 74 : chef, région « Totaux du projet » : « Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j », marge négative en couleur flag', async ({
   page,
   request,
 }) => {
@@ -258,7 +258,7 @@ test('E2E-484-r1 : ligne 74 : chef, région « Totaux du projet » : « Vendu 6 
   await ouvrirGantt(page, m.projet.id);
   const region = page.getByRole('region', { name: 'Totaux du projet' });
   await expect(region).toHaveText(
-    'Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €',
+    'Vendu 6 j · Assigné 7 j · Marge −1 j · Réel 0 j · Coût planifié 0,00 € · Coût réel 0,00 €Exporter les coûts',
   );
   await expect(region.getByText('Marge −1 j', { exact: false })).toHaveCSS('color', FLAG);
 });

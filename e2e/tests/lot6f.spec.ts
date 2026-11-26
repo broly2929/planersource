@@ -7,12 +7,29 @@ import { loginAsAdmin } from './helpers.js';
 import { MOT_DE_PASSE, connecterAvec, preparer } from './lot1-helpers.js';
 import { allerA, ouvrirCalendriers, ouvrirEquipes } from './lot3c-helpers.js';
 import { EMAIL_ALICE, EMAIL_CHEF_P, H14, bouton, caseCharge } from './lot4b-helpers.js';
-import { statutOk, monde4c, ouvrirValidation, soumettreAlice } from './lot4c-helpers.js';
+import {
+  monde4c,
+  ouvrirValidation,
+  ouvrirValidationParMenu,
+  soumettreAlice,
+  statutOk,
+} from './lot4c-helpers.js';
 import { creerEquipeParEcran, equipeApi, nav, options, utilisateurApi } from './lot6a-helpers.js';
 import { remettreAdminSeul6b } from './lot6b-helpers.js';
 
 const BOM = '﻿';
-const ENTETE_PLAN = 'Ressource;Équipe;Projet;Mois;Disponible;Réel;Planifié;Charge;Écart';
+/** En-tête du fichier du plan de charge (D-241) : trois colonnes puis les 12 mois à partir de `annee`-`mois`. */
+const entetePlan = (annee: number, mois: number): string =>
+  [
+    'Ressource',
+    'Équipe',
+    'Ligne',
+    ...Array.from({ length: 12 }, (_, i) => {
+      const t = annee * 12 + (mois - 1) + i;
+      return `${String((t % 12) + 1).padStart(2, '0')}/${Math.floor(t / 12)}`;
+    }),
+  ].join(';');
+const ZEROS = '0;0;0;0;0;0;0;0;0;0;0;0';
 const ENTETE_IMP = 'Ressource;Équipe;Semaine;Statut;Projet;Activité;Jour;Charge';
 const ADRESSE_PLAN = '/plan-de-charge?debut=2027-01';
 
@@ -61,7 +78,7 @@ function espionner(page: Page) {
   return vus;
 }
 
-test('E2E-383 : Plan de charge, « Exporter CSV » : fichier selon les filtres courants, aucun état modifié', async ({
+test('E2E-383-r1 : Plan de charge, « Exporter CSV » : fichier selon les filtres courants, aucun état modifié', async ({
   page,
   request,
 }) => {
@@ -91,10 +108,13 @@ test('E2E-383 : Plan de charge, « Exporter CSV » : fichier selon les filtres c
 
   const complet = await telecharger(page, exportPlan(page));
   expect(complet.nom).toBe('plan-de-charge-2027-01.csv');
-  expect(complet.lignes[0]).toBe(ENTETE_PLAN);
-  expect(complet.lignes).toContain('Alice 6F;Alpha 6F;Total;01/2027;21;0;0;0;21');
-  expect(complet.lignes).toContain('Bob 6F;Zeta 6F;Total;01/2027;21;0;0;0;21');
-  expect(complet.lignes).toHaveLength(1 + 2 * 12);
+  expect(complet.lignes[0]).toBe(entetePlan(2027, 1));
+  expect(complet.lignes).toContain(`Alice 6F;Alpha 6F;Charge;${ZEROS}`);
+  expect(complet.lignes).toContain(
+    'Alice 6F;Alpha 6F;Disponible;21;20;23;22;21;22;22;22;22;21;22;23',
+  );
+  expect(complet.lignes).toContain('Bob 6F;Zeta 6F;Écart;21;20;23;22;21;22;22;22;22;21;22;23');
+  expect(complet.lignes).toHaveLength(1 + 2 * 3);
 
   await listeEquipe(page).selectOption({ label: 'Alpha 6F' });
   await page.getByLabel('Mois de départ').fill('2027-05');
@@ -103,8 +123,10 @@ test('E2E-383 : Plan de charge, « Exporter CSV » : fichier selon les filtres c
   const url = page.url();
   const filtre = await telecharger(page, exportPlan(page));
   expect(filtre.nom).toBe('plan-de-charge-2027-05.csv');
-  expect(filtre.lignes[0]).toBe(ENTETE_PLAN);
-  expect(filtre.lignes).toContain('Alice 6F;Alpha 6F;Total;05/2027;21;0;0;0;21');
+  expect(filtre.lignes[0]).toBe(entetePlan(2027, 5));
+  expect(filtre.lignes).toContain(
+    'Alice 6F;Alpha 6F;Disponible;21;22;22;22;22;21;22;23;21;21;23;20',
+  );
   expect(filtre.lignes.some((l) => l.startsWith('Bob 6F;'))).toBe(false);
   expect(page.url()).toBe(url);
   expect(vus.ecritures, 'requêtes d’écriture').toEqual([]);
@@ -188,7 +210,7 @@ test('E2E-385 : dialogue d’export : période invalide, 366 jours acceptés, 36
   expect(vus.exportsImputations, 'aucun appel à /api/imputations/export').toEqual([]);
 });
 
-test('E2E-386 : chef de projet : « Autres projets » et imputations de son projet seulement ; la ressource n’a aucun export', async ({
+test('E2E-386-r1 : chef de projet : « Autres projets » et imputations de son projet seulement ; la ressource n’a aucun export', async ({
   page,
   request,
   playwright,
@@ -201,11 +223,9 @@ test('E2E-386 : chef de projet : « Autres projets » et imputations de son proj
   await expect(tableauPlan(page)).toBeVisible();
   const plan = await telecharger(page, exportPlan(page));
   expect(plan.nom).toBe('plan-de-charge-2026-01.csv');
-  expect(plan.lignes).toContain('Alice 4B;;P4B · Projet P4B;01/2026;;1,5;0;1,5;');
-  expect(plan.lignes).toContain('Alice 4B;;Autres projets;01/2026;;1;0;1;');
-  expect(
-    plan.lignes.some((l) => /^Alice 4B;;Total;01\/2026;\d+(,\d+)?;2,5;0;2,5;-?\d+(,\d+)?$/.test(l)),
-  ).toBe(true);
+  expect(plan.lignes).toContain('Alice 4B;;P4B · Projet P4B;1,5;0;0;0;0;0;0;0;0;0;0;0');
+  expect(plan.lignes).toContain('Alice 4B;;Autres projets;1;0;0;0;0;0;0;0;0;0;0;0');
+  expect(plan.lignes).toContain('Alice 4B;;Charge;2,5;0;0;0;0;0;0;0;0;0;0;0');
   expect(plan.lignes.join('\n')).not.toContain('Q4B');
 
   await ouvrirValidation(page);
@@ -228,7 +248,7 @@ test('E2E-386 : chef de projet : « Autres projets » et imputations de son proj
   }
 });
 
-test('E2E-387-r2 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran, imputation saisie, exports du plan de charge et des imputations', async ({
+test('E2E-387-r5 : parcours complet à l’écran (administrateur seul) : entités créées à l’écran, imputation saisie, exports du plan de charge et des imputations', async ({
   page,
 }) => {
   const RESSOURCE = 'Ressource 6F';
@@ -313,19 +333,16 @@ test('E2E-387-r2 : parcours complet à l’écran (administrateur seul) : entit�
 
   // Exports à l'écran par l'administrateur.
   await loginAsAdmin(page);
-  await allerA(page, 'Plan de charge');
+  await allerA(page, 'Pilotage');
   await expect(tableauPlan(page)).toBeVisible();
   const plan = await telecharger(page, exportPlan(page));
   expect(plan.nom).toBe('plan-de-charge-2026-01.csv');
-  expect(plan.lignes[0]).toBe(ENTETE_PLAN);
-  expect(
-    plan.lignes.some((l) =>
-      /^Ressource 6F;Équipe 6F;Total;01\/2026;\d+(,\d+)?;1;0;1;-?\d+(,\d+)?$/.test(l),
-    ),
-    plan.lignes.join('\n'),
-  ).toBe(true);
+  expect(plan.lignes[0]).toBe(entetePlan(2026, 1));
+  expect(plan.lignes, plan.lignes.join('\n')).toContain(
+    'Ressource 6F;Équipe 6F;Charge;1;0;0;0;0;0;0;0;0;0;0;0',
+  );
 
-  await allerA(page, 'Validation');
+  await ouvrirValidationParMenu(page);
   await ouvrirExport(page).click();
   const imputations = await telecharger(
     page,

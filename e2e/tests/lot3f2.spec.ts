@@ -17,7 +17,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
-import { connecterAvec } from './lot1-helpers.js';
+import { connecterAvec, ouvrirModeles } from './lot1-helpers.js';
 import { chefLecteur } from './lot6b-helpers.js';
 import { activiteAvec, calculer, jalonAvec, monde3b, sousProjet } from './lot3b-helpers.js';
 import {
@@ -707,7 +707,7 @@ test('E2E-203-r3 : refus réels dans le dialogue laissé ouvert (parent assigné
   await expect.poll(() => ordre(page)).toContain('3.1 Fille R');
 });
 
-test('E2E-204-r2 : bouton « Copier » après « Initiales » pour le chef et l’administrateur ; absent pour un chef en lecture seule et un modèle', async ({
+test('E2E-204-r3 : bouton « Copier » après « Initiales » pour le chef et l’administrateur ; absent pour un chef en lecture seule et un modèle', async ({
   page,
   request,
 }) => {
@@ -730,6 +730,9 @@ test('E2E-204-r2 : bouton « Copier » après « Initiales » pour le chef et l�
   await expect(page.getByRole('button', { name: 'Colonnes', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(boutonCopier(page)).toBeFocused();
+  // Révision -r3 (D-031, D-245 (6)) : « Exporter les coûts » est dans « Totaux du projet », avant le tableau.
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Exporter les coûts', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(tableau(page)).toBeFocused();
 
@@ -828,7 +831,7 @@ test('E2E-206-r1 : copie faite à l’écran depuis le Gantt (chef) : POST de co
   expect(await etatBase(request, m.projet.id)).toEqual(base);
 });
 
-test('E2E-207 : copie « Enregistrer comme modèle » depuis le Gantt (administrateur) : corps, fiche du modèle sans « Copier » ni poignée, écran « Modèles »', async ({
+test('E2E-207-r1 : copie « Enregistrer comme modèle » depuis le Gantt (administrateur) : corps, fiche du modèle sans « Copier » ni poignée, écran « Modèles »', async ({
   page,
   request,
 }) => {
@@ -863,7 +866,7 @@ test('E2E-207 : copie « Enregistrer comme modèle » depuis le Gantt (administr
   await expect(boutonCopier(page)).toHaveCount(0);
   await expect(poignees(page)).toHaveCount(0);
 
-  await allerA(page, 'Modèles');
+  await ouvrirModeles(page);
   await expect(page.getByRole('row', { name: /Copie de Projet E2E207/ })).toBeVisible();
 });
 

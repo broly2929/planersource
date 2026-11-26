@@ -36,5 +36,8 @@ const suffixeEquipe = (equipe: EquipeExport): string =>
 export const adresseExportPlan = (debut: string, equipe: EquipeExport): string =>
   `/api/plan-de-charge/export?debut=${debut}${suffixeEquipe(equipe)}`;
 
+export const adresseExportCouts = (debut: string, equipe: EquipeExport): string =>
+  `/api/couts/export?debut=${debut}${suffixeEquipe(equipe)}`;
+
 export const adresseExportImputations = (du: string, au: string, equipe: EquipeExport): string =>
   `/api/imputations/export?du=${du}&au=${au}${suffixeEquipe(equipe)}`;

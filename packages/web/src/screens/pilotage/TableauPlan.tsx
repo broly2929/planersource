@@ -1,31 +1,16 @@
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
-import { api } from '../api';
-import { useAuth } from '../auth';
-import { Button } from '../components/Button';
-import { Chargement, Vide } from '../components/Etat';
-import { Field } from '../components/Field';
-import { LienTelechargement } from '../components/LienTelechargement';
-import { adresseExportPlan } from '../export/logique';
-import { Layout } from '../components/Layout';
-import { Notification } from '../components/Notification';
-import { Select } from '../components/Select';
-import { formaterNombre } from '../gantt/libelles';
-import { aujourdhuiLocal } from '../imputations/logique';
+import { api } from '../../api';
+import { Chargement, Vide } from '../../components/Etat';
+import { Notification } from '../../components/Notification';
+import { formaterNombre } from '../../gantt/libelles';
 import {
-  adressePlan,
-  boutonsMois,
   cellulePlan,
-  decalerMois,
   enteteMois,
   libelleProjet,
   libelleRessource,
-  moisDe,
-  parametresPlan,
   type FiltreEquipe,
-} from '../plan-de-charge/logique';
-import { navigate, Redirect, useSearch } from '../router';
-import type { Equipe } from './Equipes';
+} from '../../plan-de-charge/logique';
 
 /** Réponse de GET /api/plan-de-charge (D-154 (3)). */
 interface MoisRessource {
@@ -56,31 +41,10 @@ interface Plan {
 
 type Etat = { statut: 'chargement' } | { statut: 'erreur' } | { statut: 'ok'; plan: Plan };
 
-const valeurEquipe = (e: FiltreEquipe): string => (e === 'toutes' ? '' : String(e));
-
-/** Écran « Plan de charge » (lot 6d, D-154 (8), (9)) : lecture seule. */
-export function PlanDeCharge() {
-  const { etat } = useAuth();
-  const role = etat.statut === 'connecte' ? etat.user.role : null;
-  const { debut, equipe, corrige } = parametresPlan(useSearch(), moisDe(aujourdhuiLocal()));
-  return (
-    <Layout titre="Plan de charge">
-      <Redirect to={adressePlan(debut, equipe)} when={corrige} />
-      {role === 'ressource' || corrige ? null : <Contenu debut={debut} equipe={equipe} />}
-    </Layout>
-  );
-}
-
-function Contenu({ debut, equipe }: { debut: string; equipe: FiltreEquipe }) {
-  const [equipes, setEquipes] = useState<Equipe[]>([]);
+/** Onglet « Plan de charge » (lot 6d, D-154 (9)) : tableau en lecture seule, filtres fournis par l'écran Pilotage. */
+export function TableauPlan({ debut, equipe }: { debut: string; equipe: FiltreEquipe }) {
   const [etat, setEtat] = useState<Etat>({ statut: 'chargement' });
   const [depliees, setDepliees] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    api<Equipe[]>('/api/equipes')
-      .then(setEquipes)
-      .catch(() => setEquipes([]));
-  }, []);
 
   useEffect(() => {
     let courant = true;
@@ -94,8 +58,6 @@ function Contenu({ debut, equipe }: { debut: string; equipe: FiltreEquipe }) {
     };
   }, [debut, equipe]);
 
-  const permis = boutonsMois(debut);
-  const aller = (d: string, e: FiltreEquipe) => navigate(adressePlan(d, e));
   const basculer = (id: number) =>
     setDepliees((avant) => {
       const apres = new Set(avant);
@@ -104,56 +66,7 @@ function Contenu({ debut, equipe }: { debut: string; equipe: FiltreEquipe }) {
     });
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-        <Select
-          label="Équipe"
-          value={valeurEquipe(equipe)}
-          onChange={(e) => {
-            const v = e.target.value;
-            aller(debut, v === '' ? 'toutes' : v === 'aucune' ? 'aucune' : Number(v));
-          }}
-          options={[
-            { value: '', label: 'Toutes' },
-            { value: 'aucune', label: 'Sans équipe' },
-            ...equipes.map((e) => ({ value: String(e.id), label: e.nom })),
-          ]}
-        />
-        <Field
-          label="Mois de départ"
-          type="month"
-          min="2000-01"
-          max="2099-12"
-          value={debut}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (parametresPlan(new URLSearchParams({ debut: v }), '').corrige) return;
-            aller(v, equipe);
-          }}
-        />
-        <Button
-          variante="secondaire"
-          className="px-2!"
-          disabled={!permis.precedent}
-          onClick={() => aller(decalerMois(debut, -1), equipe)}
-        >
-          <ChevronLeft aria-hidden className="size-4" />
-          Mois précédent
-        </Button>
-        <Button
-          variante="secondaire"
-          className="px-2!"
-          disabled={!permis.suivant}
-          onClick={() => aller(decalerMois(debut, 1), equipe)}
-        >
-          Mois suivant
-          <ChevronRight aria-hidden className="size-4" />
-        </Button>
-        <LienTelechargement href={adresseExportPlan(debut, equipe)}>
-          Exporter CSV
-        </LienTelechargement>
-      </div>
-
+    <>
       {etat.statut === 'chargement' && <Chargement />}
       {etat.statut === 'erreur' && (
         <Notification type="erreur">Impossible de charger le plan de charge.</Notification>
@@ -258,6 +171,6 @@ function Contenu({ debut, equipe }: { debut: string; equipe: FiltreEquipe }) {
             </table>
           </div>
         ))}
-    </div>
+    </>
   );
 }

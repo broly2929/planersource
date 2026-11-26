@@ -13,7 +13,7 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import pg from 'pg';
 import { exigerBaseTest } from '../../scripts/lib/garde-base-test.mjs';
-import { connecterAvec, preparer } from './lot1-helpers.js';
+import { connecterAvec, ouvrirModeles, preparer } from './lot1-helpers.js';
 import { activiteAvec, sousProjet } from './lot3b-helpers.js';
 import { remettreAdminSeul6b } from './lot6b-helpers.js';
 import { confirmation, quitter } from './garde-dialogue-helpers.js';
@@ -510,14 +510,14 @@ test('E2E-618 : parcours complet à l’écran : taux d’une ressource, OTP d�
   await expect(m.getByText('Hérité de P618 : FIN-618')).toBeVisible();
 });
 
-test('E2E-619 : OTP d’un modèle saisi par l’écran Modèles ; « Créer un projet depuis » : OTP copié', async ({
+test('E2E-619-r1 : OTP d’un modèle saisi par l’écran Modèles ; « Créer un projet depuis » : OTP copié', async ({
   page,
   request,
 }) => {
   const api = await preparer(request);
   await api.modele('MOD-619', 'Modèle 619');
   await loginAsAdmin(page);
-  await allerA(page, 'Modèles');
+  await ouvrirModeles(page);
   await page.getByRole('button', { name: 'Nouveau modèle' }).click();
   const n = page.getByRole('dialog');
   await expect(champOtp(n)).toBeVisible();
@@ -570,13 +570,13 @@ test('E2E-620 : captures (section des taux, Taux du jour, aide d’héritage) à
   }
 });
 
-test('E2E-621 : « Nouveau modèle » avec un OTP saisi à l’écran : OTP relu par l’API et dans « Modifier le projet »', async ({
+test('E2E-621-r1 : « Nouveau modèle » avec un OTP saisi à l’écran : OTP relu par l’API et dans « Modifier le projet »', async ({
   page,
   request,
 }) => {
   await preparer(request);
   await loginAsAdmin(page);
-  await allerA(page, 'Modèles');
+  await ouvrirModeles(page);
   await page.getByRole('button', { name: 'Nouveau modèle' }).click();
   const n = page.getByRole('dialog');
   await n.getByLabel('Code').fill('MOD-621');

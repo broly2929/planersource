@@ -167,7 +167,13 @@ const colonnesCouts: ColonneGantt[] = [
 ];
 
 /** Région « Totaux du projet » (D-149 (8a)) : marge négative en couleur flag. */
-function TotauxProjetRegion({ totaux }: { totaux: TotauxProjet }) {
+function TotauxProjetRegion({
+  totaux,
+  hrefCouts,
+}: {
+  totaux: TotauxProjet;
+  hrefCouts?: string | undefined;
+}) {
   const parties = texteTotaux(totaux).split(' · ');
   return (
     <div
@@ -185,6 +191,11 @@ function TotauxProjetRegion({ totaux }: { totaux: TotauxProjet }) {
         </span>
       ))}
       {totaux.taux_manquant && <MarqueIncomplet />}
+      {hrefCouts && (
+        <span className="ml-3">
+          <LienTelechargement href={hrefCouts}>Exporter les coûts</LienTelechargement>
+        </span>
+      )}
     </div>
   );
 }
@@ -803,6 +814,7 @@ export function GanttProjet({
 
   const { projet, elements, dependances, sous_projets: sousProjets } = etat.donnees;
   const peutCalculer = projet.peut_ecrire && !estModele;
+  const hrefCouts = projet.peut_ecrire ? `/api/projets/${projet.id}/couts/export` : undefined;
   const boutonCalculer = (
     <Button variante="secondaire" disabled={recalcul} onClick={() => setCalcul(true)}>
       Calculer
@@ -864,7 +876,9 @@ export function GanttProjet({
     return (
       <section aria-label="Gantt" className="flex flex-col gap-4">
         {retours}
-        {projet.peut_ecrire && projet.totaux && <TotauxProjetRegion totaux={projet.totaux} />}
+        {projet.peut_ecrire && projet.totaux && (
+          <TotauxProjetRegion totaux={projet.totaux} hrefCouts={hrefCouts} />
+        )}
         <Vide>Ce projet ne contient encore aucun élément.</Vide>
         {peutCalculer && (
           <div className="flex items-center justify-end gap-4">
@@ -956,11 +970,6 @@ export function GanttProjet({
       <div className="flex flex-wrap items-center gap-4">
         {peutCalculer && boutonCalculer}
         {peutCalculer && caseAuto}
-        {projet.peut_ecrire && (
-          <LienTelechargement href={`/api/projets/${projet.id}/couts/export`}>
-            Exporter les coûts
-          </LienTelechargement>
-        )}
         <BoutonsZoom zoom={zoom} chemin={chemin} />
         <CaseInitiales actif={initiales} chemin={chemin} />
         <MenuColonnes etat={disposition} />
@@ -988,7 +997,9 @@ export function GanttProjet({
         </div>
       </div>
       {dialogue}
-      {client && projet.totaux && <TotauxProjetRegion totaux={projet.totaux} />}
+      {client && projet.totaux && (
+        <TotauxProjetRegion totaux={projet.totaux} hrefCouts={hrefCouts} />
+      )}
       <DispositionGantt
         etat={disposition}
         propsTableau={{

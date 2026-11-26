@@ -67,3 +67,15 @@ export async function connecterAvec(page: Page, email: string): Promise<void> {
   // Révision 6b (D-031, D-148 (5)) : la ressource est redirigée de « / » vers /mes-taches.
   await expect(page).toHaveURL(/\/(mes-taches)?$/);
 }
+
+/**
+ * « Modèles » est un onglet de l'écran Projets (D-247, révision D-031 : navigation seulement) : lien
+ * « Projets » du menu, puis onglet « Modèles ».
+ */
+export async function ouvrirModeles(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Projets', exact: true }).click();
+  const onglet = page.getByRole('tab', { name: 'Modèles', exact: true });
+  await onglet.click();
+  await expect(onglet).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Modèles', level: 1 })).toBeVisible();
+}

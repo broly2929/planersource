@@ -4,7 +4,7 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import pg from 'pg';
 import { E2E_ADMIN } from './credentials.js';
 import { loginAsAdmin } from './helpers.js';
-import { connecterAvec, MOT_DE_PASSE, preparer } from './lot1-helpers.js';
+import { MOT_DE_PASSE, connecterAvec, ouvrirModeles, preparer } from './lot1-helpers.js';
 import { ouvrirCalendriers } from './lot3c-helpers.js';
 
 const NOM_ADMIN = 'Admin E2E';
@@ -389,7 +389,7 @@ test('E2E-56 liste Projets : « Modifier <nom> » modifie nom et code sans passe
   await expect(page).toHaveURL(/\/projets$/);
 });
 
-test('E2E-57 liste Modèles : « Modifier <nom> » pour l’administrateur, rien pour un chef de projet', async ({
+test('E2E-57-r1 liste Modèles : « Modifier <nom> » pour l’administrateur, rien pour un chef de projet', async ({
   page,
   browser,
   request,
@@ -397,7 +397,7 @@ test('E2E-57 liste Modèles : « Modifier <nom> » pour l’administrateur, rien
   const api = await preparer(request);
   await api.utilisateur('Chef R1-57', 'chef-r1-57@rex1.test', 'chef_de_projet');
   await loginAsAdmin(page);
-  await allerA(page, 'Modèles');
+  await ouvrirModeles(page);
   await page.getByRole('button', { name: 'Nouveau modèle' }).click();
   const creation = page.getByRole('dialog');
   await creation.getByLabel('Code').fill('R1-57');
@@ -417,7 +417,7 @@ test('E2E-57 liste Modèles : « Modifier <nom> » pour l’administrateur, rien
   // Chef de projet : le modèle est listé, sans bouton « Modifier ».
   const chef = await pageNeuve(browser);
   await connecterAvec(chef, 'chef-r1-57@rex1.test');
-  await allerA(chef, 'Modèles');
+  await ouvrirModeles(chef);
   await expect(chef.getByRole('row', { name: /Modèle R1-57 renommé/ })).toBeVisible();
   await expect(chef.getByRole('button', { name: /^Modifier/ })).toHaveCount(0);
   await chef.context().close();

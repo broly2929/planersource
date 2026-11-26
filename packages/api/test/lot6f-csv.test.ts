@@ -21,7 +21,8 @@ const csv = () => import('../src/export/csv.js');
  */
 
 const BOM = '﻿';
-const ENTETE_PLAN = 'Ressource;Équipe;Projet;Mois;Disponible;Réel;Planifié;Charge;Écart';
+const ENTETE_PLAN =
+  'Ressource;Équipe;Ligne;01/2027;02/2027;03/2027;04/2027;05/2027;06/2027;07/2027;08/2027;09/2027;10/2027;11/2027;12/2027';
 const ENTETE_IMP = 'Ressource;Équipe;Semaine;Statut;Projet;Activité;Jour;Charge';
 const TYPE = 'text/csv; charset=utf-8';
 
@@ -146,7 +147,6 @@ const feuille = (
     [ressource.id, lundi, statut, commentaire],
   );
 
-const MOIS_2027 = Array.from({ length: 12 }, (_, i) => `${String(i + 1).padStart(2, '0')}/2027`);
 const prefixe = (lignes: string[], debut: string) => lignes.filter((l) => l.startsWith(debut));
 
 describe('Exports CSV : fonctions pures (D-160 (2))', () => {
@@ -202,7 +202,7 @@ describe('Exports CSV : fonctions pures (D-160 (2))', () => {
 describe('Export du plan de charge (D-160 (3))', () => {
   const ctx = useTestApp();
 
-  it('CSV-5 : accès et refus (401, 403, 400), ordre des refus, base inchangée', async () => {
+  it('CSV-5-r1 : accès et refus (401, 403, 400), ordre des refus, base inchangée', async () => {
     const a = await admin(ctx);
     const chef = await utilisateur(ctx, 'Chef', 'chef_de_projet');
     const res1 = await utilisateur(ctx, 'Res1', 'ressource', { ressource: true });
@@ -236,7 +236,7 @@ describe('Export du plan de charge (D-160 (3))', () => {
     }
   });
 
-  it('CSV-6 : en-têtes HTTP, nom du fichier, première ligne', async () => {
+  it('CSV-6-r1 : en-têtes HTTP, nom du fichier, première ligne', async () => {
     const a = await admin(ctx);
     const { res, lignes } = await exporter(ctx, a, adressePlan('?debut=2027-01'));
     expect(res.headers['content-type']).toBe(TYPE);
@@ -250,7 +250,7 @@ describe('Export du plan de charge (D-160 (3))', () => {
     );
   });
 
-  it('CSV-7 : douze lignes de total puis douze lignes par projet, valeurs à virgule', async () => {
+  it('CSV-7-r1 : lignes Charge, Disponible, Écart puis une ligne par projet, valeurs à virgule', async () => {
     const a = await admin(ctx);
     const dev = await equipe(ctx, 'Dev');
     const alice = await utilisateur(ctx, 'Alice', 'ressource', { equipe: dev });
@@ -261,19 +261,16 @@ describe('Export du plan de charge (D-160 (3))', () => {
     await imputer(ctx, ass, '2027-01-12', 0.5);
 
     const { lignes } = await exporter(ctx, a, adressePlan('?debut=2027-01'));
-    expect(lignes).toHaveLength(1 + 12 + 12);
-    expect(lignes[0]).toBe(ENTETE_PLAN);
-    expect(lignes[1]).toBe('Alice;Dev;Total;01/2027;21;0,5;1,5;2;19');
-    expect(lignes[2]).toBe('Alice;Dev;Total;02/2027;20;0;0;0;20');
-    expect(lignes.slice(1, 13).map((l) => l.split(';')[3])).toEqual(MOIS_2027);
-    expect(lignes.slice(1, 13).every((l) => l.startsWith('Alice;Dev;Total;'))).toBe(true);
-    expect(lignes[13]).toBe('Alice;Dev;P1 · Projet un;01/2027;;0,5;1,5;2;');
-    expect(lignes[14]).toBe('Alice;Dev;P1 · Projet un;02/2027;;0;0;0;');
-    expect(lignes.slice(13).map((l) => l.split(';')[3])).toEqual(MOIS_2027);
-    expect(lignes.slice(13).every((l) => l.startsWith('Alice;Dev;P1 · Projet un;'))).toBe(true);
+    expect(lignes).toEqual([
+      ENTETE_PLAN,
+      'Alice;Dev;Charge;2;0;0;0;0;0;0;0;0;0;0;0',
+      'Alice;Dev;Disponible;21;20;23;22;21;22;22;22;22;21;22;23',
+      'Alice;Dev;Écart;19;20;23;22;21;22;22;22;22;21;22;23',
+      'Alice;Dev;P1 · Projet un;2;0;0;0;0;0;0;0;0;0;0;0',
+    ]);
   });
 
-  it('CSV-8 : équipe vide, suffixe (inactif), écart négatif sans apostrophe', async () => {
+  it('CSV-8-r1 : équipe vide, suffixe (inactif), écart négatif sans apostrophe', async () => {
     const a = await admin(ctx);
     const dev = await equipe(ctx, 'Dev');
     const carl = await utilisateur(ctx, 'Carl', 'ressource', { actif: false });
@@ -283,12 +280,14 @@ describe('Export du plan de charge (D-160 (3))', () => {
     await planifier(ctx, await assigner(ctx, a, p.id, bob), '2027-01-04', 22);
 
     const { lignes } = await exporter(ctx, a, adressePlan('?debut=2027-01'));
-    expect(lignes).toContain('Carl (inactif);;Total;03/2027;23;0;2;2;21');
-    expect(lignes).toContain('Bob;Dev;Total;01/2027;21;0;22;22;-1');
+    expect(lignes).toContain('Carl (inactif);;Charge;0;0;2;0;0;0;0;0;0;0;0;0');
+    expect(lignes).toContain('Carl (inactif);;Écart;21;20;21;22;21;22;22;22;22;21;22;23');
+    expect(lignes).toContain('Bob;Dev;Charge;22;0;0;0;0;0;0;0;0;0;0;0');
+    expect(lignes).toContain('Bob;Dev;Écart;-1;20;23;22;21;22;22;22;22;21;22;23');
     expect(lignes.some((l) => l.includes("'-1"))).toBe(false);
   });
 
-  it('CSV-9 : chef de projet, « Autres projets » en dernier, projets illisibles absents ; administrateur : tout', async () => {
+  it('CSV-9-r1 : chef de projet, « Autres projets » en dernier, projets illisibles absents ; administrateur : tout', async () => {
     const a = await admin(ctx);
     const chef = await utilisateur(ctx, 'Chef', 'chef_de_projet');
     const autreChef = await utilisateur(ctx, 'Autre', 'chef_de_projet');
@@ -307,18 +306,22 @@ describe('Export du plan de charge (D-160 (3))', () => {
       const projets: string[] = [];
       for (const l of prefixe(lignes, 'Alice;;')) {
         const colonnes = l.split(';');
-        if (colonnes[2] !== 'Total' && !projets.includes(colonnes[2]!)) projets.push(colonnes[2]!);
+        if (
+          !['Charge', 'Disponible', 'Écart'].includes(colonnes[2]!) &&
+          !projets.includes(colonnes[2]!)
+        )
+          projets.push(colonnes[2]!);
       }
       return projets;
     };
     const { lignes: duChef } = await exporter(ctx, chef, adressePlan('?debut=2027-01'));
     expect(vue(duChef)).toEqual(['M-PROJ1 · Nom M-PROJ1', 'N-LECT · Nom N-LECT', 'Autres projets']);
     const autres = prefixe(duChef, 'Alice;;Autres projets;');
-    expect(autres).toHaveLength(12);
-    expect(autres[0]).toBe('Alice;;Autres projets;01/2027;;0,5;4;4,5;');
+    expect(autres).toHaveLength(1);
+    expect(autres[0]).toBe('Alice;;Autres projets;4,5;0;0;0;0;0;0;0;0;0;0;0');
     expect(duChef.some((l) => l.includes('ILLISIBLE'))).toBe(false);
     expect(duChef.indexOf(autres[0]!)).toBeGreaterThan(
-      duChef.indexOf('Alice;;N-LECT · Nom N-LECT;12/2027;;0;0;0;'),
+      duChef.indexOf('Alice;;N-LECT · Nom N-LECT;1;0;0;0;0;0;0;0;0;0;0;0'),
     );
 
     const { lignes: deAdmin } = await exporter(ctx, a, adressePlan('?debut=2027-01'));
@@ -330,7 +333,7 @@ describe('Export du plan de charge (D-160 (3))', () => {
     ]);
   });
 
-  it('CSV-10 : filtres équipe, équipe inconnue et base vide : en-tête seul ; aucune écriture', async () => {
+  it('CSV-10-r1 : filtres équipe, équipe inconnue et base vide : en-tête seul ; aucune écriture', async () => {
     const a = await admin(ctx);
     const chef = await utilisateur(ctx, 'Chef', 'chef_de_projet');
     const vide = await exporter(ctx, a, adressePlan('?debut=2027-01'));
@@ -358,7 +361,7 @@ describe('Export du plan de charge (D-160 (3))', () => {
     expect(await empreinte(ctx)).toEqual(avant);
   });
 
-  it('CSV-11 : injection sur le nom de la ressource, de l’équipe et le code du projet ; nom de projet interne non préfixé', async () => {
+  it('CSV-11-r1 : injection sur le nom de la ressource, de l’équipe et le code du projet ; nom de projet interne non préfixé', async () => {
     const a = await admin(ctx);
     const eq = await equipe(ctx, '@Eq');
     const eve = await utilisateur(ctx, '=Eve', 'ressource', { equipe: eq });
@@ -368,9 +371,9 @@ describe('Export du plan de charge (D-160 (3))', () => {
     await planifier(ctx, await assigner(ctx, a, p2.id, eve), '2027-01-06', 1);
 
     const { lignes } = await exporter(ctx, a, adressePlan('?debut=2027-01'));
-    expect(lignes).toContain("'=Eve;'@Eq;Total;01/2027;21;0;2;2;19");
-    expect(lignes).toContain("'=Eve;'@Eq;'=C1 · Nom;01/2027;;0;1;1;");
-    expect(lignes).toContain("'=Eve;'@Eq;Z-1 · =Nom;01/2027;;0;1;1;");
+    expect(lignes).toContain("'=Eve;'@Eq;Charge;2;0;0;0;0;0;0;0;0;0;0;0");
+    expect(lignes).toContain("'=Eve;'@Eq;'=C1 · Nom;1;0;0;0;0;0;0;0;0;0;0;0");
+    expect(lignes).toContain("'=Eve;'@Eq;Z-1 · =Nom;1;0;0;0;0;0;0;0;0;0;0;0");
     expect(lignes.some((l) => l.includes(";'Z-1") || l.includes(";'1;"))).toBe(false);
   });
 });

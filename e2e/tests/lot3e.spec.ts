@@ -456,7 +456,7 @@ test('E2E-178-r2 : clic sur un lien au zoom mois ouvre le dialogue ; sans droit 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('E2E-179-r7 : liens et connecteurs hors tabulation, ordre de tabulation de la fiche inchangé', async ({
+test('E2E-179-r8 : liens et connecteurs hors tabulation, ordre de tabulation de la fiche inchangé', async ({
   page,
   request,
 }) => {
@@ -498,6 +498,9 @@ test('E2E-179-r7 : liens et connecteurs hors tabulation, ordre de tabulation de 
   await expect(page.getByRole('button', { name: 'Colonnes', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Copier', exact: true })).toBeFocused();
+  // Révision -r8 (D-031, D-245 (6)) : « Exporter les coûts » est dans « Totaux du projet », avant le tableau.
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Exporter les coûts', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(tableau).toBeFocused();
   // Révision -r5 (D-216 (3)) : poignées de largeur, dans l'ordre des en-têtes, avant le contenu des lignes.

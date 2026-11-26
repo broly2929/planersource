@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(remettreAdminSeul6b);
 
-test('E2E-493 : ligne 97 : menu du chef de projet ressource, liste complète ; arrivée sur « / »', async ({
+test('E2E-493-r2 : ligne 97 : menu du chef de projet ressource, liste complète ; arrivée sur « / »', async ({
   page,
   request,
 }) => {
@@ -31,15 +31,7 @@ test('E2E-493 : ligne 97 : menu du chef de projet ressource, liste complète ; a
   await connecterAvec(page, 'chefb-493@recette.test');
   await expect(page).toHaveURL('/');
   const liste = (await nav(page).getByRole('link').allTextContents()).map((t) => t.trim());
-  expect(liste).toEqual([
-    'Mes tâches',
-    'Accueil',
-    'Projets',
-    'Plan de charge',
-    'Imputations',
-    'Validation',
-    'Modèles',
-  ]);
+  expect(liste).toEqual(['Mes tâches', 'Accueil', 'Projets', 'Pilotage', 'Imputations']);
 });
 
 async function mondeValidation(request: Parameters<typeof monde4c>[0]) {

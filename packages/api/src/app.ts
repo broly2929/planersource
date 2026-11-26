@@ -25,6 +25,7 @@ import { mesTachesRoutes } from './routes/mes-taches.js';
 import { exportImputationsRoutes } from './routes/export-imputations.js';
 import { exportCoutsRoutes } from './routes/export-couts.js';
 import { planDeChargeRoutes } from './routes/plan-de-charge.js';
+import { coutsPilotageRoutes } from './routes/couts-pilotage.js';
 import { ressourcePlanningRoutes } from './routes/ressource-planning.js';
 import { projetsRoutes } from './routes/projets.js';
 import { saisiesRoutes } from './routes/saisies.js';
@@ -121,6 +122,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => feuillesRoutes(instance, deps));
   app.register(async (instance) => mesTachesRoutes(instance, deps));
   app.register(async (instance) => planDeChargeRoutes(instance, deps));
+  app.register(async (instance) => coutsPilotageRoutes(instance, deps));
   app.register(async (instance) => exportImputationsRoutes(instance, deps));
   app.register(async (instance) => exportCoutsRoutes(instance, deps));
   app.register(async (instance) => ressourcePlanningRoutes(instance, deps));

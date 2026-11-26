@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './helpers.js';
-import { connecterAvec, preparer } from './lot1-helpers.js';
+import { connecterAvec, ouvrirModeles, preparer } from './lot1-helpers.js';
 
 /*
  * Contrat d'interface du lot 1b-A (écran « Modèles ») — libellés accessibles attendus :
@@ -14,11 +14,11 @@ import { connecterAvec, preparer } from './lot1-helpers.js';
  * Un modèle n'apparaît pas dans l'écran « Projets ».
  */
 
-test('E2E-12 : l’administrateur crée un modèle, le voit dans « Modèles » et pas dans « Projets », y crée une activité', async ({
+test('E2E-12-r1 : l’administrateur crée un modèle, le voit dans « Modèles » et pas dans « Projets », y crée une activité', async ({
   page,
 }) => {
   await loginAsAdmin(page);
-  await page.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(page);
   await expect(page.getByRole('heading', { name: 'Modèles', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Nouveau modèle' }).click();
   const dialog = page.getByRole('dialog');
@@ -34,7 +34,7 @@ test('E2E-12 : l’administrateur crée un modèle, le voit dans « Modèles » 
   await expect(page.getByRole('heading', { name: 'Projets', level: 1 })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Modèle E2E12' })).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(page);
   await page.getByRole('link', { name: 'Modèle E2E12' }).click();
   await expect(page.getByRole('heading', { name: 'Modèle E2E12', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Nouvelle activité' }).click();
@@ -43,7 +43,7 @@ test('E2E-12 : l’administrateur crée un modèle, le voit dans « Modèles » 
   await expect(page.getByRole('row', { name: /1 Étude E2E12/ })).toBeVisible();
 });
 
-test('E2E-13-r1 : un chef voit le modèle et son planning sans bouton d’écriture ; une ressource n’a ni le lien « Projets » ni le lien « Modèles »', async ({
+test('E2E-13-r2 : un chef voit le modèle et son planning sans bouton d’écriture ; une ressource n’a ni le lien « Projets » ni le lien « Modèles »', async ({
   page,
   request,
   browser,
@@ -56,7 +56,7 @@ test('E2E-13-r1 : un chef voit le modèle et son planning sans bouton d’écrit
   void chef;
 
   await connecterAvec(page, 'chef-e2e13@example.test');
-  await page.getByRole('link', { name: 'Modèles' }).click();
+  await ouvrirModeles(page);
   await expect(page.getByRole('heading', { name: 'Modèles', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Nouveau modèle' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Modèle E2E13' }).click();
