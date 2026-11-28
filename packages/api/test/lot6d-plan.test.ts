@@ -482,7 +482,7 @@ describe('Plan de charge : ressources et projets (D-154 (5), (6))', () => {
     expect(r.projets.every((x) => x.projet_id !== null)).toBe(true);
   });
 
-  it('PDC-12 : chef de projet : projets illisibles regroupés en une ligne finale à champs null ; administrateur : tout, sans regroupement', async () => {
+  it('PDC-12-r1 : chef de projet : tous les projets nommés, sans ligne regroupée (D-265) ; administrateur : tout, sans regroupement', async () => {
     const a = await admin(ctx);
     const chef = await utilisateur(ctx, 'Chef', 'chef_de_projet');
     const autreChef = await utilisateur(ctx, 'Autre', 'chef_de_projet');
@@ -501,19 +501,23 @@ describe('Plan de charge : ressources et projets (D-154 (5), (6))', () => {
     await imputer(ctx, await assigner(ctx, a, p3.id, alice), '2027-01-08', 0.5);
     await planifier(ctx, await assigner(ctx, a, p2.id, bob), '2027-01-07', 1);
 
+    // Révision D-265 (4) : le chef lit tous les projets, plus de ligne regroupée.
     const vueChef = parNom(await lire(ctx, chef), 'Alice');
-    expect(vueChef.projets.map((x) => x.code)).toEqual(['M-PROJ1', 'N-LECT', null]);
-    expect(vueChef.projets.map((x) => x.projet_id)).toEqual([p1.id, pl.id, null]);
-    const autres = vueChef.projets[2]!;
-    expect(autres.nom).toBeNull();
-    expect(autres.mois.map((m) => m.mois)).toEqual(MOIS_2027);
-    expect(autres.mois.map((m) => m.reel).slice(0, 2)).toEqual([0.5, 0]);
-    expect(autres.mois.map((m) => m.planifie).slice(0, 2)).toEqual([4, 1]);
-    expect(autres.mois.map((m) => m.charge).slice(0, 2)).toEqual([4.5, 1]);
+    expect(vueChef.projets.map((x) => x.code)).toEqual([
+      'A-ILLISIBLE2',
+      'B-ILLISIBLE3',
+      'M-PROJ1',
+      'N-LECT',
+    ]);
+    expect(vueChef.projets.map((x) => x.projet_id)).toEqual([p2.id, p3.id, p1.id, pl.id]);
+    const illisible2 = vueChef.projets[0]!;
+    expect(illisible2.mois.map((m) => m.mois)).toEqual(MOIS_2027);
+    expect(illisible2.mois.map((m) => m.planifie).slice(0, 2)).toEqual([4, 1]);
+    expect(vueChef.projets[1]!.mois.map((m) => m.reel).slice(0, 2)).toEqual([0.5, 0]);
     expect(vueChef.mois[0]).toMatchObject({ reel: 0.5, planifie: 7, charge: 7.5 });
 
     const vueBob = parNom(await lire(ctx, chef), 'Bob');
-    expect(vueBob.projets.map((x) => x.code)).toEqual([null]);
+    expect(vueBob.projets.map((x) => x.code)).toEqual(['A-ILLISIBLE2']);
 
     const vueAdmin = parNom(await lire(ctx, a), 'Alice');
     expect(vueAdmin.projets.map((x) => x.code)).toEqual([
@@ -525,15 +529,15 @@ describe('Plan de charge : ressources et projets (D-154 (5), (6))', () => {
     expect(vueAdmin.projets.every((x) => x.projet_id !== null)).toBe(true);
     expect(vueAdmin.mois[0]).toMatchObject({ reel: 0.5, planifie: 7, charge: 7.5 });
 
-    // L'autre chef lit P2, P3 et PL, pas P1 : P1 (planifié 2 en janvier) tombe dans la ligne regroupée.
+    // Révision D-265 (4) : l'autre chef lit aussi P1, nommé (planifié 2 en janvier).
     const vueAutre = parNom(await lire(ctx, autreChef), 'Alice');
     expect(vueAutre.projets.map((x) => x.code)).toEqual([
       'A-ILLISIBLE2',
       'B-ILLISIBLE3',
+      'M-PROJ1',
       'N-LECT',
-      null,
     ]);
-    expect(vueAutre.projets[3]!.mois[0]).toEqual({
+    expect(vueAutre.projets[2]!.mois[0]).toEqual({
       mois: '2027-01',
       reel: 0,
       planifie: 2,

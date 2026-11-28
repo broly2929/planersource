@@ -72,10 +72,10 @@ async function pret(
   request: APIRequestContext,
   suffixe: string,
   largeur: number,
-  avant?: (page: Page) => Promise<void>,
+  avant?: (page: Page, projetId: number) => Promise<void>,
 ) {
   const m = await montage(request, suffixe);
-  await avant?.(page);
+  await avant?.(page, m.projet.id);
   await page.clock.setFixedTime(J06);
   await connecterAvec(page, m.emailChef);
   await ouvrir(page, m.projet.id, largeur);
@@ -157,9 +157,13 @@ for (const largeur of LARGEURS) {
   });
 }
 
-/** Réponse de l'API du Gantt modifiée : la ligne « Simple » porte retard et surcharge. */
-const retardEtSurcharge = async (page: Page) => {
-  await page.route('**/api/projets/*/gantt', async (route) => {
+/**
+ * Réponse de l'API du Gantt du projet du test modifiée : la ligne « Simple » porte retard et surcharge.
+ * Révision E2E-41e-r2 (D-278) : interception limitée au projet du test ; depuis D-265, le chef lit aussi les
+ * projets des autres et l'Accueil charge leur Gantt, que le motif générique interceptait (attente inchangée).
+ */
+const retardEtSurcharge = async (page: Page, projetId: number) => {
+  await page.route(`**/api/projets/${projetId}/gantt`, async (route) => {
     const reponse = await route.fetch();
     const json = (await reponse.json()) as { elements: { nom: string; drapeaux: string[] }[] };
     const simple = json.elements.find((e) => e.nom === 'Simple');
@@ -170,7 +174,7 @@ const retardEtSurcharge = async (page: Page) => {
 };
 
 for (const largeur of LARGEURS) {
-  test(`E2E-41e-r1 (${largeur} px) : une ligne à deux badges (retard + surcharge) : badges visibles, hauteur de ligne inchangée`, async ({
+  test(`E2E-41e-r2 (${largeur} px) : une ligne à deux badges (retard + surcharge) : badges visibles, hauteur de ligne inchangée`, async ({
     page,
     request,
   }) => {

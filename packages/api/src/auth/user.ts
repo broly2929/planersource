@@ -1,4 +1,17 @@
-export type Role = 'administrateur' | 'chef_de_projet' | 'ressource';
+export type Role = 'administrateur' | 'chef_de_projet' | 'leader_metier' | 'ressource';
+
+/**
+ * Chef de projet ou leader métier (D-265) : un leader est un chef dont la portée d'écriture est
+ * tous les projets ordinaires.
+ */
+export function estChef(role: Role): boolean {
+  return role === 'chef_de_projet' || role === 'leader_metier';
+}
+
+/** Rôle qui peut voir des montants (coûts, taux) : ni ressource, ni leader métier (D-265 (3)). */
+export function roleVoitFinances(role: Role): boolean {
+  return role === 'administrateur' || role === 'chef_de_projet';
+}
 
 export interface UtilisateurRow {
   id: number;

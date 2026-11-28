@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { joursAbsenceJournee, type Absence } from '../absences/logique';
 import { Chargement, Vide } from '../components/Etat';
 import { Notification } from '../components/Notification';
 import { Table, type Colonne } from '../components/Table';
@@ -53,6 +54,7 @@ function elementDe(l: LigneRessource): ElementGantt {
 /** Planning d'une ressource sur l'Accueil (lot 6e, D-157 (6)) : lecture seule. */
 export function PlanningRessource({ id }: { id: number }) {
   const [etat] = useListe<Planning>(`/api/ressources/${id}/planning`);
+  const [etatAbsences] = useListe<Absence[]>(`/api/absences?ressource_id=${id}`);
   const chemin = usePath();
   const zoom = lireZoom(useSearch().get('zoom'));
   const [aujourdhui] = useMemo(() => [dateLocale(new Date())], []);
@@ -72,6 +74,15 @@ export function PlanningRessource({ id }: { id: number }) {
         zoom,
       ),
     [datees, aujourdhui, largeurSvg, zoom],
+  );
+
+  // Absences en journée entière dans la plage affichée ; une lecture en échec ne bloque pas le planning.
+  const absences = useMemo(
+    () =>
+      etatAbsences.statut === 'ok'
+        ? joursAbsenceJournee(etatAbsences.donnees, plage.debut, plage.fin)
+        : undefined,
+    [etatAbsences, plage],
   );
 
   if (etat.statut === 'chargement') return <Chargement libelle="Chargement du planning…" />;
@@ -162,6 +173,7 @@ export function PlanningRessource({ id }: { id: number }) {
             plage={plage}
             zoom={zoom}
             aujourdhui={aujourdhui}
+            absences={absences}
           />
         }
       />

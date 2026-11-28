@@ -274,6 +274,7 @@ const REFUS: Record<string, string> = {
   feuille_verrouillee: 'La feuille est soumise ou validée : elle n’est plus modifiable.',
   feuille_vide: 'Aucune imputation : rien à soumettre.',
   deja_validee: 'La feuille est déjà validée en partie.',
+  jour_absence: "Ce jour est un jour d'absence.",
 };
 
 export function messageRefusFeuille(statut: number, code: string | undefined): string {

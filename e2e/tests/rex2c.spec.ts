@@ -272,7 +272,7 @@ test('E2E-82 « Modifier le projet » : parent proposé sans le projet ni ses de
   await expect(ligne(page, 'Alpha82')).toBeVisible();
 });
 
-test('E2E-83-r1 chef : « Projet parent » limité à ses projets ; chef affecté au sous-projet seul : sous-projet affiché comme racine, lecture seule', async ({
+test('E2E-83-r2 chef : « Projet parent » limité à ses projets ; chef affecté au sous-projet seul : parent présent (D-265), sous-projet dessous, lecture seule', async ({
   page,
   request,
 }) => {
@@ -298,8 +298,10 @@ test('E2E-83-r1 chef : « Projet parent » limité à ses projets ; chef affect�
   // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
   await connecterAvec(page, await chefLecteur(request, sous.id, 'E83'));
   await allerA(page, 'Projets');
+  // Révision D-265 (4) : le parent est présent, en lecture seule ; le sous-projet est dessous.
+  await expect(ligne(page, 'Projet autre83')).toBeVisible();
+  await page.getByRole('button', { name: 'Déplier Projet autre83', exact: true }).click();
   await expect(ligne(page, 'Sous-projet S83')).toBeVisible();
-  await expect(ligne(page, 'Projet autre83')).toHaveCount(0);
   await page.getByRole('button', { name: 'Déplier Sous-projet S83', exact: true }).click();
   await expect(ligne(page, 'Activité E83')).toBeVisible();
   await expect(page.getByRole('button', { name: /Modifier|Copier/ })).toHaveCount(0);

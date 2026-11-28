@@ -210,7 +210,7 @@ test('E2E-385 : dialogue d’export : période invalide, 366 jours acceptés, 36
   expect(vus.exportsImputations, 'aucun appel à /api/imputations/export').toEqual([]);
 });
 
-test('E2E-386-r1 : chef de projet : « Autres projets » et imputations de son projet seulement ; la ressource n’a aucun export', async ({
+test('E2E-386-r2 : chef de projet : projets nommés sans « Autres projets » (D-265) et imputations de son projet seulement ; la ressource n’a aucun export', async ({
   page,
   request,
   playwright,
@@ -224,9 +224,10 @@ test('E2E-386-r1 : chef de projet : « Autres projets » et imputations de son p
   const plan = await telecharger(page, exportPlan(page));
   expect(plan.nom).toBe('plan-de-charge-2026-01.csv');
   expect(plan.lignes).toContain('Alice 4B;;P4B · Projet P4B;1,5;0;0;0;0;0;0;0;0;0;0;0');
-  expect(plan.lignes).toContain('Alice 4B;;Autres projets;1;0;0;0;0;0;0;0;0;0;0;0');
+  // Révision D-265 (4) : le projet de l'autre chef est nommé, plus de ligne « Autres projets ».
+  expect(plan.lignes).toContain('Alice 4B;;Q4B · Projet Q4B;1;0;0;0;0;0;0;0;0;0;0;0');
   expect(plan.lignes).toContain('Alice 4B;;Charge;2,5;0;0;0;0;0;0;0;0;0;0;0');
-  expect(plan.lignes.join('\n')).not.toContain('Q4B');
+  expect(plan.lignes.join('\n')).not.toContain('Autres projets');
 
   await ouvrirValidation(page);
   await ouvrirExport(page).click();

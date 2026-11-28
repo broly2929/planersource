@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api } from '../../api';
+import { aDroitsDeChef, api } from '../../api';
 import { useAnnuaire, type EntreeAnnuaire } from '../../annuaire';
 import { useAuth } from '../../auth';
 import { Case } from '../../components/Case';
@@ -68,8 +68,7 @@ function Formulaire({
   const options = (annuaire ?? [])
     .filter(
       (u) =>
-        u.id === p.chef_id ||
-        (u.actif && (u.role === 'administrateur' || u.role === 'chef_de_projet')),
+        u.id === p.chef_id || (u.actif && (u.role === 'administrateur' || aDroitsDeChef(u.role))),
     )
     .map((u) => ({ value: String(u.id), label: u.nom }));
 

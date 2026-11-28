@@ -11,6 +11,7 @@ import { NavigationSemaine } from '../components/NavigationSemaine';
 import { Notification } from '../components/Notification';
 import { Onglets } from '../components/Onglets';
 import { Select } from '../components/Select';
+import { joursAbsenceJournee, type Absence, type Motif } from '../absences/logique';
 import {
   adresseImputations,
   aujourdhuiLocal,
@@ -73,7 +74,12 @@ export function FeuilleTemps() {
         {!ressource ? (
           <Vide>Cette page est réservée aux ressources.</Vide>
         ) : corrigee || paramRessource !== null || paramOnglet !== null ? null : (
-          <Feuille semaine={semaine} aujourdhui={aujourdhui} ressourceId={null} />
+          <Feuille
+            semaine={semaine}
+            aujourdhui={aujourdhui}
+            ressourceId={null}
+            ressourceAbsences={Number(user?.id)}
+          />
         )}
       </Onglets>
     </Layout>
@@ -129,6 +135,7 @@ function FeuilleAdmin({
             semaine={semaine}
             aujourdhui={aujourdhui}
             ressourceId={estSoi ? null : ressource}
+            ressourceAbsences={ressource}
             ressource={ressource}
           />
         )}
@@ -141,16 +148,20 @@ function Feuille({
   semaine,
   aujourdhui,
   ressourceId,
+  ressourceAbsences,
   ressource,
 }: {
   semaine: string;
   aujourdhui: string;
   ressourceId: number | null;
+  /** Ressource dont la feuille est affichée, pour lire ses absences (D-276). */
+  ressourceAbsences: number;
   ressource?: number;
 }) {
   const suffixe = ressourceId === null ? '' : `&ressource_id=${ressourceId}`;
   const [vue, setVue] = useState<Vue | null>(null);
   const [erreurChargement, setErreurChargement] = useState(false);
+  const [absences, setAbsences] = useState<Map<string, Motif>>(new Map());
   const [saisie, setSaisie] = useState<Saisie>({});
   const [retour, setRetour] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null);
   const [enCours, setEnCours] = useState(false);
@@ -170,13 +181,22 @@ function Feuille({
     setVue(null);
     setErreurChargement(false);
     setRetour(null);
-    api<Vue>(`/api/feuilles?semaine=${semaine}${suffixe}`)
-      .then((v) => !annule && adopter(v))
+    const lundi = semaine;
+    const dimanche = joursSemaine(semaine)[6]!;
+    Promise.all([
+      api<Vue>(`/api/feuilles?semaine=${semaine}${suffixe}`),
+      api<Absence[]>(`/api/absences?ressource_id=${ressourceAbsences}&du=${lundi}&au=${dimanche}`),
+    ])
+      .then(([v, liste]) => {
+        if (annule) return;
+        setAbsences(joursAbsenceJournee(liste, lundi, dimanche));
+        adopter(v);
+      })
       .catch(() => !annule && setErreurChargement(true));
     return () => {
       annule = true;
     };
-  }, [semaine, suffixe, adopter]);
+  }, [semaine, suffixe, ressourceAbsences, adopter]);
 
   const modifications = useMemo(
     () => (vue ? lignesModifiees(vue.lignes, saisie) : []),
@@ -304,6 +324,7 @@ function Feuille({
           erreurs={erreurs}
           lectureSeule={!editable}
           aujourdhui={aujourdhui}
+          absences={absences}
           modifier={modifier}
         />
       )}

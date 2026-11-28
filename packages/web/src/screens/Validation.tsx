@@ -1,7 +1,8 @@
 import { Check, Download, Eye, Undo2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { api, ApiError } from '../api';
+import { aDroitsDeChef, api, ApiError } from '../api';
 import { useAuth } from '../auth';
+import { useIdNonAdmin } from '../droits';
 import { Badge } from '../components/Badge';
 import { BoutonIcone } from '../components/BoutonIcone';
 import { Button } from '../components/Button';
@@ -53,10 +54,13 @@ const messageDe = (err: unknown): string =>
     ? messageRefusValidation(err.status, err.code)
     : messageRefusValidation(0);
 
+/** Sa propre feuille est validée par un autre valideur (D-274, SEC-3a). */
+const FEUILLE_PROPRE = 'Votre feuille est validée par un autre valideur.';
+
 export function Validation() {
   const { etat } = useAuth();
   const role = etat.statut === 'connecte' ? etat.user.role : null;
-  const autorise = role === 'administrateur' || role === 'chef_de_projet';
+  const autorise = role === 'administrateur' || aDroitsDeChef(role);
   const recherche = useSearch();
   const param = recherche.get('semaine');
   const aujourdhui = aujourdhuiLocal();
@@ -79,6 +83,7 @@ export function Validation() {
 }
 
 function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string }) {
+  const moi = useIdNonAdmin();
   const [feuilles, setFeuilles] = useState<FeuilleValidation[] | null>(null);
   const [erreurChargement, setErreurChargement] = useState(false);
   const [retour, setRetour] = useState<string | null>(null);
@@ -239,27 +244,30 @@ function Liste({ semaine, aujourdhui }: { semaine: string; aujourdhui: string })
             {
               titre: 'Actions',
               cellule: (f) => (
-                <span className="flex gap-1">
+                <span className="flex flex-wrap items-center gap-1">
                   <BoutonIcone
                     libelle={`Voir la feuille de ${f.ressource_nom}`}
                     icone={Eye}
                     onClick={ouvrir(() => setVoir(f))}
                   />
-                  {peutValider(f) && (
+                  {f.ressource_id === moi && (
+                    <span className="text-petit text-gray-600">{FEUILLE_PROPRE}</span>
+                  )}
+                  {f.ressource_id !== moi && peutValider(f) && (
                     <BoutonIcone
                       libelle={`Valider la feuille de ${f.ressource_nom}`}
                       icone={Check}
                       onClick={ouvrir(() => setValider(f))}
                     />
                   )}
-                  {peutRejeter(f) && (
+                  {f.ressource_id !== moi && peutRejeter(f) && (
                     <BoutonIcone
                       libelle={`Rejeter la feuille de ${f.ressource_nom}`}
                       icone={X}
                       onClick={ouvrir(() => setRejeter(f))}
                     />
                   )}
-                  {peutDevalider(f) && (
+                  {f.ressource_id !== moi && peutDevalider(f) && (
                     <BoutonIcone
                       libelle={`Dévalider la feuille de ${f.ressource_nom}`}
                       icone={Undo2}

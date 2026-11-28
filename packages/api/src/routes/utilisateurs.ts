@@ -2,13 +2,19 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { estReference, nomContrainte } from '../db/erreurs.js';
 import { hashPassword } from '../auth/password.js';
-import { emailSchema, initialesSchema, loginSchema, motDePasseSchema } from '../auth/schemas.js';
+import {
+  emailSchema,
+  initialesSchema,
+  loginSchema,
+  messageCorps,
+  motDePasseSchema,
+} from '../auth/schemas.js';
 import { toPublicUser, USER_COLUMNS, type UtilisateurRow } from '../auth/user.js';
 import { idCorps, identifiant } from '../planning/identifiant.js';
 import type { SessionsOrigine } from '../auth/session.js';
 import type { AppDeps } from '../app.js';
 
-const roles = z.enum(['administrateur', 'chef_de_projet', 'ressource']);
+const roles = z.enum(['administrateur', 'chef_de_projet', 'leader_metier', 'ressource']);
 
 const createBody = z.object({
   nom: z.string().min(1),
@@ -75,7 +81,7 @@ export function utilisateursRoutes(
 
   app.post('/api/utilisateurs', opts, async (request, reply) => {
     const body = createBody.safeParse(request.body);
-    if (!body.success) return reply.code(400).send({ erreur: 'Données invalides' });
+    if (!body.success) return reply.code(400).send({ erreur: messageCorps(body.error) });
     const d = body.data;
     const login = d.login ?? d.email;
     if (!login) return reply.code(400).send({ erreur: 'Renseignez un identifiant ou un email' });
@@ -110,7 +116,7 @@ export function utilisateursRoutes(
     const id = identifiant(request.params.id);
     if (id === null) return reply.code(404).send({ erreur: 'Utilisateur introuvable' });
     const body = patchBody.safeParse(request.body);
-    if (!body.success) return reply.code(400).send({ erreur: 'Données invalides' });
+    if (!body.success) return reply.code(400).send({ erreur: messageCorps(body.error) });
     const { mot_de_passe, ...champs } = body.data;
     const values: Record<string, unknown> = { ...champs };
     if (mot_de_passe !== undefined) values.mot_de_passe_hash = await hashPassword(mot_de_passe);

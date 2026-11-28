@@ -7,6 +7,7 @@ import { verifyPassword } from './auth/password.js';
 import { loadUser, type SessionsOrigine } from './auth/session.js';
 import type { Config } from './config.js';
 import './db/types.js';
+import { absencesRoutes } from './routes/absences.js';
 import { affectationsRoutes } from './routes/affectations.js';
 import { annuaireRoutes } from './routes/annuaire.js';
 import { authRoutes } from './routes/auth.js';
@@ -130,6 +131,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (instance) => tauxRoutes(instance, deps));
   app.register(async (instance) => tauxEquipeRoutes(instance, deps));
   app.register(async (instance) => tauxDuJourRoutes(instance, deps));
+  app.register(async (instance) => absencesRoutes(instance, deps));
   app.register(async (instance) => projetsRoutes(instance, deps));
   app.register(async (instance) => affectationsRoutes(instance, deps));
   app.register(async (instance) => elementsRoutes(instance, deps));

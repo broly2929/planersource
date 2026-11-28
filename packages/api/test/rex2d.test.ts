@@ -134,18 +134,18 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
     (await ctx.app.inject({ method: 'GET', url: '/api/utilisateurs', headers: { cookie } })).json<
       Array<LigneUtilisateur & { id: number }>
     >();
-  const base = { nom: 'Bob', mot_de_passe: 'a', role: 'ressource' };
+  const base = { nom: 'Bob', mot_de_passe: 'mot-de-passe-a', role: 'ressource' };
 
-  it('USR-18 : POST avec login « bob », sans email → 201, login « bob », email null ; connexion par identifiant → 200', async () => {
+  it('USR-18-r1 : POST avec login « bob », sans email → 201, login « bob », email null ; connexion par identifiant → 200', async () => {
     const cookie = await admin();
     const res = await post(cookie, { ...base, login: 'bob' });
     expect(res.statusCode).toBe(201);
     expect(res.json().login).toBe('bob');
     expect(res.json().email).toBeNull();
-    expect((await connexion(ctx, 'bob', 'a')).statusCode).toBe(200);
+    expect((await connexion(ctx, 'bob', 'mot-de-passe-a')).statusCode).toBe(200);
   });
 
-  it('USR-19 : POST avec email seul → 201, login = email en minuscules', async () => {
+  it('USR-19-r1 : POST avec email seul → 201, login = email en minuscules', async () => {
     const cookie = await admin();
     const res = await post(cookie, { ...base, email: 'Bob@Example.Test' });
     expect(res.statusCode).toBe(201);
@@ -161,7 +161,7 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
     expect(await etat(ctx)).toEqual(avant);
   });
 
-  it('USR-21 : login normalisé ; doublon à la casse près → 409 « Identifiant déjà utilisé » ; email en double → 409 inchangé ; rien n’est créé', async () => {
+  it('USR-21-r1 : login normalisé ; doublon à la casse près → 409 « Identifiant déjà utilisé » ; email en double → 409 inchangé ; rien n’est créé', async () => {
     const cookie = await admin();
     const un = await post(cookie, { ...base, login: '  Bob  ', email: 'bob@example.test' });
     expect(un.statusCode).toBe(201);
@@ -177,7 +177,7 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
     expect(await etat(ctx)).toEqual(avant);
   });
 
-  it('USR-22 : PATCH login, email null, doublon de login, email seul', async () => {
+  it('USR-22-r1 : PATCH login, email null, doublon de login, email seul', async () => {
     const cookie = await admin();
     const bob = (await post(cookie, { ...base, login: 'bob', email: 'bob@example.test' })).json()
       .id as number;
@@ -185,8 +185,8 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
 
     const renomme = await patch(cookie, bob, { login: 'robert' });
     expect(renomme.statusCode).toBe(200);
-    expect((await connexion(ctx, 'robert', 'a')).statusCode).toBe(200);
-    expect((await connexion(ctx, 'bob', 'a')).statusCode).toBe(401);
+    expect((await connexion(ctx, 'robert', 'mot-de-passe-a')).statusCode).toBe(200);
+    expect((await connexion(ctx, 'bob', 'mot-de-passe-a')).statusCode).toBe(401);
 
     const sansEmail = await patch(cookie, bob, { email: null });
     expect(sansEmail.statusCode).toBe(200);
@@ -208,7 +208,7 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
     expect(emailSeul.json().login).toBe('robert');
   });
 
-  it('USR-23 : initiales en POST et en PATCH relues par GET ; 5 caractères → 400 ; null → aucune', async () => {
+  it('USR-23-r1 : initiales en POST et en PATCH relues par GET ; 5 caractères → 400 ; null → aucune', async () => {
     const cookie = await admin();
     const creation = await post(cookie, { ...base, login: 'bob', initiales: 'AB' });
     expect(creation.statusCode).toBe(201);
@@ -242,9 +242,9 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
   const creerAdmin = (input: Record<string, unknown>) =>
     createAdmin(ctx.pool, input as unknown as Parameters<typeof createAdmin>[1]);
 
-  it('USR-24 : createAdmin avec login seul ; avec email seul (login = email) ; sans les deux → erreur, rien n’est créé', async () => {
-    await creerAdmin({ nom: 'A1', login: 'chef', motDePasse: 'a' });
-    await creerAdmin({ nom: 'A2', email: 'a2@example.test', motDePasse: 'a' });
+  it('USR-24-r1 : createAdmin avec login seul ; avec email seul (login = email) ; sans les deux → erreur, rien n’est créé', async () => {
+    await creerAdmin({ nom: 'A1', login: 'chef', motDePasse: 'mot-de-passe-a' });
+    await creerAdmin({ nom: 'A2', email: 'a2@example.test', motDePasse: 'mot-de-passe-a' });
     const lignes = (
       await ctx.pool.query<LigneUtilisateur>(
         'SELECT nom, login, email FROM utilisateur ORDER BY id',
@@ -255,7 +255,7 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
       { nom: 'A2', login: 'a2@example.test', email: 'a2@example.test' },
     ]);
     const avant = await etat(ctx);
-    await expect(creerAdmin({ nom: 'A3', motDePasse: 'a' })).rejects.toThrow();
+    await expect(creerAdmin({ nom: 'A3', motDePasse: 'mot-de-passe-a' })).rejects.toThrow();
     expect(await etat(ctx)).toEqual(avant);
   });
 
@@ -269,7 +269,7 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
     }
   });
 
-  it('AUTH-12 : connexion par identifiant (casse et espaces ignorés), clé email synonyme, email ≠ login → 401, /me renvoie login et initiales', async () => {
+  it('AUTH-12-r1 : connexion par identifiant (casse et espaces ignorés), clé email synonyme, email ≠ login → 401, /me renvoie login et initiales', async () => {
     const cookie = await admin();
     await post(cookie, {
       ...base,
@@ -277,19 +277,21 @@ describe('REX-2 R2-D : utilisateurs, identifiant, initiales, email facultatif (D
       email: 'bob@example.test',
       initiales: 'AB',
     });
-    expect((await connexion(ctx, 'bob', 'a')).statusCode).toBe(200);
-    expect((await connexion(ctx, '  BoB ', 'a')).statusCode).toBe(200);
+    expect((await connexion(ctx, 'bob', 'mot-de-passe-a')).statusCode).toBe(200);
+    expect((await connexion(ctx, '  BoB ', 'mot-de-passe-a')).statusCode).toBe(200);
     const synonyme = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'bob', mot_de_passe: 'a' },
+      payload: { email: 'bob', mot_de_passe: 'mot-de-passe-a' },
     });
     expect(synonyme.statusCode).toBe(200);
-    const parEmail = await connexion(ctx, 'bob@example.test', 'a');
+    const parEmail = await connexion(ctx, 'bob@example.test', 'mot-de-passe-a');
     expect(parEmail.statusCode).toBe(401);
     expect(parEmail.cookies.find((c) => c.name === 'session')).toBeUndefined();
 
-    const session = (await connexion(ctx, 'bob', 'a')).cookies.find((c) => c.name === 'session');
+    const session = (await connexion(ctx, 'bob', 'mot-de-passe-a')).cookies.find(
+      (c) => c.name === 'session',
+    );
     const me = await ctx.app.inject({
       method: 'GET',
       url: '/api/auth/me',

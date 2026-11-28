@@ -3,7 +3,7 @@ import { WBS_CTE } from './elements.js';
 import { champsActivite, champsJalon, lireVendu } from './vendu.js';
 import { champsCout, lireCouts, type Cout } from './couts.js';
 import { lireOtpActivites, type Herite } from './otp.js';
-import { projetsVisibles, type Acteur, type Projet } from './projets.js';
+import { projetsVisibles, voitFinances, voitNotes, type Acteur, type Projet } from './projets.js';
 
 /** Lecture du Gantt d'un projet (SPEC §6, lot 3a, D-065). Aucune écriture. */
 
@@ -35,6 +35,7 @@ interface LigneElement {
   close: boolean | null;
   est_parent: boolean;
   charge_vendue: number | null;
+  notes: string | null;
   charge_assignee: number;
   charge_reelle: number;
   reste_a_faire: number;
@@ -71,7 +72,7 @@ const ELEMENTS = `WITH RECURSIVE ${WBS_CTE},
          act.mode, act.priorite, act.debut_valide, act.fin_valide, act.duree_validee,
          act.debut_planifie, act.fin_planifiee, act.close,
          EXISTS (SELECT 1 FROM element f WHERE f.parent_id = a.id) AS est_parent,
-         act.charge_vendue,
+         act.charge_vendue, act.notes,
          COALESCE(c.assignee, 0) AS charge_assignee,
          COALESCE(c.reelle, 0) AS charge_reelle,
          COALESCE(c.reste, 0) AS reste_a_faire,
@@ -97,9 +98,11 @@ const ELEMENTS = `WITH RECURSIVE ${WBS_CTE},
 
 function forme(
   l: LigneElement,
+  peutEcrire: boolean,
   vendu: Map<number, { charge_vendue: number | null; marge: number | null }> | null,
   couts: Map<number, Cout> | null,
   otp: Map<number, Herite>,
+  notes: boolean,
 ): Record<string, unknown> {
   const commun = {
     id: l.id,
@@ -116,7 +119,7 @@ function forme(
       type_jalon: l.type_jalon,
       date_validee: l.date_validee,
       date_planifiee: l.date_planifiee,
-      ...(vendu ? champsJalon(l) : {}),
+      ...(peutEcrire ? champsJalon(l) : {}),
     };
   }
   return {
@@ -134,6 +137,7 @@ function forme(
     charge_reelle: l.charge_reelle,
     reste_a_faire: l.reste_a_faire,
     avancement: l.avancement,
+    ...(notes ? { notes: l.notes } : {}),
     ...(vendu ? champsActivite(vendu, l.id) : {}),
     otp_effectif: otp.get(l.id)?.otp_effectif ?? null,
     otp_source: otp.get(l.id)?.otp_source ?? null,
@@ -148,17 +152,23 @@ function forme(
  * Totaux du projet (D-149 (5), D-150 (2)) : feuilles du projet seul, closes comprises. Vendu et marge :
  * feuilles renseignées seulement ; assignée et réelle : toutes les feuilles.
  */
-function totaux(elements: LigneElement[]) {
+function totaux(elements: LigneElement[], finances: boolean) {
   const feuilles = elements.filter((e) => e.type === 'activite' && !e.est_parent);
   const renseignees = feuilles.filter((e) => e.charge_vendue !== null);
   const somme = (valeurs: number[]) => Math.round(valeurs.reduce((a, b) => a + b, 0) * 100) / 100;
+  const charges = {
+    charge_assignee: somme(feuilles.map((e) => e.charge_assignee)),
+    charge_reelle: somme(feuilles.map((e) => e.charge_reelle)),
+  };
+  // D-265 (3) : vente et marge sous `voit_finances`, assignée et réelle sous `peut_ecrire`.
+  if (!finances) return charges;
   return {
     charge_vendue: renseignees.length ? somme(renseignees.map((e) => e.charge_vendue!)) : null,
-    charge_assignee: somme(feuilles.map((e) => e.charge_assignee)),
+    charge_assignee: charges.charge_assignee,
     marge: renseignees.length
       ? somme(renseignees.map((e) => e.charge_vendue! - e.charge_assignee))
       : null,
-    charge_reelle: somme(feuilles.map((e) => e.charge_reelle)),
+    charge_reelle: charges.charge_reelle,
   };
 }
 
@@ -174,10 +184,11 @@ export async function lireGantt(
     fin_planifiee: string | null;
   }>('SELECT debut_planifie, fin_planifiee FROM projet WHERE id = $1', [projet.id]);
   const { rows: elements } = await db.query<LigneElement>(ELEMENTS, [projet.id]);
-  // D-149 (4) : champs de 6c pour qui écrit sur le projet seulement.
-  const vendu = peutEcrire ? await lireVendu(db, projet.id) : null;
-  // D-229 : coûts pour qui écrit sur le projet seulement ; OTP effectif pour tout lecteur.
-  const couts = peutEcrire ? await lireCouts(db, projet.id, jour) : null;
+  // D-149 (4), D-265 (3) : vente et marge sous `voit_finances` ; date client sous `peut_ecrire`.
+  const finances = voitFinances(user, peutEcrire);
+  const vendu = finances ? await lireVendu(db, projet.id) : null;
+  // D-229, D-265 (3) : coûts sous `voit_finances` ; OTP effectif pour tout lecteur.
+  const couts = finances ? await lireCouts(db, projet.id, jour) : null;
   const otp = await lireOtpActivites(db, user, projet.id);
   const { rows: dependances } = await db.query(
     `SELECT id, predecesseur_id, successeur_id, type, delai, drapeaux
@@ -202,11 +213,15 @@ export async function lireGantt(
       fin_planifiee: dates[0]!.fin_planifiee,
       clos: projet.clos,
       peut_ecrire: peutEcrire,
-      ...(vendu
-        ? { totaux: { ...totaux(elements), ...(couts ? champsCout(couts.projet) : {}) } }
+      ...(peutEcrire
+        ? {
+            totaux: { ...totaux(elements, finances), ...(couts ? champsCout(couts.projet) : {}) },
+          }
         : {}),
     },
-    elements: elements.map((l) => forme(l, vendu, couts?.activites ?? null, otp)),
+    elements: elements.map((l) =>
+      forme(l, peutEcrire, vendu, couts?.activites ?? null, otp, voitNotes(user)),
+    ),
     dependances,
     sous_projets: sousProjets,
   };

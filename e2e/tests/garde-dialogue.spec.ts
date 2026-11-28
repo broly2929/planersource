@@ -154,7 +154,9 @@ test('E2E-445-r3 : champ mot de passe (Nouvel utilisateur) : saisi puis Échap :
   );
 });
 
-test('E2E-446-r2 : liste native (Nouvel utilisateur, Rôle) : changée puis Échap : confirmation ; remise : aucune', async ({
+// E2E-446-r3 (D-031, D-268, tag tests-droits-2-r2) : « Leader métier » s'insère avant « Ressource » (DE-9) ;
+// ArrowUp depuis « Ressource » donne donc leader_metier. Seule l'attente de valeur change.
+test('E2E-446-r3 : liste native (Nouvel utilisateur, Rôle) : changée puis Échap : confirmation ; remise : aucune', async ({
   page,
 }) => {
   const dialogue = await ouvrirNouvelUtilisateur(page);
@@ -169,7 +171,7 @@ test('E2E-446-r2 : liste native (Nouvel utilisateur, Rôle) : changée puis Éch
       await role.click();
       await page.keyboard.press('Escape');
       await role.press('ArrowUp');
-      await expect(role).toHaveValue('chef_de_projet');
+      await expect(role).toHaveValue('leader_metier');
     },
     () => role.selectOption(initial),
   );

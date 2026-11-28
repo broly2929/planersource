@@ -80,3 +80,17 @@
 {"evenement":"fin","date":"2026-11-26T17:38:32.845Z","commit":"fa5506a","lot":"taux-2","vitest":{"statut":"vert","duree_s":276.5},"e2e":{"statut":"vert","duree_s":835.9},"resultat":"vert"}
 {"evenement":"debut","date":"2026-11-26T19:10:06.090Z","commit":"a205934","arbre_propre":true,"lot":"robustesse-ci"}
 {"evenement":"fin","date":"2026-11-26T19:30:56.346Z","commit":"a205934","lot":"robustesse-ci","vitest":{"statut":"vert","duree_s":305.5},"e2e":{"statut":"vert","duree_s":944.7},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-27T18:44:34.655Z","commit":"9e60aaa","arbre_propre":true,"lot":"droits"}
+{"evenement":"fin","date":"2026-11-27T19:04:31.475Z","commit":"9e60aaa","lot":"droits","vitest":{"statut":"vert","duree_s":289.4},"e2e":{"statut":"rouge","duree_s":907.4},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-27T19:53:12.023Z","commit":"8b05764","arbre_propre":false,"lot":"notes"}
+{"evenement":"fin","date":"2026-11-27T20:13:10.147Z","commit":"8b05764","lot":"notes","vitest":{"statut":"vert","duree_s":296.5},"e2e":{"statut":"rouge","duree_s":901.6},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-27T20:51:39.849Z","commit":"14c0aeb","arbre_propre":true,"lot":"securite"}
+{"evenement":"fin","date":"2026-11-27T21:11:27.140Z","commit":"14c0aeb","lot":"securite","vitest":{"statut":"vert","duree_s":294.7},"e2e":{"statut":"rouge","duree_s":892.6},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-28T10:24:57.679Z","commit":"9165cef","arbre_propre":false,"lot":"securite-2"}
+{"evenement":"fin","date":"2026-11-28T10:45:22.277Z","commit":"9165cef","lot":"securite-2","vitest":{"statut":"vert","duree_s":297.9},"e2e":{"statut":"rouge","duree_s":926.7},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-28T12:01:18.540Z","commit":"0bf5117","arbre_propre":false,"lot":"absences"}
+{"evenement":"fin","date":"2026-11-28T12:22:52.978Z","commit":"0bf5117","lot":"absences","vitest":{"statut":"vert","duree_s":328.2},"e2e":{"statut":"rouge","duree_s":966.3},"resultat":"échec e2e"}
+{"evenement":"debut","date":"2026-11-28T13:04:51.020Z","commit":"f478854","arbre_propre":false,"lot":"absences-suite"}
+{"evenement":"fin","date":"2026-11-28T13:25:12.928Z","commit":"f478854","lot":"absences-suite","vitest":{"statut":"vert","duree_s":323.6},"e2e":{"statut":"vert","duree_s":898.3},"resultat":"vert"}
+{"evenement":"debut","date":"2026-11-28T13:57:43.563Z","commit":"112ad58","arbre_propre":false,"lot":"absences-grille"}
+{"evenement":"fin","date":"2026-11-28T14:19:16.019Z","commit":"112ad58","lot":"absences-grille","vitest":{"statut":"vert","duree_s":318.5},"e2e":{"statut":"vert","duree_s":974},"resultat":"vert"}

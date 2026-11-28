@@ -161,7 +161,7 @@ describe('Activités (lot 1, T2)', () => {
     expect(liste(await api.get(url.activites(m.projet.id)))).toHaveLength(1);
   });
 
-  it('ACT-12-r1 : chef de projet écrit sur ses projets ; projet d’un autre → 404 ; ressource affectée → 404', async () => {
+  it('ACT-12-r2 : chef de projet écrit sur ses projets ; projet d’un autre → 403 ; ressource affectée → 404', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.admin, m.projet.id);
     const parChef = await appel(ctx, m.chef).post(url.activites(m.projet.id), { nom: 'Chef' });

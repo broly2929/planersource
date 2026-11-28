@@ -35,7 +35,7 @@ Les deux services `db` et `app` doivent être `Up`, `db` avec la mention `health
 
 1. Ouvrir `http://<serveur>:<PORT>` dans un navigateur.
 2. Se connecter avec l'identifiant `admin` et le mot de passe `admin`. Ce compte est créé au premier démarrage, seulement si la base ne contient aucun utilisateur.
-3. Un bandeau rappelle que le mot de passe est celui d'origine. Aller dans **Utilisateurs**, cliquer sur l'icône crayon (« Modifier Administrateur ») de la ligne « Administrateur », saisir un **Nouveau mot de passe**, puis **Enregistrer**. Le bandeau disparaît à la connexion suivante. Le bouton « Changer mon mot de passe » (pied de la barre latérale) permet à chaque utilisateur de changer le sien ; le changement ferme les autres sessions du compte et fait aussi disparaître le bandeau dès la session courante (D-254).
+3. La page « Changez votre mot de passe » s'affiche aussitôt : rien d'autre n'est accessible avant d'avoir choisi un autre mot de passe que `admin` (SEC-1, D-272). Le bouton « Changer mon mot de passe » (pied de la barre latérale) permet à chaque utilisateur de changer le sien ; le changement ferme les autres sessions du compte (D-254).
 
 - `<serveur>` : `localhost` sur le serveur lui-même ; depuis un autre poste, son adresse IP ou son nom sur le réseau ; derrière Caddy (section 4), l'adresse HTTPS du domaine, sans port.
 - `<PORT>` : la valeur de `PORT` dans `.env` (8080 par défaut).
@@ -166,6 +166,14 @@ La mise à jour récupère la dernière version publiée sur GitHub (branche mai
    Une seule fois, pour la mise à jour qui apporte ce réglage : forcer le rechargement de la page (Ctrl+F5, ou Cmd+Maj+R sur Mac), car le navigateur garde l'ancienne page jusqu'à ce rechargement.
 
 En cas d'échec : restaurer la sauvegarde avec la version précédente (`git checkout <commit précédent>`, puis section 5, « Restauration »). Une version plus ancienne que la base refuse de démarrer : dans ce cas, restaurer la sauvegarde avec l'ancienne version. Les images des versions précédentes restent sur le disque : `docker image prune` les supprime.
+
+### Notes de mise à jour 1.3.0 (D-282)
+
+- Migrations appliquées au démarrage, sans perte de données (aucune colonne ni table supprimée, aucune donnée modifiée) : 018 rôle « Leader métier » ; 019 colonne `notes` des activités ; 020 table `absence` et son historique ; 021 colonne `charge_depuis_taux` des assignations (faux pour l'existant).
+- Mot de passe de 12 caractères au moins à tout changement ; les mots de passe actuels restent valables.
+- Un chef de projet lit tous les projets ; nouveau rôle « Leader métier ».
+- Imputations : nouvel onglet « Absences » (grille mensuelle pour l'administrateur, le chef et le leader ; limite de 366 jours par absence).
+- Le compte initial dont le mot de passe doit être changé ne concerne qu'une base vide : une base existante n'est pas touchée.
 
 ## 7. Commandes utiles (Docker)
 

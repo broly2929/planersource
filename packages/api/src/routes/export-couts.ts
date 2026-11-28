@@ -3,6 +3,7 @@ import { exporterCouts } from '../export/couts.js';
 import { identifiant, refuser, verdictProjet } from '../planning/acces.js';
 import type { AppDeps } from '../app.js';
 import { requireUser } from './acces.js';
+import { roleVoitFinances } from '../auth/user.js';
 
 /** Export CSV des coûts d'un projet (D-229) : lecture seule, réservé à qui écrit sur le projet. */
 export function exportCoutsRoutes(app: FastifyInstance, { pool, aujourdhui }: AppDeps): void {
@@ -12,7 +13,7 @@ export function exportCoutsRoutes(app: FastifyInstance, { pool, aujourdhui }: Ap
     { preHandler: requireUser },
     async (request, reply) => {
       const user = request.user!;
-      if (user.role === 'ressource') return reply.code(403).send({ erreur: 'Interdit' });
+      if (!roleVoitFinances(user.role)) return reply.code(403).send({ erreur: 'Interdit' });
       // 404 si le projet est illisible, 403 s'il est en lecture seule
       const acces = await verdictProjet(pool, user, identifiant(request.params.id), true);
       if (acces.verdict) return refuser(reply, acces.verdict);

@@ -4,6 +4,7 @@ import { useAuth } from '../auth';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
 import { LogOut } from 'lucide-react';
+import { AIDE_LONGUEUR, validerLongueur } from '../motDePasse';
 import { navigate, sortir } from '../router';
 import { FormulaireDialogue } from './projet/commun';
 
@@ -24,7 +25,9 @@ export function FormulaireMotDePasse({
   return (
     <FormulaireDialogue
       libelle="Enregistrer"
-      valider={() => (confirmation !== nouveau ? CONFIRMATION_DIFFERENTE : null)}
+      valider={() =>
+        confirmation !== nouveau ? CONFIRMATION_DIFFERENTE : validerLongueur(nouveau)
+      }
       envoyer={() => changerMotDePasse(actuel, nouveau)}
       onSucces={onSucces}
       {...(onAnnuler ? { onAnnuler } : {})}
@@ -44,6 +47,7 @@ export function FormulaireMotDePasse({
       />
       <Field
         label="Nouveau mot de passe"
+        aide={AIDE_LONGUEUR}
         type="password"
         autoComplete="new-password"
         required

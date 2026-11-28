@@ -17,6 +17,10 @@ const jourPlus = (lundi: string, n: number): string => {
   return d.toISOString().slice(0, 10);
 };
 
+/** Mot de passe d'un compte de démonstration (D-274, SEC-7) : « admin » pour l'administrateur (D-071), sinon `<identifiant>-demonstration`. */
+export const motDePasseDemo = (login: string): string =>
+  login === 'admin' ? 'admin' : `${login}-demonstration`;
+
 class Session {
   constructor(
     private readonly app: FastifyInstance,
@@ -27,7 +31,7 @@ class Session {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { identifiant: login, mot_de_passe: login },
+      payload: { identifiant: login, mot_de_passe: motDePasseDemo(login) },
     });
     if (res.statusCode !== 200)
       throw new Error(`Connexion de ${login} refusée (${res.statusCode})`);
@@ -71,7 +75,13 @@ export async function remplirDemo(app: FastifyInstance, { lundi }: OptionsDemo):
   const admin = await Session.ouvrir(app, 'admin');
 
   const compte = async (login: string, nom: string, initiales: string, extra: Corps) =>
-    admin.creer('/api/utilisateurs', { login, nom, initiales, mot_de_passe: login, ...extra });
+    admin.creer('/api/utilisateurs', {
+      login,
+      nom,
+      initiales,
+      mot_de_passe: motDePasseDemo(login),
+      ...extra,
+    });
   // Équipes (D-154 (10)) : Développement (alice, bob), Pilotage (chefa, chefb).
   const developpement = await admin.creer('/api/equipes', { nom: 'Développement' });
   const pilotage = await admin.creer('/api/equipes', { nom: 'Pilotage' });
@@ -167,7 +177,13 @@ export async function remplirDemo(app: FastifyInstance, { lundi }: OptionsDemo):
     debut_valide: j(0),
     fin_valide: j(11),
   });
-  await assigner(recette, aliceU, 4);
+  // Charge depuis le taux (D-276, SPEC §4 point 17) : 40 % de la capacité d'Alice sur la fenêtre, absences déduites.
+  await chefa.creer(`/api/activites/${recette.id}/assignations`, {
+    ressource_id: aliceU.id,
+    charge_assignee: 4,
+    taux: 40,
+    charge_depuis_taux: true,
+  });
 
   const jalon = await chefa.creer(`/api/projets/${r.id}/jalons`, {
     nom: 'Fin de phase 1',
@@ -328,6 +344,23 @@ export async function remplirDemo(app: FastifyInstance, { lundi }: OptionsDemo):
   await soumettre(bob, l7, await imputer(bob, l7, [['Conception', 1, 1]]));
   // Semaine lundi : Alice brouillon (lundi seulement, si passé ou égal au jour du serveur).
   await imputer(alice, lundi, [['Cadrage', 0, 0.5]]);
+
+  // Absences d'Alice (D-276, SPEC §4 point 17) : formation le matin du mardi de la semaine suivante, congé le
+  // mardi de la semaine d'après (jours sans imputation ni saisie).
+  await alice.creer('/api/absences', {
+    ressource_id: aliceU.id,
+    debut: j(8),
+    fin: j(8),
+    portion: 'matin',
+    motif: 'formation',
+  });
+  await alice.creer('/api/absences', {
+    ressource_id: aliceU.id,
+    debut: j(15),
+    fin: j(15),
+    portion: 'journee',
+    motif: 'conge',
+  });
 
   // Calcul de R (et S) à la date du lundi : les drapeaux viennent du moteur.
   await chefa.envoyer('POST', '/api/calcul', { projets: [r.id, s.id], d0: lundi }, 200);

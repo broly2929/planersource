@@ -8,11 +8,16 @@
     "pile-worker.spec.ts",
     "rex2.spec.ts",
     "rex2d.spec.ts",
+    "securite-2.spec.ts",
     "session-partagee.spec.ts",
     "version.spec.ts"
   ],
   "utilisateurs-equipes-calendriers": [
+    "absences-grille.spec.ts",
+    "absences-suite.spec.ts",
+    "absences.spec.ts",
     "couts-1.spec.ts",
+    "droits-2.spec.ts",
     "lot1.spec.ts",
     "lot6a.spec.ts",
     "mot-de-passe.spec.ts",
@@ -23,18 +28,22 @@
     "rex2.spec.ts",
     "rex2d.spec.ts",
     "rex5.spec.ts",
+    "securite-2.spec.ts",
     "taux-2.spec.ts"
   ],
   "projets": [
     "charge-lisible.spec.ts",
+    "charge-taux.spec.ts",
     "cloture-c2.spec.ts",
     "colonne-ressources.spec.ts",
     "couts-1.spec.ts",
     "couts-2.spec.ts",
+    "droits-2.spec.ts",
     "lot1.spec.ts",
     "lot1b-c.spec.ts",
     "lot1b-wbs.spec.ts",
     "lot1b.spec.ts",
+    "notes.spec.ts",
     "onglets.spec.ts",
     "pilotage-2.spec.ts",
     "recette-auto-admin-retour.spec.ts",
@@ -44,14 +53,18 @@
     "rex2b.spec.ts",
     "rex2c.spec.ts",
     "saisie-activites.spec.ts",
+    "securite-2.spec.ts",
     "taux-2.spec.ts"
   ],
   "gantt": [
+    "absences-suite.spec.ts",
     "charge-lisible.spec.ts",
+    "charge-taux.spec.ts",
     "colonne-ressources.spec.ts",
     "correctif-inverse.spec.ts",
     "correctif-rex3b.spec.ts",
     "couts-2.spec.ts",
+    "droits-2.spec.ts",
     "gantt-colonnes-2.spec.ts",
     "gantt-colonnes.spec.ts",
     "lot3b-focus.spec.ts",
@@ -68,6 +81,7 @@
     "lot3f2.spec.ts",
     "lot3g.spec.ts",
     "lot6c.spec.ts",
+    "notes.spec.ts",
     "pilotage-2.spec.ts",
     "recette-auto-chefa.spec.ts",
     "retouches-rex6.spec.ts",
@@ -82,6 +96,7 @@
     "taux-2.spec.ts"
   ],
   "planning-manuel": [
+    "absences.spec.ts",
     "lot2e-bouton.spec.ts",
     "lot2e.spec.ts",
     "lot3g.spec.ts",
@@ -90,15 +105,19 @@
     "rex3a.spec.ts"
   ],
   "accueil": [
+    "absences-suite.spec.ts",
+    "absences.spec.ts",
     "accueil-g2.spec.ts",
-    "accueil-sans-bandeau.spec.ts",
     "accueil-g3.spec.ts",
     "accueil-g4.spec.ts",
+    "accueil-sans-bandeau.spec.ts",
     "colonne-ressources.spec.ts",
     "couts-2.spec.ts",
+    "droits-2.spec.ts",
     "gantt-colonnes-2.spec.ts",
     "gantt-colonnes.spec.ts",
     "lot6e.spec.ts",
+    "notes.spec.ts",
     "pilotage-2.spec.ts",
     "recette-auto-chefa.spec.ts",
     "retouches-rex6.spec.ts",
@@ -108,7 +127,10 @@
     "rex3b-r4.spec.ts"
   ],
   "feuille-de-temps": [
+    "absences-grille.spec.ts",
+    "absences.spec.ts",
     "autrui-e.spec.ts",
+    "charge-taux.spec.ts",
     "correctif-244.spec.ts",
     "lot4b-corr.spec.ts",
     "lot4b.spec.ts",
@@ -120,11 +142,15 @@
     "recette-auto-chefb.spec.ts",
     "retouche-feuille.spec.ts",
     "retouches-rex6.spec.ts",
+    "securite-2.spec.ts",
     "sortie.spec.ts",
     "version.spec.ts"
   ],
   "validation": [
+    "absences-grille.spec.ts",
+    "absences.spec.ts",
     "devalidation-e.spec.ts",
+    "droits-2.spec.ts",
     "lot4c.spec.ts",
     "lot5d.spec.ts",
     "onglets.spec.ts",
@@ -132,15 +158,22 @@
     "recette-auto-chefa-retour.spec.ts",
     "recette-auto-chefa.spec.ts",
     "recette-auto-chefb.spec.ts",
-    "retouche-voir.spec.ts"
+    "retouche-voir.spec.ts",
+    "securite-2.spec.ts"
   ],
   "dialogues": [
+    "absences-grille.spec.ts",
+    "absences-suite.spec.ts",
+    "absences.spec.ts",
     "charge-lisible.spec.ts",
+    "charge-taux.spec.ts",
     "colonne-ressources.spec.ts",
     "couts-1.spec.ts",
+    "droits-2.spec.ts",
     "garde-dialogue-focus.spec.ts",
     "garde-dialogue.spec.ts",
     "garde-focus-auto.spec.ts",
+    "notes.spec.ts",
     "recette-auto-admin-retour.spec.ts",
     "retours-deploiement-2.spec.ts",
     "saisie-activites.spec.ts",
@@ -150,6 +183,8 @@
     "version.spec.ts"
   ],
   "plan-de-charge": [
+    "absences-suite.spec.ts",
+    "droits-2.spec.ts",
     "export-plan-de-charge.spec.ts",
     "lot6d.spec.ts",
     "lot6f.spec.ts",
@@ -157,7 +192,10 @@
     "recette-auto-admin.spec.ts"
   ],
   "vue-ressource": [
+    "absences-grille.spec.ts",
+    "absences.spec.ts",
     "lot6b.spec.ts",
+    "notes.spec.ts",
     "retouches-rex6.spec.ts",
     "retours-deploiement-1.spec.ts",
     "version.spec.ts"

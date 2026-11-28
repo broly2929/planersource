@@ -2,13 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { lireTauxRessources, resoudreTaux, ressourcesEnPortee } from '../planning/taux.js';
 import type { AppDeps } from '../app.js';
-import { requireNonRessource } from './acces.js';
+import { requireFinances } from './acces.js';
 
 const requete = z.strictObject({ date: z.iso.date() });
 
 /** Taux du jour (SPEC §12.6 point 8, D-258) : lecture seule, une seule lecture des taux. */
 export function tauxDuJourRoutes(app: FastifyInstance, { pool }: AppDeps): void {
-  app.get('/api/taux/du-jour', { preHandler: requireNonRessource }, async (request, reply) => {
+  app.get('/api/taux/du-jour', { preHandler: requireFinances }, async (request, reply) => {
     const user = request.user!;
     const query = requete.safeParse(request.query);
     if (!query.success) return reply.code(400).send({ erreur: 'Données invalides' });

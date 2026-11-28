@@ -18,6 +18,7 @@ import {
   type Zoom,
 } from './echelle';
 import { rectSurcharge } from './surcharge';
+import { titreAbsence, type Motif } from '../absences/logique';
 import { entetes } from './entetes';
 import { datesApresGeste, gestesPermis, type Geste, type PermisGestes } from './gestes';
 import {
@@ -71,6 +72,8 @@ export interface ElementGantt {
   marge?: number | null;
   /** Activités : OTP effectif pour tout lecteur ; coûts seulement si l'utilisateur écrit (D-229). */
   otp_effectif?: string | null;
+  /** Note d'activité (D-270) ; absente pour le rôle ressource. */
+  notes?: string | null;
   cout_planifie?: number;
   cout_impute?: number;
   cout_reel?: number;
@@ -354,6 +357,7 @@ export function GanttSvg({
   gestes,
   clavier,
   joursRouges,
+  absences,
   client = false,
 }: {
   lignes: LigneSvg[];
@@ -366,6 +370,8 @@ export function GanttSvg({
   clavier?: OptionsClavier | undefined;
   /** Jours en surcharge par activité feuille (lot 3g, D-114 (4)). */
   joursRouges?: Map<number, string[]> | undefined;
+  /** Jours d'absence en journée entière (planning d'une ressource, D-276) : jour -> motif, grisés sur toute la hauteur. */
+  absences?: Map<string, Motif> | undefined;
   /** Date client des jalons : losange, texte d'écart, nom accessible (lot 6c, D-149 (8c)) ; réservé au Gantt du projet. */
   client?: boolean;
 }) {
@@ -629,6 +635,25 @@ export function GanttSvg({
         {weekends.map((i) => (
           <rect key={i} x={i * px} width={px} height={hauteurCorps} className="fill-gray-100" />
         ))}
+        {[...(absences ?? [])]
+          .filter(([jour]) => jour >= plage.debut && jour <= plage.fin)
+          .map(([jour, motif]) => (
+            <g
+              key={jour}
+              data-absence={jour}
+              // `title` en attribut (lu par les tests et les infobulles) : absent des types SVG de React.
+              {...{ title: titreAbsence(motif) }}
+              aria-hidden
+              className="pointer-events-none"
+            >
+              <rect
+                x={positionJour(plage.debut, jour, zoom)}
+                width={px}
+                height={hauteurCorps}
+                className="fill-gray-300"
+              />
+            </g>
+          ))}
         {lignes.map((l, i) => (
           <line
             key={i}

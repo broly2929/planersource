@@ -375,7 +375,7 @@ describe('Historique (lot 1, T3)', () => {
   });
 
   describe('HIS-12 : refus et atomicité', () => {
-    it('HIS-12-r1 : une modification refusée n’écrit aucune entrée (ressource : 404, D-148 (2))', async () => {
+    it('HIS-12-r2 : une modification refusée n’écrit aucune entrée (ressource : 404, D-148 (2) ; chef d’un autre projet : 403, D-265 (4))', async () => {
       const m = await creerMonde(ctx);
       const a = await creerActivite(ctx, m.chef, m.projet.id);
       const b = await creerActivite(ctx, m.chef, m.projet.id);
@@ -405,7 +405,7 @@ describe('Historique (lot 1, T3)', () => {
           'PATCH',
           `/api/projets/${m.projet.id}`,
           { nom: 'X' },
-          404,
+          403,
         ],
         ['projet, ressource', m.alice, 'PATCH', `/api/projets/${m.projet.id}`, { nom: 'X' }, 404],
         [
@@ -433,7 +433,7 @@ describe('Historique (lot 1, T3)', () => {
           'PATCH',
           `/api/affectations/${id}`,
           { taux: 10 },
-          404,
+          403,
         ],
         [
           'assignation, charge négative',
@@ -575,7 +575,7 @@ describe('Historique (lot 1, T3)', () => {
     });
   });
 
-  it('HIS-13-r1 : lecture de l’historique d’un projet : chef d’un autre projet → 404 ; ressource affectée → 404', async () => {
+  it('HIS-13-r2 : lecture de l’historique d’un projet : chef d’un autre projet → 403 ; ressource affectée → 404', async () => {
     const m = await creerMonde(ctx);
     const chefRessource = await creerActeur(ctx, 'chefres@example.test', 'chef_de_projet', true);
     await ctx.pool.query(
@@ -588,7 +588,7 @@ describe('Historique (lot 1, T3)', () => {
       (await appel(ctx, qui).get(a)).statusCode;
     expect(await statut(m.admin)).toBe(200);
     expect(await statut(m.chef)).toBe(200);
-    expect(await statut(m.autreChef)).toBe(404);
+    expect(await statut(m.autreChef)).toBe(403); // révision D-265 (4) : lecture seule
     expect(await statut(m.alice)).toBe(404); // révision 6b (D-031, D-148 (2))
     expect(await statut(chefRessource)).toBe(403); // chef d'un autre projet, affecté ici : lecture seule
     expect(await statut(nonAffectee)).toBe(404);

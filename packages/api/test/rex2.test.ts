@@ -23,30 +23,34 @@ describe('REX-2 R2-A : mot de passe sans longueur minimale (D-076)', () => {
       payload,
     });
 
-  it('USR-14 : createAdmin avec le mot de passe « a » crée l’administrateur, qui se connecte avec « a »', async () => {
-    await createAdmin(ctx.pool, { nom: 'Admin', email: 'a@example.test', motDePasse: 'a' });
+  it('USR-14-r1 : createAdmin avec le mot de passe « mot-de-passe-a » crée l’administrateur, qui se connecte avec lui', async () => {
+    await createAdmin(ctx.pool, {
+      nom: 'Admin',
+      email: 'a@example.test',
+      motDePasse: 'mot-de-passe-a',
+    });
     expect(await compte(ctx)).toBe(1);
-    expect((await login(ctx.app, 'a@example.test', 'a')).status).toBe(200);
+    expect((await login(ctx.app, 'a@example.test', 'mot-de-passe-a')).status).toBe(200);
   });
 
-  it('USR-15 : POST /api/utilisateurs avec mot_de_passe « a » → 201 ; connexion avec « a » → 200', async () => {
+  it('USR-15-r1 : POST /api/utilisateurs avec mot_de_passe « mot-de-passe-a » → 201 ; connexion avec lui → 200', async () => {
     const cookie = await admin();
     const res = await post(cookie, {
       nom: 'Court',
       email: 'court@example.test',
-      mot_de_passe: 'a',
+      mot_de_passe: 'mot-de-passe-a',
       role: 'ressource',
     });
     expect(res.statusCode).toBe(201);
-    expect((await login(ctx.app, 'court@example.test', 'a')).status).toBe(200);
+    expect((await login(ctx.app, 'court@example.test', 'mot-de-passe-a')).status).toBe(200);
   });
 
-  it('USR-16 : PATCH avec mot_de_passe « b » → 200 ; « b » connecte, l’ancien mot de passe → 401', async () => {
+  it('USR-16-r1 : PATCH avec mot_de_passe « mot-de-passe-b » → 200 ; il connecte, l’ancien mot de passe → 401', async () => {
     const cookie = await admin();
     const id = await seedUser(ctx.pool, { email: 'bob@example.test' });
-    const res = await patch(cookie, id, { mot_de_passe: 'b' });
+    const res = await patch(cookie, id, { mot_de_passe: 'mot-de-passe-b' });
     expect(res.statusCode).toBe(200);
-    expect((await login(ctx.app, 'bob@example.test', 'b')).status).toBe(200);
+    expect((await login(ctx.app, 'bob@example.test', 'mot-de-passe-b')).status).toBe(200);
     expect((await login(ctx.app, 'bob@example.test')).status).toBe(401);
   });
 

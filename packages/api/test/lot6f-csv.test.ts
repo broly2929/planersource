@@ -287,7 +287,7 @@ describe('Export du plan de charge (D-160 (3))', () => {
     expect(lignes.some((l) => l.includes("'-1"))).toBe(false);
   });
 
-  it('CSV-9-r1 : chef de projet, « Autres projets » en dernier, projets illisibles absents ; administrateur : tout', async () => {
+  it('CSV-9-r2 : chef de projet, tous les projets nommés, sans « Autres projets » (D-265) ; administrateur : tout', async () => {
     const a = await admin(ctx);
     const chef = await utilisateur(ctx, 'Chef', 'chef_de_projet');
     const autreChef = await utilisateur(ctx, 'Autre', 'chef_de_projet');
@@ -315,14 +315,14 @@ describe('Export du plan de charge (D-160 (3))', () => {
       return projets;
     };
     const { lignes: duChef } = await exporter(ctx, chef, adressePlan('?debut=2027-01'));
-    expect(vue(duChef)).toEqual(['M-PROJ1 · Nom M-PROJ1', 'N-LECT · Nom N-LECT', 'Autres projets']);
-    const autres = prefixe(duChef, 'Alice;;Autres projets;');
-    expect(autres).toHaveLength(1);
-    expect(autres[0]).toBe('Alice;;Autres projets;4,5;0;0;0;0;0;0;0;0;0;0;0');
-    expect(duChef.some((l) => l.includes('ILLISIBLE'))).toBe(false);
-    expect(duChef.indexOf(autres[0]!)).toBeGreaterThan(
-      duChef.indexOf('Alice;;N-LECT · Nom N-LECT;1;0;0;0;0;0;0;0;0;0;0;0'),
-    );
+    // Révision D-265 (4) : le chef lit tous les projets ; plus de ligne « Autres projets ».
+    expect(vue(duChef)).toEqual([
+      'A-ILLISIBLE2 · Nom A-ILLISIBLE2',
+      'B-ILLISIBLE3 · Nom B-ILLISIBLE3',
+      'M-PROJ1 · Nom M-PROJ1',
+      'N-LECT · Nom N-LECT',
+    ]);
+    expect(prefixe(duChef, 'Alice;;Autres projets;')).toHaveLength(0);
 
     const { lignes: deAdmin } = await exporter(ctx, a, adressePlan('?debut=2027-01'));
     expect(vue(deAdmin)).toEqual([

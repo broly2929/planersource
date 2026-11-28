@@ -47,6 +47,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run licenses
+      - name: Audit des dépendances (information, non bloquant, D-272)
+        continue-on-error: true
+        run: npm run audit-securite
       - run: npm run sbom -- --check
       - run: npx playwright install --with-deps chromium
       - name: Polices

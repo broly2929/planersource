@@ -134,7 +134,7 @@ describe('Travail par jour : GET /api/projets/:id/travail (lot 3g)', () => {
     expect(await lire(ctx, m.chef, m.projet.id)).toEqual(attendu);
   });
 
-  it('TRAV-6 : refus : 401 sans session ; chef d’un autre projet, ressource non affectée, « abc », 2147483648, 999999 : 404 ; témoin 200 ; base inchangée', async () => {
+  it('TRAV-6-r1 : refus : 401 sans session ; chef d’un autre projet 200 (lecture élargie) ; ressource non affectée, « abc », 2147483648, 999999 : 404 ; témoin 200 ; base inchangée', async () => {
     const m = await creerMonde(ctx);
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     await tache(ctx, m.admin, m.projet.id, m.alice.id, 2);
@@ -144,7 +144,8 @@ describe('Travail par jour : GET /api/projets/:id/travail (lot 3g)', () => {
 
     expect((await appel(ctx, m.admin).get(adresse(m.projet.id))).statusCode).toBe(200);
     expect((await appel(ctx).get(adresse(m.projet.id))).statusCode).toBe(401);
-    expect((await appel(ctx, m.autreChef).get(adresse(m.projet.id))).statusCode).toBe(404);
+    // Révision D-265 (4) : le chef d'un autre projet lit le travail planifié.
+    expect((await appel(ctx, m.autreChef).get(adresse(m.projet.id))).statusCode).toBe(200);
     expect((await appel(ctx, carole).get(adresse(m.projet.id))).statusCode).toBe(404);
     expect((await appel(ctx, m.admin).get(adresse('abc'))).statusCode).toBe(404);
     expect((await appel(ctx, m.admin).get(adresse(2147483648))).statusCode).toBe(404);

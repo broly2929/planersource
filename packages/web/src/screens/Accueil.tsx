@@ -26,6 +26,7 @@ import {
 } from '../accueil/logique';
 import { BoutonsZoom } from '../gantt/BoutonsZoom';
 import { CaseInitiales } from '../gantt/CaseInitiales';
+import { CelluleNotes } from '../gantt/CelluleNotes';
 import { Drapeaux } from '../gantt/Drapeaux';
 import {
   DispositionGantt,
@@ -46,6 +47,7 @@ import {
 import { CelluleRessources } from '../gantt/CelluleRessources';
 import { DialogueModifAssignation } from './projet/DialogueModifAssignation';
 import { formaterAvancement, formaterDate, formaterNombre, VIDE } from '../gantt/libelles';
+import { useEstLeader } from '../droits';
 import { formaterJours } from '../gantt/vendu';
 import { calculerPlage, etendrePlage } from '../gantt/plage';
 import { useLargeur } from '../gantt/useLargeur';
@@ -68,7 +70,14 @@ type Edition =
   | { kind: 'activite'; activite: ActiviteDetail; projetId: number }
   | { kind: 'jalon'; jalon: JalonDetail; projetId: number }
   | { kind: 'projet'; id: number }
-  | { kind: 'assignation'; assignation: AssignationGantt; activite: string };
+  | {
+      kind: 'assignation';
+      assignation: AssignationGantt;
+      activite: string;
+      /** mode REGUL et projet : case « Charge depuis le taux » (D-278) */
+      regul: boolean;
+      projetId: number;
+    };
 
 type Contenu =
   | { statut: 'chargement' }
@@ -118,7 +127,7 @@ function GanttGlobal() {
   const zoom = lireZoom(recherche.get('zoom'));
   const initiales = lireInitialesAccueil(recherche.get('initiales'));
   const [largeurSvg, zoneSvg] = useLargeur();
-  const disposition = useDispositionGantt('accueil', { vendu: true });
+  const disposition = useDispositionGantt('accueil', { vendu: !useEstLeader() });
   const [ouverts, setOuverts] = useState<Set<number>>(new Set());
   const [contenus, setContenus] = useState<Map<number, Contenu>>(new Map());
   const demandes = useRef<Set<number>>(new Set());
@@ -465,13 +474,25 @@ function GanttGlobal() {
               peutEcrire.has(projetDeElement.get(l.element.id) ?? -1)
                 ? (a) =>
                     !edition &&
-                    setEdition({ kind: 'assignation', assignation: a, activite: l.element.nom })
+                    setEdition({
+                      kind: 'assignation',
+                      assignation: a,
+                      activite: l.element.nom,
+                      regul: l.element.mode === 'REGUL',
+                      projetId: projetDeElement.get(l.element.id) ?? -1,
+                    })
                 : null
             }
           />
         ) : null,
     },
     ...colonnesAjoutees,
+    {
+      id: 'notes',
+      titre: 'Notes',
+      titreCellule: (l) => (l.type === 'element' ? (l.element.notes ?? undefined) : undefined),
+      cellule: (l) => (l.type === 'element' ? <CelluleNotes notes={l.element.notes} /> : null),
+    },
     {
       id: 'drapeaux',
       titre: 'Drapeaux',
@@ -535,6 +556,8 @@ function GanttGlobal() {
           taux={edition.assignation.taux}
           nomRessource={edition.assignation.nom}
           nomActivite={edition.activite}
+          regul={edition.regul}
+          projetId={edition.projetId}
           onSucces={apresEdition}
           onFermer={fermerEdition}
         />

@@ -58,6 +58,7 @@ const MENUS: Record<Vue, string[]> = {
     'OTP',
     'Coût planifié',
     'Coût réel',
+    'Notes',
     'Drapeaux',
   ],
   accueil: [
@@ -72,6 +73,7 @@ const MENUS: Record<Vue, string[]> = {
     'OTP',
     'Coût planifié',
     'Coût réel',
+    'Notes',
     'Drapeaux',
   ],
   ressource: ['Début', 'Fin', 'Assigné', 'Réel', 'Reste', 'Drapeaux'],
@@ -227,8 +229,8 @@ function suivreErreurs(p: Page): string[] {
 }
 
 const numeros: Record<Vue, Record<'a' | 'b' | 'c' | 'd' | 'e', string>> = {
-  projet: { a: 'E2E-540-r5', b: 'E2E-543-r1', c: 'E2E-546-r3', d: 'E2E-549-r3', e: 'E2E-552-r3' },
-  accueil: { a: 'E2E-541-r6', b: 'E2E-544-r2', c: 'E2E-547-r4', d: 'E2E-550-r4', e: 'E2E-553-r4' },
+  projet: { a: 'E2E-540-r6', b: 'E2E-543-r1', c: 'E2E-546-r3', d: 'E2E-549-r3', e: 'E2E-552-r3' },
+  accueil: { a: 'E2E-541-r7', b: 'E2E-544-r2', c: 'E2E-547-r4', d: 'E2E-550-r4', e: 'E2E-553-r4' },
   ressource: {
     a: 'E2E-542-r3',
     b: 'E2E-545-r1',
@@ -587,7 +589,7 @@ for (const v of VUES) {
   });
 }
 
-test('E2E-555-r4 : Gantt d’un projet, chef qui lit sans écrire : menu sans Vendu ni Marge', async ({
+test('E2E-555-r5 : Gantt d’un projet, chef qui lit sans écrire : menu sans Vendu ni Marge', async ({
   page,
   request,
 }) => {
@@ -611,6 +613,7 @@ test('E2E-555-r4 : Gantt d’un projet, chef qui lit sans écrire : menu sans Ve
     'Charge',
     'Avancement',
     'OTP',
+    'Notes',
     'Drapeaux',
   ]);
   await fermerMenu(page);

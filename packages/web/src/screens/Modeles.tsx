@@ -2,7 +2,7 @@ import { FilePlus, Pencil, Plus } from 'lucide-react';
 import { useId, useState } from 'react';
 import { ChampOtp } from '../components/ChampOtp';
 import { otpSaisi } from '../couts';
-import { api } from '../api';
+import { aDroitsDeChef, api } from '../api';
 import { useAuth } from '../auth';
 import { BoutonIcone } from '../components/BoutonIcone';
 import { Button } from '../components/Button';
@@ -119,7 +119,7 @@ export function Modeles() {
   const [dialogue, setDialogue] = useState(false);
   const peutCreer =
     auth.statut === 'connecte' &&
-    (auth.user.role === 'administrateur' || auth.user.role === 'chef_de_projet');
+    (auth.user.role === 'administrateur' || aDroitsDeChef(auth.user.role));
   const [aCopier, setACopier] = useState<Modele | null>(null);
   const [aModifier, setAModifier] = useState<Modele | null>(null);
   const [etat, recharger] = useListe<Modele[]>('/api/modeles');

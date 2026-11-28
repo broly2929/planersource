@@ -48,6 +48,7 @@ const MENUS: Record<Vue, string[]> = {
     'OTP',
     'Coût planifié',
     'Coût réel',
+    'Notes',
     'Drapeaux',
   ],
   accueil: [
@@ -62,6 +63,7 @@ const MENUS: Record<Vue, string[]> = {
     'OTP',
     'Coût planifié',
     'Coût réel',
+    'Notes',
     'Drapeaux',
   ],
   ressource: ['Début', 'Fin', 'Assigné', 'Réel', 'Reste', 'Drapeaux'],
@@ -124,7 +126,7 @@ async function basculer(page: Page, titres: string[]) {
   await expect(menu(page)).toHaveCount(0);
 }
 
-test('E2E-623-r2 : colonnes par défaut des trois vues, sans stockage ; autres colonnes décochées au menu', async ({
+test('E2E-623-r3 : colonnes par défaut des trois vues, sans stockage ; autres colonnes décochées au menu', async ({
   page,
   request,
 }) => {

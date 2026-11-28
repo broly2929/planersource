@@ -15,7 +15,14 @@ import { api, ApiError } from '../../api';
 import { useAnnuaire } from '../../annuaire';
 import { BoutonIcone } from '../../components/BoutonIcone';
 import { Button } from '../../components/Button';
+import { Case } from '../../components/Case';
 import { Confirmation } from '../../components/Confirmation';
+import {
+  AIDE_CHARGE,
+  AIDE_CHARGE_TAUX,
+  CASE_CHARGE_TAUX,
+  texteRefusAssignation,
+} from '../../chargeTaux';
 import { Dialog } from '../../components/Dialog';
 import { Chargement, Vide } from '../../components/Etat';
 import { Field } from '../../components/Field';
@@ -32,6 +39,7 @@ import { DialogueModifAssignation } from './DialogueModifAssignation';
 import { FormulaireDeplacement } from './FormulaireDeplacement';
 import { inverseLigne } from '../../gantt/annulation';
 import type { PileAnnulation } from './annulation';
+import { useEstLeader } from '../../droits';
 import {
   ChampChargeVendue,
   ChampDuree,
@@ -47,6 +55,7 @@ import {
   usePlanification,
 } from './FormulairesEdition';
 import { ChampOtp } from '../../components/ChampOtp';
+import { ChampNotes } from '../../components/ChampNotes';
 import { otpSaisi } from '../../couts';
 import { ChampTaux } from '../../components/ChampTaux';
 import { AIDE_TAUX_ASSIGNATION } from '../../aidesTaux';
@@ -65,6 +74,7 @@ interface Assignation {
   ressource_id: number;
   taux: number;
   charge_assignee: number;
+  charge_depuis_taux?: boolean;
 }
 interface Dependance {
   id: number;
@@ -106,10 +116,11 @@ export function FormulaireNom({
   corps: Record<string, unknown>;
   onSucces: () => void;
   onAnnuler: () => void;
-  /** Champ « Charge vendue (j) » à la création d'une activité (D-149 (7)). */
+  /** Champs propres à la création d'une activité : « Charge vendue (j) » (D-149 (7)), mode, dates, OTP et « Notes » (D-270). */
   avecChargeVendue?: boolean;
 }) {
   const [nom, setNom] = useState('');
+  const voitFinances = !useEstLeader();
   const vendue = useChargeVendue(null);
   const p = usePlanification({ mode: 'ASAP', debut: null, fin: null, duree: null });
   // D-222 (1) : parent préchoisi par `corps` (sous-activité, menu) ; changé, il remplace le rang (dernier de sa fratrie).
@@ -117,6 +128,7 @@ export function FormulaireNom({
   const parentInitial = typeof corps.parent_id === 'number' ? corps.parent_id : null;
   const [parent, setParent] = useState(parentInitial === null ? '' : String(parentInitial));
   const [otp, setOtp] = useState('');
+  const [notes, setNotes] = useState('');
   const aideHeritage = useAideOtpCreation(projetId, lignes, parent);
   const parentChoisi = parentChange(parentInitial, parent)
     ? { parent_id: parent === '' ? null : Number(parent), rang: undefined }
@@ -140,26 +152,31 @@ export function FormulaireNom({
                   ...(p.champs.duree && p.duree !== '' ? { duree_validee: Number(p.duree) } : {}),
                 }
               : {}),
-            ...(avecChargeVendue && vendue.analyse.ok && vendue.analyse.valeur !== null
+            ...(avecChargeVendue &&
+            voitFinances &&
+            vendue.analyse.ok &&
+            vendue.analyse.valeur !== null
               ? { charge_vendue: vendue.analyse.valeur }
               : {}),
             ...(avecChargeVendue && otpSaisi(otp) ? { otp: otpSaisi(otp) } : {}),
+            ...(avecChargeVendue && notes !== '' ? { notes } : {}),
           },
         })
       }
-      inactif={avecChargeVendue && !vendue.valide}
+      inactif={avecChargeVendue && voitFinances && !vendue.valide}
       cible="element"
       onSucces={onSucces}
       onAnnuler={onAnnuler}
     >
       <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
+      {avecChargeVendue && <ChampNotes valeur={notes} onChange={setNotes} />}
       <ChampParent lignes={lignes} id={null} valeur={parent} onChange={setParent} />
       {avecChargeVendue && (
         <>
           <ChampMode p={p} />
           <ChampsDates p={p} />
           <ChampDuree p={p} />
-          <ChampChargeVendue valeur={vendue.texte} onChange={vendue.setTexte} />
+          {voitFinances && <ChampChargeVendue valeur={vendue.texte} onChange={vendue.setTexte} />}
           <ChampOtp valeur={otp} onChange={setOtp} aide={otp.trim() === '' ? aideHeritage : null} />
         </>
       )}
@@ -169,11 +186,14 @@ export function FormulaireNom({
 
 function FormulaireAssignation({
   ligne,
+  regul,
   candidats,
   onSucces,
   onAnnuler,
 }: {
   ligne: Ligne;
+  /** activité en mode REGUL : case « Charge depuis le taux » (D-276) */
+  regul: boolean;
   candidats: { value: string; label: string }[];
   onSucces: () => void;
   onAnnuler: () => void;
@@ -181,6 +201,7 @@ function FormulaireAssignation({
   const [ressource, setRessource] = useState('');
   const [charge, setCharge] = useState('');
   const [taux, setTaux] = useState('100');
+  const [depuisTaux, setDepuisTaux] = useState(false);
   return (
     <FormulaireDialogue
       libelle="Assigner"
@@ -189,11 +210,13 @@ function FormulaireAssignation({
           method: 'POST',
           body: {
             ressource_id: Number(ressource),
-            charge_assignee: Number(charge),
+            charge_assignee: Number(charge) || 0,
             taux: Number(taux),
+            ...(depuisTaux ? { charge_depuis_taux: true } : {}),
           },
         })
       }
+      texteErreur={texteRefusAssignation}
       onSucces={onSucces}
       onAnnuler={onAnnuler}
     >
@@ -204,11 +227,19 @@ function FormulaireAssignation({
         onChange={(e) => setRessource(e.target.value)}
         options={[{ value: '', label: 'Choisir une ressource' }, ...candidats]}
       />
+      {regul && (
+        <Case
+          label={CASE_CHARGE_TAUX}
+          checked={depuisTaux}
+          onChange={(e) => setDepuisTaux(e.target.checked)}
+        />
+      )}
       <Field
         label="Charge assignée (j)"
-        aide="Effet sur le planning : oui."
+        aide={depuisTaux ? AIDE_CHARGE_TAUX : AIDE_CHARGE}
         type="number"
-        required
+        required={!depuisTaux}
+        readOnly={depuisTaux}
         min="0.01"
         step="0.01"
         value={charge}
@@ -326,6 +357,9 @@ export function PlanningProjet({
     !lignes.some((e) => e.parent_id === l.id) &&
     activites.statut === 'ok' &&
     activites.donnees.some((a) => a.id === l.id && a.mode === 'MAN');
+  // Activité en mode REGUL : case « Charge depuis le taux » des dialogues d'assignation (D-276).
+  const estRegul = (l: Ligne) =>
+    activites.statut === 'ok' && activites.donnees.some((a) => a.id === l.id && a.mode === 'REGUL');
   const listeAssignations = assignations.statut === 'ok' ? assignations.donnees : [];
 
   const fermer = () => setDialogue(null);
@@ -716,6 +750,7 @@ export function PlanningProjet({
         >
           <FormulaireAssignation
             ligne={dialogue.ligne}
+            regul={estRegul(dialogue.ligne)}
             candidats={candidats(dialogue.ligne)}
             onSucces={apres}
             onAnnuler={fermer}
@@ -774,6 +809,8 @@ export function PlanningProjet({
           id={dialogue.assignation.id}
           charge={dialogue.assignation.charge_assignee}
           taux={dialogue.assignation.taux}
+          regul={estRegul(dialogue.ligne)}
+          depuisTaux={dialogue.assignation.charge_depuis_taux ?? false}
           nomRessource={nomRessource(dialogue.assignation.ressource_id)}
           nomActivite={dialogue.ligne.nom}
           onSucces={apres}

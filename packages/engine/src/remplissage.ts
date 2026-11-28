@@ -31,7 +31,8 @@ export function remplirAvant(
   horizon: number,
   deja: readonly Pose[] = [],
 ): ResultatRemplissage {
-  const plafond = plafondAssignation(dispo.capacite(ressourceId), taux);
+  const plafond = (jour: number) =>
+    plafondAssignation(dispo.capaciteDuJour(ressourceId, jour), taux);
   const poses: Pose[] = [];
   let restant = reste;
   for (let jour = debut; restant > 0 && jour <= horizon; jour += 1) {
@@ -41,7 +42,7 @@ export function remplirAvant(
       jour,
       poseDansSemaine(poses, jour) + poseDansSemaine(deja, jour),
     );
-    const charge = Math.min(restant, posable, plafond);
+    const charge = Math.min(restant, posable, plafond(jour));
     if (charge > 0) {
       poses.push({ jour, charge, surcharge: 0 });
       restant -= charge;
@@ -63,12 +64,13 @@ export function remplirArriere(
   debut: number,
   fin: number,
 ): Pose[] | null {
-  const plafond = plafondAssignation(dispo.capacite(ressourceId), taux);
+  const plafond = (jour: number) =>
+    plafondAssignation(dispo.capaciteDuJour(ressourceId, jour), taux);
   const poses: Pose[] = [];
   let restant = reste;
   for (let jour = fin; restant > 0 && jour >= debut; jour -= 1) {
     const posable = dispo.posable(ressourceId, projetId, jour, poseDansSemaine(poses, jour));
-    const charge = Math.min(restant, posable, plafond);
+    const charge = Math.min(restant, posable, plafond(jour));
     if (charge > 0) {
       poses.push({ jour, charge, surcharge: 0 });
       restant -= charge;
@@ -98,7 +100,8 @@ export function remplirFenetre(
   // la cible se répartit sur les seuls jours ouvrés de la ressource ; sans aucun, DDUR garde tous les jours
   const siens = joursFenetre.filter((j) => dispo.estOuvre(ressourceId, j));
   const jours = siens.length === 0 && ignorerCapacite ? joursFenetre : siens;
-  const plafond = plafondAssignation(dispo.capacite(ressourceId), taux);
+  const plafond = (jour: number) =>
+    plafondAssignation(dispo.capaciteDuJour(ressourceId, jour), taux);
   const poses: Pose[] = [];
   let restant = reste;
   jours.forEach((jour, i) => {
@@ -109,7 +112,7 @@ export function remplirFenetre(
       : Math.min(
           cible,
           dispo.posable(ressourceId, projetId, jour, poseDansSemaine(poses, jour)),
-          plafond,
+          plafond(jour),
         );
     if (charge > 0) {
       poses.push({ jour, charge, surcharge: Math.max(0, charge - libre) });

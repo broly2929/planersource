@@ -3,13 +3,17 @@ import { exporterCoutsPilotage } from '../export/couts-pilotage.js';
 import { lireCoutsPilotage } from '../planning/couts-pilotage.js';
 import type { AppDeps } from '../app.js';
 import { requireUser } from './acces.js';
+import { roleVoitFinances, type Role } from '../auth/user.js';
 import { lireParametresPlan } from './plan-de-charge.js';
 
 /** Coûts mensuels du pilotage (SPEC §12.5, D-243) et leur export CSV : lecture seule. */
 export function coutsPilotageRoutes(app: FastifyInstance, { pool }: AppDeps): void {
   type Requete = { Querystring: { debut?: unknown; equipe?: unknown } };
-  const parametres = (role: string, query: Requete['Querystring']) =>
-    lireParametresPlan(role, query);
+  // Leader métier : 403 comme le rôle ressource, avant 400 (D-265 (3)).
+  const parametres = (role: Role, query: Requete['Querystring']) =>
+    roleVoitFinances(role)
+      ? lireParametresPlan(role, query)
+      : ({ statut: 403, erreur: 'Interdit' } as const);
 
   app.get<Requete>('/api/couts', { preHandler: requireUser }, async (request, reply) => {
     const user = request.user!;

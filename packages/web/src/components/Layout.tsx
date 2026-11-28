@@ -9,6 +9,7 @@ import {
   ChartNoAxesGantt,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { aDroitsDeChef } from '../api';
 import { useAuth } from '../auth';
 import { Link, sortir, usePath } from '../router';
 import { FormulaireMotDePasse } from '../screens/ChangementMotDePasse';
@@ -50,10 +51,13 @@ function NavLink({
 
 export function Layout({
   titre,
+  mention,
   actions,
   children,
 }: {
   titre: string;
+  /** Mention à côté du titre (ex. « Lecture seule »). */
+  mention?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
 }) {
@@ -94,14 +98,14 @@ export function Layout({
               Projets
             </NavLink>
           )}
-          {(user?.role === 'administrateur' || user?.role === 'chef_de_projet') && (
+          {(user?.role === 'administrateur' || aDroitsDeChef(user?.role)) && (
             <NavLink to="/pilotage" icone={ChartNoAxesGantt}>
               Pilotage
             </NavLink>
           )}
           {(user?.est_ressource ||
             user?.role === 'administrateur' ||
-            user?.role === 'chef_de_projet') && (
+            aDroitsDeChef(user?.role)) && (
             <NavLink to="/imputations" icone={ClipboardList}>
               Imputations
             </NavLink>
@@ -161,7 +165,10 @@ export function Layout({
           </div>
         )}
         <header className="flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3">
-          <h1 className="text-titre font-semibold">{titre}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-titre font-semibold">{titre}</h1>
+            {mention}
+          </div>
           <div className="flex items-center gap-2">{actions}</div>
         </header>
         {user?.role === 'administrateur' && user.mot_de_passe_origine && (

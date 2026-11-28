@@ -13,7 +13,7 @@ const calcul = { d0: '2027-01-04' };
 describe('Calcul : un chef et les sous-projets d’un autre chef (lot 3g)', () => {
   const ctx = useTestApp();
 
-  it('CALC-51 : A calcule R → R et S, travail de S écrit ; B (chef de S) calcule S seul, R inchangé et pris en compte ; B calcule R : 404 ; B affecté à R : 403', async () => {
+  it('CALC-51-r1 : A calcule R → R et S, travail de S écrit ; B (chef de S) calcule S seul, R inchangé et pris en compte ; B calcule R : 403 ; B affecté à R : 403', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const chefA = await creerActeur(ctx, 'chef-a@example.test', 'chef_de_projet');
     const chefB = await creerActeur(ctx, 'chef-b@example.test', 'chef_de_projet', true);
@@ -49,9 +49,9 @@ describe('Calcul : un chef et les sous-projets d’un autre chef (lot 3g)', () =
     expect(await travail(ctx, aR.assignation.id)).toEqual(travailR);
     expect(await etatDes(ctx, [r.id])).toEqual(etatR);
 
-    // B ne voit pas R : 404, rien n'est écrit.
+    // Révision D-265 (4) : B lit R, en lecture seule : 403, rien n'est écrit.
     const avant404 = await empreinte(ctx);
-    expect((await calculer(ctx, chefB, { projets: [r.id], ...calcul })).statusCode).toBe(404);
+    expect((await calculer(ctx, chefB, { projets: [r.id], ...calcul })).statusCode).toBe(403);
     expect(await empreinte(ctx)).toEqual(avant404);
 
     // B affecté à R : R lisible en lecture seule, 403, rien n'est écrit.

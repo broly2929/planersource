@@ -13,7 +13,8 @@ import {
   supprimerTaux,
 } from '../planning/taux.js';
 import type { AppDeps } from '../app.js';
-import { requireNonRessource, requireUser } from './acces.js';
+import { requireFinances, requireUser } from './acces.js';
+import { roleVoitFinances } from '../auth/user.js';
 
 // Montant en euros (§12.1 point 2) : > 0, au plus 999999,99, deux décimales au plus exactement.
 const montant = z
@@ -52,15 +53,17 @@ export const REFUS = {
 } as const;
 
 export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
+  // D-274 (SEC-3b) : le chef n'écrit jamais son propre taux.
   const peutEcrire = async (user: NonNullable<FastifyRequest['user']>, ressourceId: number) =>
-    user.role === 'administrateur' || (await chefLitTaux(pool, user, ressourceId));
+    user.role === 'administrateur' ||
+    (user.id !== ressourceId && (await chefLitTaux(pool, user, ressourceId)));
   // Lecture (§12.1 point 7) : 401, 403 rôle ressource, 404, 403 chef hors de sa portée.
   app.get<{ Params: { id: string } }>(
     '/api/utilisateurs/:id/taux',
     { preHandler: requireUser },
     async (request, reply) => {
       const user = request.user!;
-      if (user.role === 'ressource') return reply.code(403).send(interdit);
+      if (!roleVoitFinances(user.role)) return reply.code(403).send(interdit);
       const id = identifiant(request.params.id);
       if (id === null || !(await lireRessource(pool, id))) {
         return reply.code(404).send(utilisateurIntrouvable);
@@ -76,7 +79,7 @@ export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
   // ressource), 404, 403 (chef hors de sa portée), 400, 422, 409.
   app.post<{ Params: { id: string } }>(
     '/api/utilisateurs/:id/taux',
-    { preHandler: requireNonRessource },
+    { preHandler: requireFinances },
     async (request, reply) => {
       const id = identifiant(request.params.id);
       if (id === null || !(await lireRessource(pool, id))) {
@@ -101,7 +104,7 @@ export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
 
   app.patch<{ Params: { id: string } }>(
     '/api/taux/:id',
-    { preHandler: requireNonRessource },
+    { preHandler: requireFinances },
     async (request, reply) => {
       const id = identifiant(request.params.id);
       const lu = id === null ? null : await lireUnTaux(pool, id);
@@ -133,7 +136,7 @@ export function tauxRoutes(app: FastifyInstance, { pool }: AppDeps): void {
 
   app.delete<{ Params: { id: string } }>(
     '/api/taux/:id',
-    { preHandler: requireNonRessource },
+    { preHandler: requireFinances },
     async (request, reply) => {
       const id = identifiant(request.params.id);
       const lu = id === null ? null : await lireUnTaux(pool, id);

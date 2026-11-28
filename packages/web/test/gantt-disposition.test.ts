@@ -236,7 +236,7 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
     ).toEqual(['projet', 'activite', 'debut', 'fin', 'reel', 'reste', 'drapeaux']);
   });
 
-  it('GCO-7-r3 : colonnes du menu, ordre fixe, sans les colonnes toujours affichées', () => {
+  it('GCO-7-r4 : colonnes du menu, ordre fixe, sans les colonnes toujours affichées', () => {
     const titres = (v: Parameters<typeof colonnesDuMenu>[0], vendu: boolean) =>
       colonnesDuMenu(v, { vendu }).map((c) => c.titre);
     expect(titres('projet', true)).toEqual([
@@ -251,6 +251,7 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
       'OTP',
       'Coût planifié',
       'Coût réel',
+      'Notes',
       'Drapeaux',
     ]);
     expect(titres('projet', false)).toEqual([
@@ -261,6 +262,7 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
       'Charge',
       'Avancement',
       'OTP',
+      'Notes',
       'Drapeaux',
     ]);
     expect(titres('accueil', true)).toEqual([
@@ -275,6 +277,7 @@ describe('Colonnes (GCO-5 à GCO-9)', () => {
       'OTP',
       'Coût planifié',
       'Coût réel',
+      'Notes',
       'Drapeaux',
     ]);
     expect(titres('ressource', false)).toEqual([

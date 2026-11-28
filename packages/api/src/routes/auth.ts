@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Limiteur } from '../auth/limiteur.js';
+import { MESSAGE_LONGUEUR, motDePasseLongEnough } from '../auth/schemas.js';
 import { hashDeSubstitution } from '../auth/password.js';
 import {
   createSession,
@@ -104,6 +105,9 @@ export function authRoutes(
     if (!rows[0] || !(await verifier(rows[0].mot_de_passe_hash, actuel))) {
       limiteur.echec(ip, cle);
       return reply.code(400).send({ erreur: 'Mot de passe actuel incorrect' });
+    }
+    if (!motDePasseLongEnough(nouveau)) {
+      return reply.code(400).send({ erreur: MESSAGE_LONGUEUR });
     }
     if (nouveau === actuel) {
       return reply

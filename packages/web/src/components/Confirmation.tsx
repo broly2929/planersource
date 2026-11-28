@@ -30,6 +30,7 @@ export function Confirmation({
   variante = 'danger',
   messageErreur = messageRefus,
   focusRetour,
+  alerte = false,
 }: {
   nom?: string;
   action: () => Promise<unknown>;
@@ -43,6 +44,8 @@ export function Confirmation({
   messageErreur?: (err: unknown) => string;
   /** Élément qui reprend le focus à la fermeture (D-188). */
   focusRetour?: (() => HTMLElement | null) | undefined;
+  /** Rôle `alertdialog` au lieu de `dialog` (confirmations des écrans qui l'adoptent, D-276). */
+  alerte?: boolean;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
@@ -62,6 +65,7 @@ export function Confirmation({
   return (
     <Dialog
       sansGarde
+      role={alerte ? 'alertdialog' : undefined}
       focusRetour={focusRetour}
       focusInitial="[data-focus-initial]"
       ouvert

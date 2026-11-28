@@ -1,6 +1,6 @@
 import type pg from 'pg';
 import { hashPassword } from './password.js';
-import { emailSchema, loginSchema, motDePasseSchema } from './schemas.js';
+import { emailSchema, loginSchema, MESSAGE_LONGUEUR, motDePasseSchema } from './schemas.js';
 
 export interface CreateAdminInput {
   nom: string;
@@ -28,7 +28,7 @@ export async function createAdmin(
   if (!loginRes.success) throw new Error('Renseignez un identifiant ou un email');
   const login = loginRes.data;
   if (!motDePasseSchema.safeParse(input.motDePasse).success) {
-    throw new Error('Mot de passe vide');
+    throw new Error(MESSAGE_LONGUEUR);
   }
   const hash = await hashPassword(input.motDePasse);
   try {

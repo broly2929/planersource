@@ -221,7 +221,7 @@ describe('Utilisateurs : equipe_id (D-147 (4))', () => {
   const nouveau = (extra: Corps = {}): Corps => ({
     nom: 'Nouveau',
     email: 'nouveau@example.test',
-    mot_de_passe: 'mdp',
+    mot_de_passe: 'mdp-de-test-12',
     role: 'ressource',
     est_ressource: true,
     ...extra,
@@ -230,7 +230,7 @@ describe('Utilisateurs : equipe_id (D-147 (4))', () => {
     (liste(await appel(ctx, a).get('/api/utilisateurs')).find((u) => u.id === id) as Corps)
       .equipe_id;
 
-  it('USR-26 : equipe_id à la création, null sans équipe, relu par GET /api/utilisateurs', async () => {
+  it('USR-26-r1 : equipe_id à la création, null sans équipe, relu par GET /api/utilisateurs', async () => {
     const a = await admin(ctx);
     const e = await equipe(ctx, a, 'Atelier');
     const avec = await appel(ctx, a).post('/api/utilisateurs', nouveau({ equipe_id: e }));
@@ -246,7 +246,7 @@ describe('Utilisateurs : equipe_id (D-147 (4))', () => {
     expect(await equipeDe(a, corps(sans).id)).toBeNull();
   });
 
-  it('USR-27 : equipe_id modifié, retiré par null, inchangé sans la clé', async () => {
+  it('USR-27-r1 : equipe_id modifié, retiré par null, inchangé sans la clé', async () => {
     const a = await admin(ctx);
     const e1 = await equipe(ctx, a, 'Atelier');
     const e2 = await equipe(ctx, a, 'Bureau');
@@ -265,7 +265,7 @@ describe('Utilisateurs : equipe_id (D-147 (4))', () => {
     expect(await equipeDe(a, u)).toBeNull();
   });
 
-  it('USR-28 : 422 « Équipe inconnue » distinct de « Calendrier inconnu » ; 400 pour un equipe_id invalide', async () => {
+  it('USR-28-r1 : 422 « Équipe inconnue » distinct de « Calendrier inconnu » ; 400 pour un equipe_id invalide', async () => {
     const a = await admin(ctx);
     const u = corps(await appel(ctx, a).post('/api/utilisateurs', nouveau())).id as number;
     const c = appel(ctx, a);
@@ -333,7 +333,7 @@ describe('Utilisateurs : equipe_id (D-147 (4))', () => {
     }
   });
 
-  it('USR-29 : l’annuaire ne contient ni equipe_id ni equipe', async () => {
+  it('USR-29-r1 : l’annuaire ne contient ni equipe_id ni equipe', async () => {
     const a = await admin(ctx);
     const e = await equipe(ctx, a, 'Atelier');
     await appel(ctx, a).post('/api/utilisateurs', nouveau({ equipe_id: e }));

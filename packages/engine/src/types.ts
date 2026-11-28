@@ -10,10 +10,21 @@ export interface Calendrier {
   feries: Jour[];
 }
 
+/** Jour d'absence d'une ressource (SPEC §4, absences, D-276). */
+export interface AbsenceRessource {
+  jour: Jour;
+  portion: 'journee' | 'matin' | 'apres_midi';
+}
+
 export interface Ressource {
   id: number;
   capacite: Cs;
   calendrierId: number;
+  /**
+   * Absences, une entrée par jour (D-276) : journée entière = jour férié de la ressource ; demi-journée =
+   * capacité du jour divisée par deux ; matin et après-midi le même jour = journée. Absent ou vide : aucun effet.
+   */
+  absences?: AbsenceRessource[];
 }
 
 export interface AffectationProjet {
@@ -73,6 +84,11 @@ export interface Assignation {
   charge: Cs;
   chargeReelle: Cs;
   resteAFaire: Cs;
+  /**
+   * Charge calculée depuis le taux (D-276, SPEC §4 point 12) : sur une feuille REGUL ouverte, la charge et le
+   * reste d'entrée sont remplacés avant la passe A. Ignoré ailleurs.
+   */
+  chargeDepuisTaux?: boolean;
 }
 
 export interface TravailReel {
@@ -162,6 +178,8 @@ export interface SortieDependance {
 export interface SortieAssignation {
   id: number;
   reste: Cs;
+  /** charge assignée calculée depuis le taux (D-276) ; présente pour ces seules assignations */
+  charge?: Cs;
 }
 
 export interface Sortie {

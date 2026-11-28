@@ -4,7 +4,15 @@ import { requis } from './graphe.js';
 
 export interface RessourceCtx {
   capacite: number;
+  /** calendrier de la ressource, jours d'absence en journée entière comptés comme fériés (D-276) */
   cal: CalendrierCompile;
+  /** jours d'absence en demi-journée : capacité du jour divisée par deux (D-276) */
+  demi?: ReadonlySet<number>;
+}
+
+/** Capacité d'un jour (D-276) : moitié, au centième inférieur, un jour de demi-journée d'absence. */
+function capaciteJour(r: RessourceCtx, jour: number): number {
+  return r.demi?.has(jour) ? Math.floor(r.capacite / 2) : r.capacite;
 }
 
 export interface FenetreAffectation {
@@ -47,7 +55,10 @@ export class Disponibilites {
     const taux = requis(this.fenetres, `${projetId}:${ressourceId}`).taux;
     const debut = 4 + 7 * semaine;
     let ouvres = 0;
-    for (let j = debut; j < debut + 7; j += 1) if (estOuvre(r.cal, j)) ouvres += 1;
+    // une demi-journée d'absence compte pour 0,5 jour ouvré (D-276)
+    for (let j = debut; j < debut + 7; j += 1) {
+      if (estOuvre(r.cal, j)) ouvres += r.demi?.has(j) ? 0.5 : 1;
+    }
     return Math.floor((taux * r.capacite * ouvres) / 10000);
   }
 
@@ -81,6 +92,11 @@ export class Disponibilites {
     return requis(this.ressources, ressourceId).capacite;
   }
 
+  /** Capacité de la ressource ce jour-là (demi-journée d'absence comprise, D-276). */
+  capaciteDuJour(ressourceId: number, jour: number): number {
+    return capaciteJour(requis(this.ressources, ressourceId), jour);
+  }
+
   /** Jour ouvré du calendrier de la ressource. */
   estOuvre(ressourceId: number, jour: number): boolean {
     return estOuvre(requis(this.ressources, ressourceId).cal, jour);
@@ -112,6 +128,6 @@ export class Disponibilites {
     if (!f || !estOuvre(r.cal, jour)) return 0;
     if ((f.debut !== null && jour < f.debut) || (f.fin !== null && jour > f.fin)) return 0;
     const pris = this.consomme.get(ressourceId)?.get(jour) ?? 0;
-    return Math.max(0, r.capacite - pris);
+    return Math.max(0, capaciteJour(r, jour) - pris);
   }
 }

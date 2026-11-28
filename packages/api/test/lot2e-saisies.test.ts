@@ -157,7 +157,7 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     await putRefuse(m.admin, 999999, JANV, corps, 404, 'PUT activité inconnue');
   });
 
-  it('SAI-7-r1 : droits. GET : administrateur et chef 200 ; ressource affectée, chef d’un autre projet et ressource non affectée 404. PUT : ressource affectée 404, non affectée 404, chef d’un autre projet 404 ; base inchangée', async () => {
+  it('SAI-7-r2 : droits. GET : administrateur, chef et chef d’un autre projet 200 ; ressource affectée et ressource non affectée 404. PUT : ressource affectée 404, non affectée 404, chef d’un autre projet 403 ; base inchangée', async () => {
     const m = await creerMonde(ctx);
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     const { activite, assignation } = await activiteMan(ctx, m.chef, m.projet.id, m.alice.id, 1);
@@ -171,10 +171,11 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
       expect(res.statusCode, `GET ${nom}`).toBe(200);
       expect(res.json(), `GET ${nom}`).toEqual({ mois: JANV, saisies: [matin(a, J05)] });
     }
+    // Révision D-265 (4) : le chef d'un autre projet lit les saisies.
+    expect((await lireSaisies(ctx, m.autreChef, activite.id, JANV)).statusCode).toBe(200);
     // Révision 6b (D-031, D-148 (2)) : la ressource affectée ne lit plus les saisies → 404.
     for (const [nom, qui] of [
       ['ressource affectée', m.alice],
-      ['chef d’un autre projet', m.autreChef],
       ['ressource non affectée', carole],
     ] as const) {
       expect((await lireSaisies(ctx, qui, activite.id, JANV)).statusCode, `GET ${nom}`).toBe(404);
@@ -182,7 +183,7 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     const corps = { saisies: [matin(a, J06)] };
     await putRefuse(m.alice, activite.id, JANV, corps, 404, 'PUT ressource affectée');
     await putRefuse(carole, activite.id, JANV, corps, 404, 'PUT ressource non affectée');
-    await putRefuse(m.autreChef, activite.id, JANV, corps, 404, 'PUT chef d’un autre projet');
+    await putRefuse(m.autreChef, activite.id, JANV, corps, 403, 'PUT chef d’un autre projet'); // D-265 (4)
     // témoins : l'administrateur et le chef écrivent
     for (const qui of [m.admin, m.chef]) {
       expect((await ecrireSaisies(ctx, qui, activite.id, JANV, corps)).statusCode).toBe(200);
@@ -297,7 +298,7 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     expect(await saisiesEnBase(ctx)).toEqual([matin(deux.assignation.id, J06)]);
   });
 
-  it('SAI-10-r1 : ordre des refus 401, 404, 403, 400, 422 ; ressource affectée 404 ; base inchangée', async () => {
+  it('SAI-10-r2 : ordre des refus 401, 404, 403, 400, 422 ; ressource affectée 404 ; chef d’un autre projet 403 ; base inchangée', async () => {
     const m = await creerMonde(ctx);
     const man = await activiteMan(ctx, m.chef, m.projet.id, m.alice.id, 1);
     const asap = await tache(ctx, m.chef, m.projet.id, m.alice.id, 1);
@@ -305,7 +306,8 @@ describe('Saisies manuelles : GET et PUT /api/activites/:id/saisies (lot 2e-I)',
     const valideAsap = { saisies: [matin(asap.assignation.id, J05)] };
     await putRefuse(undefined, man.activite.id, '2027-13', invalide, 401, '401 avant 404 et 400');
     await putRefuse(m.chef, 999999, '2027-13', invalide, 404, '404 avant 400');
-    await putRefuse(m.autreChef, man.activite.id, '2027-13', invalide, 404, '404 avant 403 et 400');
+    // révision D-265 (4) : le chef d'un autre projet lit le projet → 403 avant 400
+    await putRefuse(m.autreChef, man.activite.id, '2027-13', invalide, 403, '403 avant 400');
     // Révision 6b (D-031, D-148 (2), (9)) : la ressource affectée reçoit 404 ; l'ordre 403 est vérifié
     // avec un chef de projet affecté au projet d'un autre chef (lecture seule).
     await putRefuse(m.alice, man.activite.id, '2027-13', invalide, 404, 'ressource affectée : 404');

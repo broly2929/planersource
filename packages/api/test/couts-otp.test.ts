@@ -228,19 +228,19 @@ describe('Lot couts-1 : OTP (SPEC §12.2, D-225)', () => {
     expect(trois(corps(patch))).toEqual({ otp: null, otp_effectif: 'SP-OTP', otp_source: src });
   });
 
-  it('OTP-5 : ancêtre illisible : otp_effectif renvoyé, source sans id ni libellé ; ni id ni code du parent dans la réponse', async () => {
+  it('OTP-5-r1 : ancêtre lisible par tout chef (D-265) : otp_effectif renvoyé, source complète (id et libellé du parent)', async () => {
     const a = await admin(ctx);
     const chefB = await creerActeur(ctx, 'chefb@example.test', 'chef_de_projet');
     const parent = await creerProjet(ctx, a, { code: 'SECRET-PARENT', otp: 'FIN-42' });
     const sp = await creerProjet(ctx, a, { code: 'SOUS', parent_id: parent.id, chef_id: chefB.id });
     const act = await creerActivite(ctx, a, sp.id, { nom: 'Tâche' });
-    const masque = {
+    // Révision D-265 (4) : le chef B lit le parent ; la source n'est plus masquée.
+    const source = {
       otp: null,
       otp_effectif: 'FIN-42',
-      otp_source: { type: 'projet', id: null, libelle: null },
+      otp_source: { type: 'projet', id: parent.id, libelle: 'SECRET-PARENT' },
     };
-    // le chef B ne lit pas le parent
-    expect((await appel(ctx, chefB).get(`/api/projets/${parent.id}`)).statusCode).toBe(404);
+    expect((await appel(ctx, chefB).get(`/api/projets/${parent.id}`)).statusCode).toBe(200);
     const reponses = [
       await appel(ctx, chefB).get(`/api/projets/${sp.id}`),
       await appel(ctx, chefB).get('/api/projets'),
@@ -249,19 +249,10 @@ describe('Lot couts-1 : OTP (SPEC §12.2, D-225)', () => {
       await appel(ctx, chefB).patch(url.activite(act.id), { nom: 'Tâche 2' }),
       await appel(ctx, chefB).post(url.activites(sp.id), { nom: 'Nouvelle' }),
     ];
-    for (const r of reponses) {
-      expect(r.statusCode, r.body).toBeLessThan(300);
-      expect(r.body).not.toContain('SECRET-PARENT');
-      // otp_source ne révèle ni l'id ni le code du parent ; `parent_id` reste lu (D-079, D-226).
-      const vues = ([] as Corps[]).concat(r.json() as Corps | Corps[]);
-      for (const v of vues) {
-        const src = v.otp_source as Corps | null;
-        if (src) expect(src.id, r.body).not.toBe(parent.id);
-      }
-    }
-    expect(trois(corps(reponses[0]!))).toEqual(masque);
-    expect(trois(liste(reponses[2]!).find((x) => x.id === act.id)!)).toEqual(masque);
-    expect(trois(corps(reponses[5]!))).toEqual(masque);
+    for (const r of reponses) expect(r.statusCode, r.body).toBeLessThan(300);
+    expect(trois(corps(reponses[0]!))).toEqual(source);
+    expect(trois(liste(reponses[2]!).find((x) => x.id === act.id)!)).toEqual(source);
+    expect(trois(corps(reponses[5]!))).toEqual(source);
     // l'administrateur lit la source complète
     expect(trois(await lireProjet(ctx, a, sp.id))).toEqual({
       otp: null,

@@ -34,7 +34,7 @@ describe('Changement de mot de passe (D-254)', () => {
       )
     ).rows[0]?.d;
 
-  it('MDP-1 : défaut faux ; POST et PATCH par l’administrateur ; refus pour un non-administrateur, base inchangée', async () => {
+  it('MDP-1-r1 : défaut faux ; POST et PATCH par l’administrateur ; refus pour un non-administrateur, base inchangée', async () => {
     await seedUser(ctx.pool, { email: 'admin@mdp.test', role: 'administrateur' });
     await seedUser(ctx.pool, { email: 'ress@mdp.test', role: 'ressource' });
     expect(await drapeau('admin@mdp.test')).toBe(false);
@@ -48,7 +48,7 @@ describe('Changement de mot de passe (D-254)', () => {
       payload: {
         nom: 'Nouveau',
         email: 'nouveau@mdp.test',
-        mot_de_passe: 'x',
+        mot_de_passe: 'mot-de-passe-x',
         role: 'ressource',
         doit_changer_mot_de_passe: true,
       },
@@ -61,7 +61,12 @@ describe('Changement de mot de passe (D-254)', () => {
       method: 'POST',
       url: '/api/utilisateurs',
       headers: admin,
-      payload: { nom: 'Defaut', email: 'defaut@mdp.test', mot_de_passe: 'x', role: 'ressource' },
+      payload: {
+        nom: 'Defaut',
+        email: 'defaut@mdp.test',
+        mot_de_passe: 'mot-de-passe-x',
+        role: 'ressource',
+      },
     });
     expect(defaut.json().doit_changer_mot_de_passe).toBe(false);
 
@@ -79,7 +84,7 @@ describe('Changement de mot de passe (D-254)', () => {
       method: 'PATCH',
       url: `/api/utilisateurs/${id}`,
       headers: admin,
-      payload: { mot_de_passe: 'autre' },
+      payload: { mot_de_passe: 'autre-mot-de-passe' },
     });
     expect(mdp.json().doit_changer_mot_de_passe).toBe(false);
     const lu = await ctx.app.inject({ method: 'GET', url: '/api/utilisateurs', headers: admin });

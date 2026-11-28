@@ -45,6 +45,15 @@ Vérifications proportionnées (D-128) : phase rouge = vitest et e2e des seuls f
 
 Suite complète et base de test (D-193) : une seule suite complète par lot, après les corrections du reviewer, lancée par `npm run suite-complete -- --lot <nom>` (point d'entrée unique, journal `docs/journal-suites.jsonl`) ; une suite de plus pour le même lot exige `--justification`. Pendant le développement : passes ciblées seulement, par `npm run tests-cibles -- --depuis <commit d'ouverture> [--domaine <nom>…]` (le prompt d'ouverture du lot déclare ses domaines, `e2e/domaines.json` ; `--lister` pour voir la sélection) ou `npx vitest run <fichier>`, `cd e2e && npx playwright test -g <ID>`. Le rapport de clôture cite les lignes du journal du lot (`npm run suite-complete -- --lister <lot>`). Tout lancement ad hoc qui touche une base passe par `npm run avec-base-test -- <commande>` ; une base de test a un nom qui finit par `_test`. Règle complète : docs/tests.md. Commande longue (suite complète, passes multiples, au-delà du délai d'une commande) : lancée en arrière-plan, sortie dans un fichier. Lancement : `nohup <commande> > <fichier>.log 2>&1 & echo $! > <fichier>.pid`. Attente par tranches de 60 s au plus, avec sortie dès la fin : `timeout 60 sh -c 'while kill -0 $(cat <fichier>.pid) 2>/dev/null; do sleep 10; done'; tail -n 15 <fichier>.log` ; répéter jusqu'à la fin, puis enchaîner l'étape suivante dans le même tour. Ne jamais terminer le tour pendant l'attente ; si le porteur écrit, répondre en une ligne (avancement lu dans la fin du fichier), puis reprendre l'attente. Fin constatée : code de sortie et fin du fichier affichés (D-237).
 
+## Méthode de lot (D-266)
+
+- Un prompt de lot s'enchaîne sans arrêt : ouverture (SPEC, décision, identifiants), rouge prouvé, tag, vert, @reviewer, suite complète, clôture.
+- Point douteux : choisir l'option la plus prudente et réversible, la consigner dans la décision sous « Choix à ratifier », continuer.
+- Arrêt seulement si : valeur de la SPEC qui semble fausse ; test sous tag cassé hors de la règle de révision du prompt ; licence douteuse ; migration qui détruit des données ; deux corrections échouées après @debugger.
+- Test du lot en cours faux (D-271) : un test écrit dans le lot en cours, faux au regard d'une règle existante de la SPEC ou d'un mécanisme existant (et non du nouveau comportement), est révisé sans arrêt : commit seul, tag -rN suivant (un tag n'est jamais déplacé), raison dans la décision de clôture. Arrêt seulement si la correction change une règle voulue par le porteur.
+- Fin de lot : section « Recette <lot> » dans docs/recette.md, 3 à 6 gestes dans l'application avec le résultat attendu.
+- claude.ai relit a posteriori depuis l'archive ; ses corrections passent au lot suivant. Plus de relecture des tests par claude.ai avant le tag.
+
 ## Fin de session (même si le lot n'est pas fini)
 
 - Mettre à jour `docs/state.md`, commit, `git push`. Le dépôt distant doit toujours refléter l'état réel : c'est lui qui est lu depuis claude.ai.
@@ -61,6 +70,7 @@ Suite complète et base de test (D-193) : une seule suite complète par lot, apr
 - debugger : après deux corrections échouées, ou un /goal arrêté sans succès.
 - ui-designer : tout écran ou composant visuel (lots 0, 1, 1b, 2e, 3, 4).
 - Le reviewer ne lance aucun test pendant qu'une suite tourne sur la même base `_test` (D-179).
+- securite : premier audit au lot securite ; ensuite une passe par lot qui touche l'authentification, les droits, l'API exposée, les dépendances ou le déploiement, avant @reviewer ; rapport ajouté à docs/securite.md (D-272).
 
 ## Architecture
 

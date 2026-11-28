@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createAdmin } from '../src/auth/create-admin.js';
+import { creerAdminDeDeveloppement } from '../src/auth/dev-admin.js';
 import { exigerBaseDemo, urlBaseDemo } from '../src/demo/base.js';
-import { remplirDemo } from '../src/demo/remplir.js';
+import { motDePasseDemo, remplirDemo } from '../src/demo/remplir.js';
 import { useTestApp } from './helpers.js';
 import { type Acteur } from './lot1-helpers.js';
 import { calculer, empreinte } from './lot2a-helpers.js';
@@ -15,7 +15,7 @@ async function connecter(ctx: ReturnType<typeof useTestApp>, login: string): Pro
   const res = await ctx.app.inject({
     method: 'POST',
     url: '/api/auth/login',
-    payload: { identifiant: login, mot_de_passe: login },
+    payload: { identifiant: login, mot_de_passe: motDePasseDemo(login) },
   });
   expect(res.statusCode, `connexion ${login}`).toBe(200);
   const c = res.cookies.find((x) => x.name === 'session')!;
@@ -23,7 +23,8 @@ async function connecter(ctx: ReturnType<typeof useTestApp>, login: string): Pro
 }
 
 async function demarrer(ctx: ReturnType<typeof useTestApp>, lundi = LUNDI): Promise<void> {
-  await createAdmin(ctx.pool, { login: 'admin', nom: 'Administrateur', motDePasse: 'admin' });
+  // Compte d'amorce de D-071 (admin / admin), exception à la longueur minimale (D-274).
+  await creerAdminDeDeveloppement(ctx.pool, { nodeEnv: 'development' }, { warn: () => undefined });
   await remplirDemo(ctx.app, { lundi });
 }
 
@@ -47,7 +48,7 @@ async function lire(ctx: ReturnType<typeof useTestApp>, sql: string): Promise<Li
 describe('Jeu de démonstration (D-117)', () => {
   const ctx = useTestApp();
 
-  it('DEMO-1-r1 : comptes, projets, hiérarchie, affectations, modèle, projet clos, drapeaux, connexion de chefb', async () => {
+  it('DEMO-1-r2 : comptes, projets, hiérarchie, affectations, modèle, projet clos, drapeaux, connexion de chefb', async () => {
     await demarrer(ctx);
 
     const users = await lire(
@@ -161,7 +162,7 @@ describe('Jeu de démonstration (D-117)', () => {
     await connecter(ctx, 'chefb');
   });
 
-  it('DEMO-2 : chefb calcule S seul (200), calcule R (403, travail de R inchangé)', async () => {
+  it('DEMO-2-r1 : chefb calcule S seul (200), calcule R (403, travail de R inchangé)', async () => {
     await demarrer(ctx);
     const chefb = await connecter(ctx, 'chefb');
     const ids = await lire(ctx, 'SELECT id, code FROM projet');
@@ -188,7 +189,7 @@ describe('Jeu de démonstration (D-117)', () => {
       expect(() => exigerBaseDemo(`postgres://u:p@h:5432/${nom}`), nom).toThrow();
     }
   });
-  it('DEMO-5 : charge vendue sur deux feuilles de DEMO-R (marge positive, marge négative), date client antérieure à la date planifiée d’un jalon de DEMO-R (D-149 (9))', async () => {
+  it('DEMO-5-r1 : charge vendue sur deux feuilles de DEMO-R (marge positive, marge négative), date client antérieure à la date planifiée d’un jalon de DEMO-R (D-149 (9))', async () => {
     await demarrer(ctx);
     const admin = await connecter(ctx, 'admin');
     const lireGantt = async (code: string) => {
@@ -237,7 +238,7 @@ describe('Jeu de démonstration (D-117)', () => {
     expect(ailleurs).toEqual([]);
   });
 
-  it('DEMO-4-r1 : feuilles de temps du jeu (statuts, commentaire, validations, imputations passées, charge réelle)', async () => {
+  it('DEMO-4-r2 : feuilles de temps du jeu (statuts, commentaire, validations, imputations passées, charge réelle)', async () => {
     const lundi = lundiReel();
     const l14 = decale(lundi, -14);
     const l7 = decale(lundi, -7);
@@ -310,7 +311,7 @@ describe('Jeu de démonstration (D-117)', () => {
     expect(sansReel).toEqual([]);
   });
 
-  it('DEMO-6 : équipes « Développement » (alice, bob) et « Pilotage » (chefa, chefb), administrateur sans équipe, imputation passée d’alice, réel d’alice visible dans le plan de charge (D-154 (10))', async () => {
+  it('DEMO-6-r1 : équipes « Développement » (alice, bob) et « Pilotage » (chefa, chefb), administrateur sans équipe, imputation passée d’alice, réel d’alice visible dans le plan de charge (D-154 (10))', async () => {
     const lundi = lundiReel();
     await demarrer(ctx, lundi);
     const membres = await lire(

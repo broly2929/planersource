@@ -28,6 +28,7 @@ import {
   verrouillerRacines,
 } from '../planning/cloture.js';
 import { lireAssignees, lireVendu, vueActivite, vueJalon } from '../planning/vendu.js';
+import { voitFinances, voitNotes } from '../planning/projets.js';
 import { avecOtp, lireOtpActivites } from '../planning/otp.js';
 import { otpCorps } from './otp.js';
 import type { AppDeps } from '../app.js';
@@ -46,6 +47,13 @@ const chargeVendue = z
   .max(999999.99)
   .refine((v) => Number(v.toFixed(2)) === v)
   .nullable();
+// notes (D-270) : espaces de bord retirés, vide = null, 500 points de code au plus
+const notesCorps = z
+  .string()
+  .transform((t) => t.trim())
+  .refine((t) => [...t].length <= 500)
+  .transform((t) => (t === '' ? null : t))
+  .nullable();
 const modes = z.enum(['ASAP', 'START', 'STARR', 'ALAP', 'FDUR', 'DDUR', 'REGUL', 'MAN']);
 const position = {
   parent_id: idCorps.nullable().default(null),
@@ -63,6 +71,7 @@ const creationActivite = z.strictObject({
   duree_validee: int4Corps.nullable().default(null),
   charge_vendue: chargeVendue.default(null),
   otp: otpCorps.default(null),
+  notes: notesCorps.default(null),
 });
 const modificationActivite = z
   .strictObject({
@@ -75,6 +84,7 @@ const modificationActivite = z
     close: z.boolean(),
     charge_vendue: chargeVendue,
     otp: otpCorps,
+    notes: notesCorps,
   })
   .partial();
 const creationJalon = z.strictObject({
@@ -97,6 +107,10 @@ const deplacement = z.strictObject({
   rang: rangCorps.optional(),
 });
 
+/** Corps qui porte la clé `charge_vendue`, quelle que soit sa valeur (D-265 (3) : 403 au leader). */
+const porteChargeVendue = (corps: unknown): boolean =>
+  typeof corps === 'object' && corps !== null && 'charge_vendue' in corps;
+
 /** Durée validée 1 par défaut pour FDUR et DDUR. */
 const dureeParDefaut = (mode: string, duree: number | null): number | null =>
   duree === null && (mode === 'FDUR' || mode === 'DDUR') ? 1 : duree;
@@ -109,7 +123,8 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     const projetId = identifiant(request.params.id);
     const acces = await verdictProjet(pool, request.user!, projetId, false);
     if (acces.verdict) return refuser(reply, acces.verdict);
-    return lirePlanning(pool, acces.projet.id, acces.peutEcrire);
+    const finances = voitFinances(request.user!, acces.peutEcrire);
+    return lirePlanning(pool, acces.projet.id, acces.peutEcrire, finances);
   });
 
   // --- activités ---
@@ -120,13 +135,26 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     const assignees = acces.peutEcrire ? await lireAssignees(pool, acces.projet.id) : undefined;
     const herite = await lireOtpActivites(pool, request.user!, acces.projet.id);
     return (await lireActivites(pool, acces.projet.id)).map((a) =>
-      avecOtp(vueActivite(a, vendu, acces.peutEcrire, assignees), a.id, herite),
+      avecOtp(
+        vueActivite(
+          a,
+          vendu,
+          acces.peutEcrire,
+          assignees,
+          voitFinances(request.user!, acces.peutEcrire),
+          voitNotes(request.user!),
+        ),
+        a.id,
+        herite,
+      ),
     );
   });
 
   app.post<ParamId>('/api/projets/:id/activites', opts, async (request, reply) => {
     const acces = await verdictProjet(pool, request.user!, identifiant(request.params.id), true);
     if (acces.verdict) return refuser(reply, acces.verdict);
+    const finances = voitFinances(request.user!, true);
+    if (!finances && porteChargeVendue(request.body)) return refuser(reply, 'interdit');
     const body = creationActivite.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalide);
     const d = body.data;
@@ -144,6 +172,8 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
             await lireVendu(db, acces.projet.id),
             true,
             await lireAssignees(db, acces.projet.id),
+            finances,
+            voitNotes(request.user!),
           ),
           creee.id,
           await lireOtpActivites(db, request.user!, acces.projet.id),
@@ -160,6 +190,8 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     const activite = id === null ? null : await lireActivite(pool, id);
     const acces = await verdictProjet(pool, request.user!, activite?.projet_id ?? null, true);
     if (acces.verdict || !activite) return refuser(reply, acces.verdict ?? 'introuvable');
+    const finances = voitFinances(request.user!, true);
+    if (!finances && porteChargeVendue(request.body)) return refuser(reply, 'interdit');
     const body = modificationActivite.safeParse(request.body);
     if (!body.success) return reply.code(400).send(invalide);
     const { close, ...champs } = body.data;
@@ -181,6 +213,7 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
           duree_validee: dureeParDefaut(fusion.mode, fusion.duree_validee),
           charge_vendue: fusion.charge_vendue,
           otp: fusion.otp,
+          notes: fusion.notes,
           ...(close === undefined ? {} : { close }),
         });
         // D-083 (2), (3) : seules les transitions de clôture sont contrôlées (D-083 (7)).
@@ -201,6 +234,8 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
             await lireVendu(db, apres.projet_id),
             true,
             await lireAssignees(db, apres.projet_id),
+            finances,
+            voitNotes(request.user!),
           ),
           apres.id,
           await lireOtpActivites(db, request.user!, apres.projet_id),
@@ -320,7 +355,12 @@ export function elementsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     } catch (err) {
       return traduireErreur(err, reply);
     }
-    const lignes = await lirePlanning(pool, element.projet_id, true);
+    const lignes = await lirePlanning(
+      pool,
+      element.projet_id,
+      true,
+      voitFinances(request.user!, true),
+    );
     return lignes.find((l) => l.id === element.id);
   });
 }

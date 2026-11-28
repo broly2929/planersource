@@ -87,12 +87,15 @@ async function prouverDetection(ctx: TestCtx, c: Cas): Promise<void> {
   expect(await empreinte(ctx), `témoin ${nomCas(c)} : l'empreinte doit changer`).not.toEqual(avant);
 }
 
-/** Sans session → 401, chef d'un autre projet → 404, ressource affectée → 404 (révision 6b, D-148 (2)). */
+/**
+ * Sans session → 401, chef d'un autre projet → 403 (révision D-265 (4) : projet lisible, lecture
+ * seule), ressource affectée → 404 (révision 6b, D-148 (2)).
+ */
 function trio(m: Monde, methode: Methode, adresse: string, c?: Corps): Cas[] {
   const base = { methode, adresse, ...(c ? { corps: c } : {}) };
   return [
     { ...base, qui: undefined, statut: 401 },
-    { ...base, qui: m.autreChef, statut: 404 },
+    { ...base, qui: m.autreChef, statut: 403 },
     { ...base, qui: m.alice, statut: 404 },
   ];
 }
@@ -102,7 +105,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
   const DELAI = 120_000;
 
   it(
-    'REF-1-r1 : routes de T1, toute requête refusée laisse l’empreinte de la base identique',
+    'REF-1-r2 : routes de T1, toute requête refusée laisse l’empreinte de la base identique',
     async () => {
       const m = await creerMonde(ctx);
       const { admin, chef, autreChef, alice } = m;
@@ -334,7 +337,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
           methode: 'POST',
           adresse: '/api/projets',
           corps: { code: 'X', nom: 'X', date_debut: '2027-01-04', parent_id: A.id },
-          statut: 404,
+          statut: 403,
         },
         {
           qui: undefined,
@@ -348,7 +351,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
           methode: 'PATCH',
           adresse: `/api/projets/${P.id}`,
           corps: { nom: 'Pirate' },
-          statut: 404,
+          statut: 403,
         },
         {
           qui: alice,
@@ -411,7 +414,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
           methode: 'PATCH',
           adresse: `/api/projets/${P.id}`,
           corps: { parent_id: A.id },
-          statut: 404,
+          statut: 403,
         },
         ...trio(m, 'DELETE', `/api/projets/${P.id}`),
         { qui: admin, methode: 'DELETE', adresse: `/api/projets/${P.id}`, statut: 409 },
@@ -613,7 +616,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
   );
 
   it(
-    'REF-2-r1 : routes de T2, toute requête refusée laisse l’empreinte de la base identique',
+    'REF-2-r2 : routes de T2, toute requête refusée laisse l’empreinte de la base identique',
     async () => {
       const m = await creerMonde(ctx);
       const { chef, alice, admin } = m;
@@ -1065,7 +1068,7 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
     DELAI,
   );
 
-  it('PRJ-21 : un chef de projet, ressource affectée au projet d’un autre chef, le lit et ne peut pas y écrire', async () => {
+  it('PRJ-21-r1 : un chef de projet, ressource affectée au projet d’un autre chef, le lit et ne peut pas y écrire', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet', true);
@@ -1083,11 +1086,11 @@ describe('Compléments de T2 : refus sans écriture, identifiants, visibilité p
       liste(await api.get('/api/projets'))
         .map((p) => p.id)
         .sort(),
-    ).toEqual([p1.id, p2.id].sort());
+    ).toEqual([p1.id, p2.id, autre.id].sort());
     expect((await planning(ctx, c2, p1.id)).length).toBe(1);
     expect((await api.get(`/api/projets/${p1.id}/affectations`)).statusCode).toBe(200);
-    // un projet sans lien reste invisible
-    expect((await api.get(`/api/projets/${autre.id}`)).statusCode).toBe(404);
+    // révision D-265 (4) : un projet sans lien est lisible, en lecture seule
+    expect((await api.get(`/api/projets/${autre.id}`)).statusCode).toBe(200);
     // écriture refusée (403), base inchangée
     await verifierRefus(ctx, [
       {

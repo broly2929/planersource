@@ -6,7 +6,7 @@ import { affecter, appel, corps, creerActeur, creerProjet, liste } from './lot1-
 describe('Projets : règles ajoutées après T1 (D-028)', () => {
   const ctx = useTestApp();
 
-  it('PRJ-17 : rattacher un projet à un parent (POST ou PATCH) exige le droit d’écriture sur ce parent', async () => {
+  it('PRJ-17-r1 : rattacher un projet à un parent (POST ou PATCH) exige le droit d’écriture sur ce parent', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
@@ -20,13 +20,13 @@ describe('Projets : règles ajoutées après T1 (D-028)', () => {
       date_debut: '2027-01-04',
       parent_id: sien.id,
     });
-    expect(refus.statusCode).toBe(404);
+    expect(refus.statusCode).toBe(403); // révision D-265 (4) : parent lisible, lecture seule
     // PATCH vers le parent d'un autre chef : refusé, parent inchangé
     const sousProjet = await creerProjet(ctx, c1, { parent_id: mien.id });
     const deplace = await api.patch(`/api/projets/${sousProjet.id}`, { parent_id: sien.id });
-    expect(deplace.statusCode).toBe(404);
+    expect(deplace.statusCode).toBe(403); // révision D-265 (4)
     expect(corps(await api.get(`/api/projets/${sousProjet.id}`)).parent_id).toBe(mien.id);
-    expect(liste(await api.get('/api/projets'))).toHaveLength(2);
+    expect(liste(await api.get('/api/projets'))).toHaveLength(3); // révision D-265 (4) : sien compris
     // sous son propre projet : accepté ; l'administrateur rattache n'importe où
     const ok = await api.post('/api/projets', {
       code: 'LEGIT',
@@ -84,7 +84,7 @@ describe('Projets : règles ajoutées après T1 (D-028)', () => {
     expect(corps(parAdmin).chef_id).toBe(c2.id);
   });
 
-  it('PRJ-19-r1 : un refus sur un projet (404 pour un autre chef, 404 pour une ressource affectée) ne modifie ni ne supprime rien', async () => {
+  it('PRJ-19-r2 : un refus sur un projet (403 pour un autre chef, 404 pour une ressource affectée) ne modifie ni ne supprime rien', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
@@ -101,12 +101,12 @@ describe('Projets : règles ajoutées après T1 (D-028)', () => {
     };
     const avant = await etat();
     const modifications = { nom: 'Pirate', priorite: 1, clos: true, parent_id: mien.id };
-    // autre chef : projet invisible → 404, rien n'est modifié ni supprimé
+    // autre chef : projet lisible en lecture seule → 403 (révision D-265 (4)), rien n'est modifié ni supprimé
     const autre = appel(ctx, c1);
     for (const id of [cible.id, sousCible.id, feuille.id]) {
-      expect((await autre.patch(`/api/projets/${id}`, modifications)).statusCode).toBe(404);
+      expect((await autre.patch(`/api/projets/${id}`, modifications)).statusCode).toBe(403);
       expect(await etat(), `PATCH ${id} par un autre chef`).toEqual(avant);
-      expect((await autre.delete(`/api/projets/${id}`)).statusCode).toBe(404);
+      expect((await autre.delete(`/api/projets/${id}`)).statusCode).toBe(403);
       expect(await etat(), `DELETE ${id} par un autre chef`).toEqual(avant);
     }
     // ressource affectée : projet invisible (révision 6b, D-148 (2)) → 404, rien n'est modifié ni supprimé

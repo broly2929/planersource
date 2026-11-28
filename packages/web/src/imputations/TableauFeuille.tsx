@@ -1,6 +1,7 @@
 // Tableau des imputations d'une semaine (lot 4b, D-120 ; réutilisé en lecture seule par l'écran Validation, D-135 (4)).
 import { TriangleAlert } from 'lucide-react';
 import { useMemo } from 'react';
+import { titreAbsence, type Motif } from '../absences/logique';
 import {
   analyserCharge,
   analyserReste,
@@ -31,6 +32,7 @@ export function TableauFeuille({
   erreurs,
   lectureSeule,
   aujourdhui,
+  absences,
   modifier,
 }: {
   lignes: LigneFeuille[];
@@ -39,6 +41,8 @@ export function TableauFeuille({
   erreurs: ErreurSaisie[];
   lectureSeule: boolean;
   aujourdhui: string;
+  /** Jours d'absence en journée entière de la ressource (D-276) : jour -> motif ; absent en consultation. */
+  absences?: Map<string, Motif> | undefined;
   modifier: (id: number, jour: string | null, texte: string) => void;
 }) {
   const totaux = useMemo(() => totauxJours(saisie, jours), [saisie, jours]);
@@ -124,6 +128,7 @@ export function TableauFeuille({
                         erreurs.find((e) => e.cle === `c-${l.assignation_id}-${j.jour}`)?.id
                       }
                       desactivee={lecture || j.jour > aujourdhui}
+                      absence={absences?.get(j.jour) ?? null}
                       onChange={(t) => modifier(l.assignation_id, j.jour, t)}
                     />
                   </td>
@@ -179,6 +184,7 @@ function CaseSaisie({
   valeur,
   erreurId,
   desactivee,
+  absence = null,
   onChange,
 }: {
   nom: string;
@@ -186,8 +192,11 @@ function CaseSaisie({
   valeur: string;
   erreurId: string | undefined;
   desactivee: boolean;
+  /** Motif d'un jour d'absence en journée entière : case vide non saisissable, avec valeur activable pour l'effacer (D-124 (1)). */
+  absence?: Motif | null;
   onChange: (texte: string) => void;
 }) {
+  const bloquee = absence !== null && valeur === '' && !desactivee;
   return (
     <input
       id={id}
@@ -198,8 +207,11 @@ function CaseSaisie({
       aria-errormessage={erreurId}
       value={valeur}
       disabled={desactivee}
-      onChange={(e) => onChange(e.target.value)}
-      className={`h-8 w-full min-w-0 rounded-ui border px-1 text-right disabled:bg-gray-100 disabled:text-gray-600 ${erreurId ? 'border-flag' : 'border-gray-300'}`}
+      readOnly={bloquee}
+      aria-disabled={bloquee ? true : undefined}
+      title={absence === null ? undefined : titreAbsence(absence)}
+      onChange={(e) => !bloquee && onChange(e.target.value)}
+      className={`h-8 w-full min-w-0 rounded-ui border px-1 text-right disabled:bg-gray-100 disabled:text-gray-600 ${bloquee ? 'cursor-not-allowed bg-gray-100 text-gray-600' : ''} ${erreurId ? 'border-flag' : 'border-gray-300'}`}
     />
   );
 }

@@ -133,7 +133,7 @@ describe('Assignations (lot 1, T2)', () => {
     expect(rows).toEqual([{ charge_reelle: 0 }]);
   });
 
-  it('ASS-9-r1 : écriture chef et administrateur ; chef d’un autre projet → 404 ; ressource affectée → 404 ; sans session → 401', async () => {
+  it('ASS-9-r2 : écriture chef et administrateur ; chef d’un autre projet → 403 ; ressource affectée → 404 ; sans session → 401', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.chef, m.projet.id);
     const parChef = await appel(ctx, m.chef).post(url.assignationsActivite(a.id), {

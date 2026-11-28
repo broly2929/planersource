@@ -413,7 +413,7 @@ test('E2E-615 : OTP propre qui prime : saisi sur l’activité héritière, aide
   await expect(d.getByText('Hérité de 1 Conception : PROPRE-615')).toBeVisible();
 });
 
-test('E2E-616 : chef d’un sous-projet seulement : aide « Hérité d’un projet parent », ni code ni nom du parent', async ({
+test('E2E-616-r1 : chef d’un sous-projet seulement : parent lisible (D-265), aide « Hérité de <code du parent> »', async ({
   page,
   request,
 }) => {
@@ -428,9 +428,8 @@ test('E2E-616 : chef d’un sous-projet seulement : aide « Hérité d’un proj
   await page.getByRole('button', { name: 'Modifier le projet' }).click();
   const m = page.getByRole('dialog', { name: 'Modifier le projet' });
   await expect(champOtp(m)).toHaveValue('');
-  await expect(m.getByText("Hérité d'un projet parent : FIN-616")).toBeVisible();
-  await expect(m).not.toContainText('SECRET-616');
-  await expect(m).not.toContainText('Parent secret 616');
+  // Révision D-265 (4) : le chef lit le parent ; la source est nommée.
+  await expect(m.getByText('Hérité de SECRET-616 : FIN-616')).toBeVisible();
 });
 
 test('E2E-617 : copie de projet par l’écran : OTP propre du projet et d’une activité copié', async ({

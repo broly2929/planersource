@@ -178,7 +178,7 @@ test('E2E-9-r1 : un chef assigne une ressource ; une ressource non affectée n�
   await expect(page.getByRole('row', { name: /Maçonnerie E2E9.*Alice E2E9/ })).toBeVisible();
 });
 
-test('E2E-10-r1 : un chef de projet affecté au projet d’un autre chef consulte le planning sans bouton d’écriture', async ({
+test('E2E-10-r2 : un chef de projet affecté au projet d’un autre chef consulte le planning sans bouton d’écriture', async ({
   page,
   request,
 }) => {
@@ -192,8 +192,9 @@ test('E2E-10-r1 : un chef de projet affecté au projet d’un autre chef consult
   // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
   await connecterAvec(page, await chefLecteur(request, projet.id, 'E2E10'));
   await page.getByRole('link', { name: 'Projets' }).click();
-  await expect(page.getByRole('row', { name: /Autre projet E2E10/ })).toHaveCount(0);
-  await page.getByRole('link', { name: 'Projet E2E10' }).click();
+  // Révision D-265 (4) : les projets d'un autre chef sont présents, en lecture seule.
+  await expect(page.getByRole('row', { name: /Autre projet E2E10/ })).toHaveCount(1);
+  await page.getByRole('link', { name: 'Projet E2E10', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Projet E2E10', level: 1 })).toBeVisible();
   await expect(page.getByRole('row', { name: /Lecture E2E10/ })).toBeVisible();
   const ecriture =

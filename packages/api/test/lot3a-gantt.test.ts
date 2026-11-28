@@ -51,7 +51,7 @@ async function poserReel(ctx: TestCtx, assignationId: number, reel: number, rest
 describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
   const ctx = useTestApp();
 
-  it('GANTT-1-r4 : avant calcul, forme complète (avec les champs de 6c, D-149 (4), (5), et de §12, D-230) : ordre et numéros WBS (parent, enfant, jalon), dates planifiées null, drapeaux [], dépendance avec drapeaux []', async () => {
+  it('GANTT-1-r5 : avant calcul, forme complète (avec les champs de 6c, D-149 (4), (5), et de §12, D-230) : ordre et numéros WBS (parent, enfant, jalon), dates planifiées null, drapeaux [], dépendance avec drapeaux []', async () => {
     const m = await creerMonde(ctx);
     const g = await creerActivite(ctx, m.admin, m.projet.id, { nom: 'Parent' });
     const enfant = await creerActivite(ctx, m.admin, m.projet.id, {
@@ -87,6 +87,7 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
       debut_planifie: null,
       fin_planifiee: null,
       close: a.close,
+      notes: null,
       otp_effectif: null,
       otp_source: null,
       cout_planifie: 0,
@@ -320,7 +321,7 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
     expect(g.elements.map((e) => e.id)).not.toContain(c.activite.id);
   });
 
-  it('GANTT-8-r1 : droits : 401 sans session ; ressource affectée 404 ; non affectée 404 ; chef hors portée 404 ; « abc », 2147483648 et 999999 (administrateur) → 404 ; modèle lu par une ressource affectée → 404 ; base inchangée', async () => {
+  it('GANTT-8-r2 : droits : 401 sans session ; ressource affectée 404 ; non affectée 404 ; chef hors portée 200, peut_ecrire faux ; « abc », 2147483648 et 999999 (administrateur) → 404 ; modèle lu par une ressource affectée → 404 ; base inchangée', async () => {
     const m = await creerMonde(ctx);
     const carole = await creerActeur(ctx, 'carole@example.test', 'ressource', true);
     const modele = corps(
@@ -340,7 +341,12 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
     expect((await appel(ctx, m.alice).get(adresse(m.projet.id))).statusCode).toBe(404);
 
     expect((await appel(ctx, carole).get(adresse(m.projet.id))).statusCode).toBe(404);
-    expect((await appel(ctx, m.autreChef).get(adresse(m.projet.id))).statusCode).toBe(404);
+    // Révision D-265 (4) : le chef hors portée lit le Gantt, en lecture seule.
+    const horsPortee = await appel(ctx, m.autreChef).get(adresse(m.projet.id));
+    expect(horsPortee.statusCode).toBe(200);
+    expect((corps(horsPortee) as { projet: { peut_ecrire: boolean } }).projet.peut_ecrire).toBe(
+      false,
+    );
     expect((await appel(ctx, m.admin).get(adresse('abc'))).statusCode).toBe(404);
     expect((await appel(ctx, m.admin).get(adresse(2147483648))).statusCode).toBe(404);
     expect((await appel(ctx, m.admin).get(adresse(999999))).statusCode).toBe(404);
@@ -376,7 +382,7 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
     });
   });
 
-  it('GANTT-9-r1 : chef de projet affecté à P seul, pas à P1 : sous_projets vide pour lui, P1 présent pour l’administrateur ; Alice (ressource) 404', async () => {
+  it('GANTT-9-r2 : chef de projet affecté à P seul, pas à P1 : sous_projets contient P1 pour lui (lecture élargie), P1 présent pour l’administrateur ; Alice (ressource) 404', async () => {
     const m = await creerMonde(ctx);
     const p1 = await creerProjet(ctx, m.admin, { chef_id: m.chef.id, parent_id: m.projet.id });
     // Révision 6b (D-031, D-148 (2), (9)) : témoin de lecture = chef affecté au projet d'un autre chef.
@@ -384,7 +390,8 @@ describe('Gantt : lecture par GET /api/projets/:id/gantt (lot 3a)', () => {
     await affecter(ctx, m.projet.id, lecteur.id);
     const pourLecteur = await lire(ctx, lecteur, m.projet.id);
     expect(pourLecteur.projet.peut_ecrire).toBe(false);
-    expect(pourLecteur.sous_projets).toEqual([]);
+    // Révision D-265 (4) : P1 est lisible pour tout chef de projet.
+    expect(pourLecteur.sous_projets.map((s) => s.id)).toEqual([p1.id]);
     expect((await appel(ctx, m.alice).get(adresse(m.projet.id))).statusCode).toBe(404);
     const pourAdmin = await lire(ctx, m.admin, m.projet.id);
     expect(pourAdmin.sous_projets.map((s) => s.id)).toEqual([p1.id]);

@@ -79,14 +79,15 @@ describe('Lot couts-2 : visibilité des coûts (SPEC §12.3 point 7)', () => {
     }
   });
 
-  it('CVI-4 : export refusé : 401 sans session, puis 403 rôle ressource, 403 lecture seule, 404 projet illisible ; base inchangée', async () => {
+  it('CVI-4-r1 : export refusé : 401 sans session, puis 403 rôle ressource, 403 lecture seule, 403 chef d’un autre projet, 404 projet inconnu ; base inchangée', async () => {
     const m = await creerMondeCouts(ctx);
     const adresse = `/api/projets/${m.projet.id}/couts/export`;
     const avant = await empreinte(ctx);
     expect((await appel(ctx).get(adresse)).statusCode).toBe(401);
     expect((await appel(ctx, m.alice).get(adresse)).statusCode).toBe(403);
     expect((await appel(ctx, m.lecteur).get(adresse)).statusCode).toBe(403);
-    expect((await appel(ctx, m.autreChef).get(adresse)).statusCode).toBe(404);
+    // Révision D-265 (4) : projet lisible pour l'autre chef, en lecture seule → 403.
+    expect((await appel(ctx, m.autreChef).get(adresse)).statusCode).toBe(403);
     expect((await appel(ctx, m.admin).get('/api/projets/999999/couts/export')).statusCode).toBe(
       404,
     );

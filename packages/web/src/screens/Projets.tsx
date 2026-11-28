@@ -1,7 +1,7 @@
 import * as Tabs from '@radix-ui/react-tabs';
 import { ChevronDown, ChevronRight, Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { api, ApiError } from '../api';
+import { aDroitsDeChef, api, ApiError } from '../api';
 import { useAnnuaire, type EntreeAnnuaire } from '../annuaire';
 import { useAuth } from '../auth';
 import { BoutonIcone } from '../components/BoutonIcone';
@@ -136,7 +136,7 @@ function FormulaireProjet({
   // D-028 : l'administrateur choisit parmi les chefs et administrateurs actifs ; un chef, lui seul.
   const candidats = (annuaire ?? []).filter((u) =>
     admin
-      ? u.actif && (u.role === 'administrateur' || u.role === 'chef_de_projet')
+      ? u.actif && (u.role === 'administrateur' || aDroitsDeChef(u.role))
       : String(u.id) === String(user?.id),
   );
   const options = [
@@ -227,7 +227,7 @@ export function ListeProjets() {
   const { etat: auth } = useAuth();
   const peutCreer =
     auth.statut === 'connecte' &&
-    (auth.user.role === 'administrateur' || auth.user.role === 'chef_de_projet');
+    (auth.user.role === 'administrateur' || aDroitsDeChef(auth.user.role));
   const annuaire = useAnnuaire();
   const [etat, charger] = useChargement<Projet[]>(
     '/api/projets',
@@ -335,6 +335,7 @@ export function ListeProjets() {
             <Link to={`/projets/${p.id}`} className="text-accent underline hover:text-accent-hover">
               {p.nom}
             </Link>
+            {!p.peut_ecrire && <Badge statut="neutre">Lecture seule</Badge>}
           </span>
         );
       },
@@ -396,6 +397,15 @@ export function ListeProjets() {
       }
     >
       <Onglets>
+        {etat.statut === 'ok' &&
+          auth.statut === 'connecte' &&
+          auth.user.role === 'chef_de_projet' &&
+          !projets.some((p) => p.peut_ecrire) && (
+            <Notification type="info">
+              Vous n'êtes chef d'aucun projet. L'administrateur désigne le chef dans Modifier le
+              projet.
+            </Notification>
+          )}
         {etat.statut === 'chargement' && <Chargement libelle="Chargement des projets…" />}
         {etat.statut === 'erreur' && <Notification type="erreur">{etat.message}</Notification>}
         {etat.statut === 'ok' && etat.donnees.length === 0 && (
@@ -485,6 +495,9 @@ export function ProjetDetail({ id }: { id: string }) {
   return (
     <Layout
       titre={projet?.nom ?? 'Projet'}
+      mention={
+        projet && !projet.peut_ecrire ? <Badge statut="neutre">Lecture seule</Badge> : undefined
+      }
       actions={
         projet?.peut_ecrire && (
           <>

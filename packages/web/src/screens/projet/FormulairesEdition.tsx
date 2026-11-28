@@ -13,6 +13,7 @@ import {
   texteMarge,
 } from '../../champsActivite';
 import { formaterDate } from '../../gantt/libelles';
+import { useEstLeader } from '../../droits';
 import { analyserChargeVendue } from '../../gantt/vendu';
 import { FormulaireDialogue, useListe } from './commun';
 import { ErreurApresDeplacement, texteErreurSaisie, useParentModif } from './ChampParent';
@@ -24,7 +25,14 @@ import {
 import { champsActivite } from '../../saisieActivites';
 import { ChampTaux } from '../../components/ChampTaux';
 import { AIDE_TAUX_ASSIGNATION } from '../../aidesTaux';
+import {
+  AIDE_CHARGE,
+  AIDE_CHARGE_TAUX,
+  CASE_CHARGE_TAUX,
+  texteRefusAssignation,
+} from '../../chargeTaux';
 import { ChampOtp } from '../../components/ChampOtp';
+import { ChampNotes, notesEnvoyees } from '../../components/ChampNotes';
 import { aideOtp, heriteDe, otpSaisi, type OtpLecture } from '../../couts';
 import type { LigneArbo } from '../../saisieActivites';
 
@@ -50,6 +58,8 @@ export interface ActiviteDetail {
   otp?: string | null;
   otp_effectif?: string | null;
   otp_source?: OtpLecture['otp_source'];
+  /** Note d'activité (D-270) ; absente pour le rôle ressource. */
+  notes?: string | null;
 }
 export interface JalonDetail {
   id: number;
@@ -232,6 +242,8 @@ export function FormulaireActivite({
   onChangement?: () => void;
 } & Commun) {
   const [nom, setNom] = useState(activite.nom);
+  const notesInitiales = activite.notes ?? '';
+  const [notes, setNotes] = useState(notesInitiales);
   const parent = useParentModif(projetId, activite.id, onChangement);
   const dependances = useDependancesActivite(projetId, activite.id, parent.lignes, onChangement);
   const estParent = activite.est_parent === true;
@@ -255,7 +267,9 @@ export function FormulaireActivite({
           otp_source: activite.otp_source ?? null,
         })
       : null;
-  const avecVendue = activite.est_parent !== true && activite.charge_vendue !== undefined;
+  const leader = useEstLeader();
+  const avecVendue =
+    !leader && activite.est_parent !== true && activite.charge_vendue !== undefined;
   // D-149 (7) : la charge vendue n'est envoyée que si elle a changé.
   const vendueChangee =
     avecVendue && vendue.analyse.ok && vendue.analyse.valeur !== (activite.charge_vendue ?? null);
@@ -275,6 +289,8 @@ export function FormulaireActivite({
               method: 'PATCH',
               body: {
                 nom,
+                // D-270 : les notes ne sont envoyées que si elles ont changé.
+                ...(notes !== notesInitiales ? { notes: notesEnvoyees(notes) } : {}),
                 ...(champs.mode ? { mode: p.mode } : {}),
                 priorite: Number(priorite),
                 // D-220 : un champ masqué n'est pas envoyé, sa valeur reste en base.
@@ -296,6 +312,7 @@ export function FormulaireActivite({
         {...commun}
       >
         <Field label="Nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
+        <ChampNotes valeur={notes} onChange={setNotes} />
         {parent.champ}
         {champs.mode && <ChampMode p={p} />}
         <Field
@@ -316,7 +333,7 @@ export function FormulaireActivite({
         />
         <DatePlanifiee libelle="Fin planifiée" cle="fin" date={activite.fin_planifiee ?? null} />
         <ChampDuree p={pc} />
-        {avecVendue && activite.charge_assignee !== undefined && (
+        {activite.est_parent !== true && activite.charge_assignee !== undefined && (
           <ValeurLecture libelle="Charge assignée (somme des ressources)" cle="charge-assignee">
             {texteChargeAssignee(activite.charge_assignee)}
           </ValeurLecture>
@@ -416,27 +433,52 @@ export function FormulaireModifAssignation({
   id,
   charge: chargeInitiale,
   taux: tauxInitial,
+  regul = false,
+  depuisTaux: depuisTauxInitial = false,
   ...commun
-}: { id: number; charge: number; taux: number } & Commun) {
+}: {
+  id: number;
+  charge: number;
+  taux: number;
+  /** activité en mode REGUL : case « Charge depuis le taux » (D-276) */
+  regul?: boolean;
+  depuisTaux?: boolean;
+} & Commun) {
   const [charge, setCharge] = useState(String(chargeInitiale));
   const [taux, setTaux] = useState(String(tauxInitial));
+  const [depuisTaux, setDepuisTaux] = useState(depuisTauxInitial);
   return (
     <FormulaireDialogue
       libelle="Enregistrer"
       envoyer={() =>
         api(`/api/assignations/${id}`, {
           method: 'PATCH',
-          body: { charge_assignee: Number(charge), taux: Number(taux) },
+          body: {
+            // charge calculée : jamais envoyée (refus `charge_calculee`, D-276 point 14)
+            ...(depuisTaux ? {} : { charge_assignee: Number(charge) }),
+            taux: Number(taux),
+            ...(depuisTaux !== depuisTauxInitial ? { charge_depuis_taux: depuisTaux } : {}),
+          },
         })
       }
+      texteErreur={texteRefusAssignation}
       {...commun}
     >
+      {regul && (
+        <Case
+          label={CASE_CHARGE_TAUX}
+          checked={depuisTaux}
+          onChange={(e) => setDepuisTaux(e.target.checked)}
+        />
+      )}
       <Field
         label="Charge assignée (j)"
-        aide="Effet sur le planning : oui."
+        aide={depuisTaux ? AIDE_CHARGE_TAUX : AIDE_CHARGE}
         type="number"
-        required
-        min="0.01"
+        required={!depuisTaux}
+        readOnly={depuisTaux}
+        // charge laissée par le calcul (D-276) : 0 possible, rien n'impose 0,01 après décochage
+        min={depuisTauxInitial ? '0' : '0.01'}
         step="0.01"
         value={charge}
         onChange={(e) => setCharge(e.target.value)}

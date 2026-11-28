@@ -24,3 +24,5 @@ export const PAS_COLONNE = 16;
 /** Marges internes d'une cellule du tableau du Gantt (`px-2`), ou d'une colonne resserrée (`px-1`). */
 export const MARGES_CELLULE = 16;
 export const MARGES_CELLULE_SERREE = 8;
+/** Colonne « Notes » (D-270) : texte sur une ligne, tronqué. */
+export const CLASSE_NOTES_MAX = 'max-w-56';

@@ -1,6 +1,6 @@
 import { noterVersionServeur } from './version';
 
-export type Role = 'administrateur' | 'chef_de_projet' | 'ressource';
+export type Role = 'administrateur' | 'chef_de_projet' | 'leader_metier' | 'ressource';
 
 export interface Utilisateur {
   id: number | string;
@@ -24,8 +24,13 @@ export interface Utilisateur {
 export const ROLE_LABELS: Record<Role, string> = {
   administrateur: 'Administrateur',
   chef_de_projet: 'Chef de projet',
+  leader_metier: 'Leader métier',
   ressource: 'Ressource',
 };
+
+/** Rôles à droits de chef (SPEC §2, D-265) : chef de projet et leader métier. */
+export const aDroitsDeChef = (role: Role | null | undefined): boolean =>
+  role === 'chef_de_projet' || role === 'leader_metier';
 
 export class ApiError extends Error {
   constructor(

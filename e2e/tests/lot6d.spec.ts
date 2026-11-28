@@ -309,7 +309,7 @@ test('E2E-373 : états : « Aucune ressource. » sans tableau pour une équipe v
   await expect(tableauPlan(page)).toHaveCount(0);
 });
 
-test('E2E-374 : ressource inactive à charge : « (inactif) » ; chef de projet : projets illisibles regroupés en « Autres projets », en dernier', async ({
+test('E2E-374-r1 : ressource inactive à charge : « (inactif) » ; chef de projet : projet d’un autre chef nommé (D-265), pas d’« Autres projets »', async ({
   page,
   request,
 }) => {
@@ -341,10 +341,9 @@ test('E2E-374 : ressource inactive à charge : « (inactif) » ; chef de projet 
   await expect(ligne(page, 'Eve 374')).not.toContainText('(inactif)');
   await page.getByRole('button', { name: 'Déplier Eve 374' }).click();
   await expect(ligne(page, 'A374 · Projet visible')).toHaveCount(1);
-  await expect(ligne(page, 'B374')).toHaveCount(0);
-  const dernier = lignes(page).last();
-  await expect(cellules(dernier).first()).toHaveText('Autres projets');
-  await expect(cellules(dernier).nth(1)).toHaveText('3');
+  // Révision D-265 (4) : le projet de l'autre chef est présent, nommé ; plus de ligne regroupée.
+  await expect(ligne(page, 'B374 · Projet caché')).toHaveCount(1);
+  await expect(ligne(page, 'Autres projets')).toHaveCount(0);
   await expect(tableauPlan(page).getByRole('link')).toHaveCount(0);
 
   await page.context().clearCookies();

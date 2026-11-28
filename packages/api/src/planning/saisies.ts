@@ -1,6 +1,7 @@
 import type { Db } from '../db/erreurs.js';
 import { verrouiller } from './historique.js';
 import { lireActivite } from './elements.js';
+import { joursAbsence, joursEntiers } from './absences.js';
 
 export interface Saisie {
   assignation_id: number;
@@ -57,8 +58,13 @@ export async function joursNonOuvres(
   mois: string,
 ): Promise<JoursNonOuvres> {
   const [debut, fin] = bornes(mois);
-  const { rows } = await db.query<{ id: number; jours: number[]; feries: string[] }>(
-    `SELECT a.id, c.jours_travailles::int[] AS jours,
+  const { rows } = await db.query<{
+    id: number;
+    ressource_id: number;
+    jours: number[];
+    feries: string[];
+  }>(
+    `SELECT a.id, a.ressource_id, c.jours_travailles::int[] AS jours,
             COALESCE((SELECT array_agg(f.jour::text) FROM calendrier_ferie f
                        WHERE f.calendrier_id = c.id AND f.jour >= $2 AND f.jour < $3), '{}') AS feries
        FROM assignation a
@@ -69,14 +75,26 @@ export async function joursNonOuvres(
     [activiteId, debut, fin],
   );
   const calendrier = joursDuMois(mois);
+  // jours d'absence en journée entière de la ressource : non ouvrés (D-276, point 6)
+  const absences = await joursAbsence(
+    db,
+    rows.map((r) => r.ressource_id),
+    debut,
+    calendrier[calendrier.length - 1]!.jour,
+  );
   return {
     mois,
-    jours_non_ouvres: rows.map((r) => ({
-      assignation_id: r.id,
-      jours: calendrier
-        .filter((j) => !r.jours.includes(j.iso) || r.feries.includes(j.jour))
-        .map((j) => j.jour),
-    })),
+    jours_non_ouvres: rows.map((r) => {
+      const entiers = joursEntiers(absences.filter((a) => a.ressource_id === r.ressource_id));
+      return {
+        assignation_id: r.id,
+        jours: calendrier
+          .filter(
+            (j) => !r.jours.includes(j.iso) || r.feries.includes(j.jour) || entiers.has(j.jour),
+          )
+          .map((j) => j.jour),
+      };
+    }),
   };
 }
 

@@ -62,6 +62,7 @@ export function Dialog({
   modifie: modifieProp,
   focusRetour,
   focusInitial,
+  role,
 }: {
   ouvert: boolean;
   onOuvertChange: (ouvert: boolean) => void;
@@ -78,6 +79,8 @@ export function Dialog({
   focusRetour?: (() => HTMLElement | null) | undefined;
   /** Sélecteur de l'élément qui prend le focus à l'ouverture, à la place du premier élément focalisable (D-190 (4)). */
   focusInitial?: string | undefined;
+  /** Rôle du dialogue : `alertdialog` pour une confirmation qui demande une réponse (D-276) ; défaut : `dialog`. */
+  role?: 'alertdialog' | undefined;
 }) {
   const contenu = useRef<HTMLDivElement>(null);
   const reference = useRef<Instantane | null>(null);
@@ -158,6 +161,7 @@ export function Dialog({
         <RadixDialog.Overlay className="fixed inset-0 z-50 bg-gray-900/40" />
         <RadixDialog.Content
           ref={contenu}
+          {...(role ? { role } : {})}
           onPointerDownCapture={() => {
             focusOuverture.current = false;
             prendreReference();

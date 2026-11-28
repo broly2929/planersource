@@ -57,7 +57,7 @@ async function remplirCreation(page: Page, s: Saisie): Promise<void> {
   if (s.identifiant !== undefined) await dialog.getByLabel('Identifiant').fill(s.identifiant);
   if (s.initiales !== undefined) await dialog.getByLabel('Initiales').fill(s.initiales);
   if (s.email !== undefined) await dialog.getByLabel('Email').fill(s.email);
-  await dialog.getByLabel('Mot de passe', { exact: true }).fill(s.motDePasse ?? 'a');
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(s.motDePasse ?? 'mot-de-passe-a');
   await dialog.getByRole('button', { name: 'Créer' }).click();
 }
 
@@ -81,7 +81,7 @@ async function seConnecter(page: Page, identifiant: string, motDePasse: string):
   return !(await refus.isVisible());
 }
 
-test('E2E-71-r1 création sans email avec Identifiant et Initiales : la ligne les affiche, l’utilisateur se connecte avec l’identifiant', async ({
+test('E2E-71-r2 création sans email avec Identifiant et Initiales : la ligne les affiche, l’utilisateur se connecte avec l’identifiant', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -89,16 +89,16 @@ test('E2E-71-r1 création sans email avec Identifiant et Initiales : la ligne le
     nom: 'Bob R2-71',
     identifiant: 'bob71',
     initiales: 'B7',
-    motDePasse: 'a',
+    motDePasse: 'mot-de-passe-a',
   });
   const ligne = page.getByRole('row', { name: /Bob R2-71/ });
   await expect(ligne).toContainText('bob71');
   await expect(ligne).toContainText('B7');
   await deconnecter(page);
-  expect(await seConnecter(page, 'bob71', 'a'), 'connexion avec « bob71 »').toBe(true);
+  expect(await seConnecter(page, 'bob71', 'mot-de-passe-a'), 'connexion avec « bob71 »').toBe(true);
 });
 
-test('E2E-72-r1 « Modifier <nom> » : identifiant et initiales changés, email vidé ; la ligne est à jour, le nouvel identifiant connecte', async ({
+test('E2E-72-r2 « Modifier <nom> » : identifiant et initiales changés, email vidé ; la ligne est à jour, le nouvel identifiant connecte', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -107,7 +107,7 @@ test('E2E-72-r1 « Modifier <nom> » : identifiant et initiales changés, email 
     identifiant: 'ancien72',
     initiales: 'AN',
     email: 'eve72@rex2d.test',
-    motDePasse: 'a',
+    motDePasse: 'mot-de-passe-a',
   });
   await expect(page.getByRole('row', { name: /Eve R2-72/ })).toContainText('ancien72');
 
@@ -124,23 +124,39 @@ test('E2E-72-r1 « Modifier <nom> » : identifiant et initiales changés, email 
   await expect(ligne).toContainText('NV');
   await expect(ligne).not.toContainText('eve72@rex2d.test');
   await deconnecter(page);
-  expect(await seConnecter(page, 'nouveau72', 'a'), 'connexion avec « nouveau72 »').toBe(true);
+  expect(
+    await seConnecter(page, 'nouveau72', 'mot-de-passe-a'),
+    'connexion avec « nouveau72 »',
+  ).toBe(true);
 });
 
-test('E2E-73-r1 refus : identifiant et email vides, puis identifiant déjà utilisé ; dialogue ouvert, rien de créé', async ({
+test('E2E-73-r2 refus : identifiant et email vides, puis identifiant déjà utilisé ; dialogue ouvert, rien de créé', async ({
   page,
 }) => {
   await loginAsAdmin(page);
-  await remplirCreation(page, { nom: 'Vide R2-73', identifiant: '', email: '', motDePasse: 'a' });
+  await remplirCreation(page, {
+    nom: 'Vide R2-73',
+    identifiant: '',
+    email: '',
+    motDePasse: 'mot-de-passe-a',
+  });
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('alert')).toHaveText('Renseignez un identifiant ou un email.');
   await fermerEnAbandonnant(page, dialog);
   await expect(page.getByRole('row', { name: /Vide R2-73/ })).toHaveCount(0);
 
-  await remplirCreation(page, { nom: 'Un R2-73', identifiant: 'bob73', motDePasse: 'a' });
+  await remplirCreation(page, {
+    nom: 'Un R2-73',
+    identifiant: 'bob73',
+    motDePasse: 'mot-de-passe-a',
+  });
   await expect(page.getByRole('row', { name: /Un R2-73/ })).toBeVisible();
 
-  await remplirCreation(page, { nom: 'Deux R2-73', identifiant: 'bob73', motDePasse: 'a' });
+  await remplirCreation(page, {
+    nom: 'Deux R2-73',
+    identifiant: 'bob73',
+    motDePasse: 'mot-de-passe-a',
+  });
   await expect(dialog.getByRole('alert')).toHaveText('Cet identifiant est déjà utilisé.');
   await expect(dialog).toBeVisible();
   await fermerEnAbandonnant(page, dialog);

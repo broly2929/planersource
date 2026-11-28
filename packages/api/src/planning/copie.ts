@@ -71,6 +71,7 @@ async function copierContenu(
         duree_validee: a.duree_validee,
         charge_vendue: a.charge_vendue,
         otp: a.otp,
+        notes: a.notes,
       });
       nouveaux.set(a.id, creee.id);
     } else if (j) {
@@ -112,6 +113,7 @@ async function copierContenu(
       ressource_id: s.ressource_id,
       taux: s.taux,
       charge_assignee: s.charge_assignee,
+      charge_depuis_taux: s.charge_depuis_taux,
     });
   }
 }

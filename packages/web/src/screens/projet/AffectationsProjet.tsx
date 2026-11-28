@@ -14,6 +14,7 @@ import { Table } from '../../components/Table';
 import { FormulaireDialogue, useListe, type Affectation } from './commun';
 import { ChampTaux } from '../../components/ChampTaux';
 import { AIDE_TAUX_AFFECTATION, AIDE_TAUX_RESSOURCE } from '../../aidesTaux';
+import { useEstLeader, useIdNonAdmin } from '../../droits';
 import { useTauxDuJour } from '../../tauxDuJour';
 import { DialogueTaux } from '../TauxJournaliers';
 
@@ -72,7 +73,10 @@ export function AffectationsProjet({
   const nom = (id: number) => annuaire?.find((u) => u.id === id)?.nom ?? '…';
   const affectees = etat.statut === 'ok' ? etat.donnees.map((a) => a.ressource_id) : [];
   const [tauxRessource, setTauxRessource] = useState<Affectation | null>(null);
-  const duJour = useTauxDuJour(peutEcrire);
+  const leader = useEstLeader();
+  const moi = useIdNonAdmin();
+  const voitTaux = peutEcrire && !leader;
+  const duJour = useTauxDuJour(voitTaux);
   const candidates = (annuaire ?? []).filter(
     (u) => u.est_ressource && u.actif && !affectees.includes(u.id),
   );
@@ -111,7 +115,7 @@ export function AffectationsProjet({
             { titre: 'Taux (%)', cellule: (a) => a.taux },
             { titre: 'Début', cellule: (a) => a.date_debut ?? '—' },
             { titre: 'Fin', cellule: (a) => a.date_fin ?? '—' },
-            ...(peutEcrire
+            ...(voitTaux
               ? [
                   {
                     titre: 'Taux du jour',
@@ -119,15 +123,21 @@ export function AffectationsProjet({
                     classeCellule: 'text-right tabular-nums',
                     cellule: (a: Affectation) => duJour.texte(a.ressource_id),
                   },
+                ]
+              : []),
+            ...(peutEcrire
+              ? [
                   {
                     titre: 'Actions',
                     cellule: (a: Affectation) => (
                       <div className="flex gap-1">
-                        <BoutonIcone
-                          libelle={`Modifier les taux de ${nom(a.ressource_id)}`}
-                          icone={Coins}
-                          onClick={() => setTauxRessource(a)}
-                        />
+                        {voitTaux && a.ressource_id !== moi && (
+                          <BoutonIcone
+                            libelle={`Modifier les taux de ${nom(a.ressource_id)}`}
+                            icone={Coins}
+                            onClick={() => setTauxRessource(a)}
+                          />
+                        )}
                         <BoutonIcone
                           libelle={`Modifier l'affectation de ${nom(a.ressource_id)}`}
                           icone={Pencil}

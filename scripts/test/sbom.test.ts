@@ -19,6 +19,10 @@ const REPO = new URL('../../', import.meta.url).pathname;
 interface Composant {
   'bom-ref': string;
   name: string;
+  version?: string;
+  purl?: string;
+  supplier?: { name?: string };
+  externalReferences?: { type: string; url: string }[];
   licenses?: { license?: { id?: string; name?: string } }[];
   properties?: { name: string; value: string }[];
 }
@@ -201,5 +205,84 @@ describe('SBOM CycloneDX (D-169)', () => {
     cpSync(join(a, 'sbom.cdx.json'), join(b, 'sbom.cdx.json'));
     const r = run(b, '--check');
     expect(r.code, r.out).toBe(0);
+  });
+});
+
+/** Fixture copiée, version racine et dépôt posés (package.json et lock), pour SBOM-11 et SBOM-12. */
+const VERSION = '3.4.5';
+const DEPOT = 'git+https://example.invalid/depot.git';
+function copieVersionnee(): string {
+  const root = copieFixture();
+  const pkgFichier = join(root, 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgFichier, 'utf8')) as Record<string, unknown>;
+  pkg.version = VERSION;
+  pkg.repository = { type: 'git', url: DEPOT };
+  writeFileSync(pkgFichier, `${JSON.stringify(pkg, null, 2)}\n`);
+  const lockFichier = join(root, 'package-lock.json');
+  const lock = JSON.parse(readFileSync(lockFichier, 'utf8')) as {
+    version?: string;
+    packages: Record<string, { version?: string }>;
+  };
+  lock.version = VERSION;
+  (lock.packages[''] as { version?: string }).version = VERSION;
+  writeFileSync(lockFichier, `${JSON.stringify(lock, null, 2)}\n`);
+  return root;
+}
+
+const estInterne = (c: Composant) => c['bom-ref'].startsWith('@planersource/');
+
+describe('SBOM des paquets internes (D-272)', () => {
+  it('SBOM-11 : les paquets internes portent la version de la racine (bom-ref, version, purl, dependencies), plus aucune trace de 0.0.0', () => {
+    const { texte, sbom } = ecrit(copieVersionnee());
+    const a = sbom.components.find((c) => c.name === 'a' || c.name === '@planersource/a');
+    expect(a, 'composant interne a').toBeTruthy();
+    expect(a?.['bom-ref']).toBe(`@planersource/a@${VERSION}`);
+    expect(a?.version).toBe(VERSION);
+    expect(a?.purl).toBe(`pkg:npm/%40planersource/a@${VERSION}`);
+    const refs = sbom.dependencies.map((d) => d.ref);
+    expect(refs).toContain(`@planersource/a@${VERSION}`);
+    const racine = sbom.dependencies.find((d) => d.ref === sbom.metadata.component?.['bom-ref']);
+    expect(racine?.dependsOn ?? []).toContain(`@planersource/a@${VERSION}`);
+    expect(texte).not.toContain('@planersource/a@0.0.0');
+    // Les dépendances tierces gardent leur version.
+    expect(sbom.components.find((c) => c.name === 'ms')?.['bom-ref']).toBe('ms@2.1.3');
+  });
+
+  it('SBOM-12 : les paquets internes ont le fournisseur planersource, la référence vcs du dépôt et la propriété planersource:interne ; les tiers ne les ont pas', () => {
+    const { sbom } = ecrit(copieVersionnee());
+    const internes = sbom.components.filter(estInterne);
+    expect(internes.length).toBeGreaterThan(0);
+    for (const c of internes) {
+      expect(c.supplier, c['bom-ref']).toEqual({ name: 'planersource' });
+      expect(c.externalReferences ?? [], c['bom-ref']).toContainEqual({ type: 'vcs', url: DEPOT });
+      expect(c.properties ?? [], c['bom-ref']).toContainEqual({
+        name: 'planersource:interne',
+        value: 'true',
+      });
+    }
+    const ms = sbom.components.find((c) => c.name === 'ms');
+    expect(ms?.supplier).toBeUndefined();
+    expect((ms?.properties ?? []).some((p) => p.name === 'planersource:interne')).toBe(false);
+    expect((ms?.externalReferences ?? []).some((r) => r.url === DEPOT)).toBe(false);
+  });
+
+  it('SBOM-13 : sbom.cdx.json du dépôt : api, engine et web à la version racine, fournisseur planersource, vcs du dépôt, propriété interne', () => {
+    const pkg = JSON.parse(readFileSync(join(REPO, 'package.json'), 'utf8')) as {
+      version: string;
+      repository?: { url?: string };
+    };
+    const depot = pkg.repository?.url;
+    expect(depot, 'repository.url du package.json racine').toMatch(/^git\+https:\/\//);
+    const sbom = JSON.parse(readFileSync(join(REPO, 'sbom.cdx.json'), 'utf8')) as Sbom;
+    for (const nom of ['api', 'engine', 'web']) {
+      const ref = `@planersource/${nom}@${pkg.version}`;
+      const c = sbom.components.find((x) => x['bom-ref'] === ref);
+      expect(c, ref).toBeTruthy();
+      expect(c?.version).toBe(pkg.version);
+      expect(c?.supplier).toEqual({ name: 'planersource' });
+      expect(c?.externalReferences ?? []).toContainEqual({ type: 'vcs', url: depot });
+      expect(c?.properties ?? []).toContainEqual({ name: 'planersource:interne', value: 'true' });
+    }
+    expect(JSON.stringify(sbom)).not.toMatch(/@planersource\/(api|engine|web)@0\.0\.0/);
   });
 });

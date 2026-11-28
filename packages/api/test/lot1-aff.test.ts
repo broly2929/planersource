@@ -52,7 +52,7 @@ describe('Affectations projet (lot 1, T1)', () => {
     expect(liste(await appel(ctx, admin).get(affectations(projet.id)))).toHaveLength(1);
   });
 
-  it('AFF-3-r2 : écriture réservée à l’administrateur et au chef du projet ; chef d’un autre projet → 404 ; ressource affectée → 404', async () => {
+  it('AFF-3-r3 : écriture réservée à l’administrateur et au chef du projet ; chef d’un autre projet → 403 ; ressource affectée → 404', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
@@ -62,12 +62,12 @@ describe('Affectations projet (lot 1, T1)', () => {
     const b = await creerProjet(ctx, admin, { chef_id: c2.id });
     const parAdmin = await affecterParApi(ctx, admin, a.id, alice.id);
     await affecterParApi(ctx, c1, a.id, bob.id); // le chef du projet écrit
-    // chef d'un autre projet : le projet est invisible
+    // chef d'un autre projet : le projet est lisible, en lecture seule (révision D-265 (4))
     const refus = (statut: number, requete: () => Promise<LightMyRequestResponse>) =>
       refusSansEffet(ctx, TABLES_AFF, statut, requete);
-    await refus(404, () => appel(ctx, c2).post(affectations(a.id), { ressource_id: alice.id }));
-    await refus(404, () => appel(ctx, c2).patch(`/api/affectations/${parAdmin.id}`, { taux: 10 }));
-    await refus(404, () => appel(ctx, c2).delete(`/api/affectations/${parAdmin.id}`));
+    await refus(403, () => appel(ctx, c2).post(affectations(a.id), { ressource_id: alice.id }));
+    await refus(403, () => appel(ctx, c2).patch(`/api/affectations/${parAdmin.id}`, { taux: 10 }));
+    await refus(403, () => appel(ctx, c2).delete(`/api/affectations/${parAdmin.id}`));
     // ressource affectée : projet invisible pour le rôle ressource (révision 6b, D-148 (2))
     const apiAlice = appel(ctx, alice);
     await refus(404, () => apiAlice.post(affectations(a.id), { ressource_id: alice.id }));

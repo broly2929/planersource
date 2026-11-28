@@ -181,34 +181,21 @@ test('E2E-378-r1 : vue d’une ressource : colonnes, lignes, lien, boutons masqu
   await expect(cal.locator('[data-connecteur-element], [data-poignee]')).toHaveCount(0);
 });
 
-test('E2E-379 : ligne masquée pour le chef (« Autre projet », « — », barre grise, nom accessible) ; l’administrateur voit le projet nommé', async ({
+test('E2E-379-r1 : plus de ligne masquée pour le chef (D-265) : projet d’un autre chef nommé, avec lien, comme pour l’administrateur', async ({
   page,
   request,
 }) => {
   const m = await monde(request);
   const d2 = await dates(request, m.p2.id, 'Secrète');
-  const d1 = await dates(request, m.p1.id, 'Analyse');
+  await dates(request, m.p1.id, 'Analyse');
   await connecterAvec(page, 'chef-6e@lot6e.test');
   await page.goto(`/?ressource=${m.alice.id}`);
   await expect(lignes(page)).toHaveCount(2);
-  const masquee = lignes(page).filter({ hasText: 'Autre projet' });
-  await expect(masquee).toHaveCount(1);
-  await expect(masquee.getByRole('link')).toHaveCount(0);
-  await expect(masquee.locator('td').nth(1)).toHaveText('—');
-  await expect(masquee).toContainText(d2.debut);
-  const cal = zoneCalendrier(page);
-  const barreMasquee = cal.getByRole('img', {
-    name: `Autre projet, du ${d2.debut} au ${d2.fin}`,
-    exact: true,
-  });
-  await expect(barreMasquee).toHaveCount(1);
-  const barreClaire = cal.getByRole('img', {
-    name: `6E1 · 1 Analyse, du ${d1.debut} au ${d1.fin}`,
-    exact: true,
-  });
-  const gris = canaux(await remplissage(barreMasquee));
-  expect(Math.max(...gris.slice(0, 3)) - Math.min(...gris.slice(0, 3))).toBeLessThan(60);
-  expect(await remplissage(barreMasquee)).not.toBe(await remplissage(barreClaire));
+  // Révision D-265 (4) : le chef lit tous les projets ; la ligne est en clair.
+  await expect(lignes(page).filter({ hasText: 'Autre projet' })).toHaveCount(0);
+  const claire = lignes(page).filter({ hasText: '1 Secrète' });
+  await expect(claire.getByRole('link', { name: '6E2', exact: true })).toBeVisible();
+  await expect(claire).toContainText(d2.debut);
 
   await page.context().clearCookies();
   await loginAsAdmin(page);

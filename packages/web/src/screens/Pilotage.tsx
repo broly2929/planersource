@@ -40,13 +40,15 @@ export function Pilotage() {
   const recherche = useSearch();
   const { debut, equipe, corrige } = parametresPlan(recherche, moisDe(aujourdhuiLocal()));
   const brut = recherche.get('onglet');
-  const onglet: OngletPilotage = brut === 'couts' ? 'couts' : 'charge';
-  const canonique = corrige || (brut !== 'charge' && brut !== 'couts');
+  const leader = role === 'leader_metier';
+  const onglet: OngletPilotage = brut === 'couts' && !leader ? 'couts' : 'charge';
+  const canonique =
+    corrige || (brut !== 'charge' && brut !== 'couts') || (leader && brut === 'couts');
   return (
     <Layout titre="Pilotage">
       <Redirect to={adressePlan(debut, equipe, onglet)} when={canonique} />
       {role === 'ressource' || canonique ? null : (
-        <Contenu onglet={onglet} debut={debut} equipe={equipe} />
+        <Contenu onglet={onglet} debut={debut} equipe={equipe} avecCouts={!leader} />
       )}
     </Layout>
   );
@@ -56,10 +58,12 @@ function Contenu({
   onglet,
   debut,
   equipe,
+  avecCouts,
 }: {
   onglet: OngletPilotage;
   debut: string;
   equipe: FiltreEquipe;
+  avecCouts: boolean;
 }) {
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   useEffect(() => {
@@ -83,9 +87,11 @@ function Contenu({
         <Tabs.Trigger value="charge" className={ONGLET}>
           Plan de charge
         </Tabs.Trigger>
-        <Tabs.Trigger value="couts" className={ONGLET}>
-          Coûts
-        </Tabs.Trigger>
+        {avecCouts && (
+          <Tabs.Trigger value="couts" className={ONGLET}>
+            Coûts
+          </Tabs.Trigger>
+        )}
       </Tabs.List>
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
         <Select
@@ -144,9 +150,11 @@ function Contenu({
       <Tabs.Content value="charge">
         <TableauPlan debut={debut} equipe={equipe} />
       </Tabs.Content>
-      <Tabs.Content value="couts">
-        <TableauCouts debut={debut} equipe={equipe} />
-      </Tabs.Content>
+      {avecCouts && (
+        <Tabs.Content value="couts">
+          <TableauCouts debut={debut} equipe={equipe} />
+        </Tabs.Content>
+      )}
     </Tabs.Root>
   );
 }

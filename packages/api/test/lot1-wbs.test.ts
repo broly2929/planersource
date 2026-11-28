@@ -132,7 +132,7 @@ describe('WBS : ordre, numérotation et déplacement (lot 1, T2)', () => {
     ]);
   });
 
-  it('WBS-8-r1 : déplacer : chef d’un autre projet → 404 ; ressource affectée → 404 ; sans session → 401', async () => {
+  it('WBS-8-r2 : déplacer : chef d’un autre projet → 403 ; ressource affectée → 404 ; sans session → 401', async () => {
     const m = await creerMonde(ctx);
     const a = await creerActivite(ctx, m.chef, m.projet.id);
     const b = await creerActivite(ctx, m.chef, m.projet.id);

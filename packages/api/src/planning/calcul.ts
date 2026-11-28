@@ -2,12 +2,20 @@ import { calculer, type Entree, type Mode, type Sortie } from '@planersource/eng
 import type { Db } from '../db/erreurs.js';
 import { accesProjet, type Acteur } from './projets.js';
 import type { Verdict } from './acces.js';
+import { joursAbsence, type Portion } from './absences.js';
 
 /** Horizon du calcul : D0 + 3 ans (le 29 février devient le 28 février). */
 export function horizonDe(d0: string): string {
   const [annee, mois, jour] = d0.split('-') as [string, string, string];
   const j = mois === '02' && jour === '29' ? '28' : jour;
   return `${Number(annee) + 3}-${mois}-${j}`;
+}
+
+/** Lundi de la semaine ISO d'un jour (le plafond de projet compte les jours de toute la semaine). */
+function lundiDe(jour: string): string {
+  const d = new Date(`${jour}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
 }
 
 export interface Ignore {
@@ -83,6 +91,15 @@ async function charger(db: Db, effectifs: number[], d0: string): Promise<Entree>
     `SELECT id, (capacite * 100)::int AS capacite, calendrier_id
        FROM utilisateur WHERE est_ressource ORDER BY id`,
   );
+  // Absences (D-276, point 3) : toutes celles des ressources, jour par jour, à partir de la semaine de D0.
+  // SEC-21 : bornées à l'horizon du calcul, regroupées par ressource.
+  const absences = new Map<number, { jour: string; portion: Portion }[]>();
+  for (const a of await joursAbsence(db, null, lundiDe(d0), horizonDe(d0))) {
+    absences.set(a.ressource_id, [
+      ...(absences.get(a.ressource_id) ?? []),
+      { jour: a.jour, portion: a.portion },
+    ]);
+  }
   const projets = await lire<{
     id: number;
     parent_id: number | null;
@@ -142,10 +159,11 @@ async function charger(db: Db, effectifs: number[], d0: string): Promise<Entree>
     charge: number;
     charge_reelle: number;
     reste: number;
+    charge_depuis_taux: boolean;
   }>(
     `SELECT id, activite_id, ressource_id, (taux * 100)::int AS taux,
             (charge_assignee * 100)::int AS charge, (charge_reelle * 100)::int AS charge_reelle,
-            (reste_a_faire * 100)::int AS reste
+            (reste_a_faire * 100)::int AS reste, charge_depuis_taux
        FROM assignation WHERE projet_id = ANY($1) ORDER BY id`,
     [effectifs],
   );
@@ -181,11 +199,15 @@ async function charger(db: Db, effectifs: number[], d0: string): Promise<Entree>
     horizon: horizonDe(d0),
     calendriers: calendriers.map((c) => ({ id: c.id, joursTravailles: c.jours, feries: c.feries })),
     calendrierDefautId: calendriers.find((c) => c.est_defaut)!.id,
-    ressources: ressources.map((r) => ({
-      id: r.id,
-      capacite: r.capacite,
-      calendrierId: r.calendrier_id,
-    })),
+    ressources: ressources.map((r) => {
+      const siennes = absences.get(r.id);
+      return {
+        id: r.id,
+        capacite: r.capacite,
+        calendrierId: r.calendrier_id,
+        ...(siennes ? { absences: siennes } : {}),
+      };
+    }),
     projets: projets.map((p) => ({
       id: p.id,
       parentId: p.parent_id,
@@ -239,6 +261,7 @@ async function charger(db: Db, effectifs: number[], d0: string): Promise<Entree>
       charge: a.charge,
       chargeReelle: a.charge_reelle,
       resteAFaire: a.reste,
+      ...(a.charge_depuis_taux ? { chargeDepuisTaux: true } : {}),
     })),
     travailReel: reel.map((t) => ({
       assignationId: t.assignation_id,
@@ -328,6 +351,22 @@ async function ecrire(db: Db, effectifs: number[], sortie: Sortie): Promise<void
         WHERE s.id = u.id AND s.projet_id = ANY($3)
           AND a.id = s.activite_id AND a.mode = 'MAN' AND NOT a.close`,
       [r.map((x) => x.id), r.map((x) => x.reste), effectifs],
+    );
+  }
+  // charge depuis le taux (D-276, point 12) : charge et reste calculés, sans historique
+  const calculees = r.filter((x) => x.charge !== undefined);
+  if (calculees.length > 0) {
+    await db.query(
+      `UPDATE assignation s SET charge_assignee = u.charge::numeric / 100,
+              reste_a_faire = u.reste::numeric / 100
+         FROM unnest($1::int[], $2::int[], $3::int[]) AS u(id, charge, reste)
+        WHERE s.id = u.id AND s.projet_id = ANY($4)`,
+      [
+        calculees.map((x) => x.id),
+        calculees.map((x) => x.charge),
+        calculees.map((x) => x.reste),
+        effectifs,
+      ],
     );
   }
   const p = sortie.projets;

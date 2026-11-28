@@ -1,5 +1,7 @@
 import type { Db } from '../db/erreurs.js';
 import { projetsVisibles, type Acteur } from './projets.js';
+import { estChef } from '../auth/user.js';
+import { joursAbsence, joursEntiers, type JourAbsence } from './absences.js';
 
 /** Plan de charge (lot 6d, D-154) : charge mensuelle des ressources sur 12 mois, lecture seule. */
 export interface MoisRessource {
@@ -86,6 +88,37 @@ function joursOuvres(mois: string[], travailles: number[], feries: Set<string>):
   });
 }
 
+/** Jour ouvré d'un calendrier : jour travaillé (ISO 1 à 7), non férié. */
+function estOuvre(jour: string, travailles: number[], feries: Set<string>): boolean {
+  const j = new Date(`${jour}T00:00:00Z`).getUTCDay();
+  return travailles.includes(j === 0 ? 7 : j) && !feries.has(jour);
+}
+
+/**
+ * Capacité retirée par les absences, en centièmes, par mois (SPEC §4 « Absences et charge depuis le taux »,
+ * points 3 et 24, D-278) : un jour ouvré d'absence en journée entière retire la capacité ; une demi-journée en
+ * retire ce qui dépasse la moitié plancher au centième ; un jour non ouvré ou férié ne retire rien.
+ */
+function retraitAbsences(
+  mois: string[],
+  jours: JourAbsence[],
+  capacite: number,
+  travailles: number[],
+  feries: Set<string>,
+): number[] {
+  const retrait = mois.map(() => 0);
+  const entiers = joursEntiers(jours);
+  const vus = new Set<string>();
+  for (const a of jours) {
+    if (vus.has(a.jour)) continue;
+    vus.add(a.jour);
+    const i = mois.indexOf(a.jour.slice(0, 7));
+    if (i < 0 || !estOuvre(a.jour, travailles, feries)) continue;
+    retrait[i]! += entiers.has(a.jour) ? capacite : capacite - Math.floor(capacite / 2);
+  }
+  return retrait;
+}
+
 const comparer = (x: string, y: string): number => {
   const a = x.toLowerCase();
   const b = y.toLowerCase();
@@ -157,14 +190,30 @@ export async function lirePlanDeCharge(
     [d, f],
   );
   const ouvres = new Map<number, number[]>();
+  const feriesDe = new Map<number, Set<string>>();
+  const travaillesDe = new Map<number, number[]>();
   for (const c of calendriers) {
     const set = new Set(feries.filter((x) => x.calendrier_id === c.id).map((x) => x.jour));
+    feriesDe.set(c.id, set);
+    travaillesDe.set(c.id, c.jours_travailles);
     ouvres.set(c.id, joursOuvres(mois, c.jours_travailles, set));
   }
 
-  // Projets lisibles : le chef de projet ne nomme que ceux-là ; l'administrateur voit tout.
+  // Absences des ressources lues, dépliées sur les 12 mois seulement (point 24, D-278).
+  const dernier = new Date(Date.parse(`${f}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+  const absencesDe = new Map<number, JourAbsence[]>();
+  for (const a of await joursAbsence(
+    db,
+    utilisateurs.map((u) => u.id),
+    d,
+    dernier,
+  )) {
+    absencesDe.set(a.ressource_id, [...(absencesDe.get(a.ressource_id) ?? []), a]);
+  }
+
+  // Projets lisibles : administrateur, chef de projet et leader métier lisent tous les projets (D-265).
   const lisibles =
-    acteur.role === 'administrateur'
+    acteur.role === 'administrateur' || estChef(acteur.role)
       ? null
       : new Set((await projetsVisibles(db, acteur)).map((p) => p.id));
 
@@ -179,6 +228,13 @@ export async function lirePlanDeCharge(
     const lignes = parRessource.get(u.id) ?? [];
     const capacite = cents(u.capacite);
     const ouvresU = ouvres.get(u.calendrier_id) ?? mois.map(() => 0);
+    const retrait = retraitAbsences(
+      mois,
+      absencesDe.get(u.id) ?? [],
+      capacite,
+      travaillesDe.get(u.calendrier_id) ?? [],
+      feriesDe.get(u.calendrier_id) ?? new Set(),
+    );
     const reelTotal = mois.map(() => 0);
     const planTotal = mois.map(() => 0);
     // Un groupe par projet nommé ; les projets illisibles tombent dans le groupe `null`.
@@ -228,7 +284,7 @@ export async function lirePlanDeCharge(
       actif: u.actif,
       equipe_id: u.equipe_id,
       mois: mois.map((m, i) => {
-        const dispo = ouvresU[i]! * capacite;
+        const dispo = ouvresU[i]! * capacite - retrait[i]!;
         const charge = reelTotal[i]! + planTotal[i]!;
         return {
           mois: m,

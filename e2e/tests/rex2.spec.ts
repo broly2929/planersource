@@ -70,17 +70,20 @@ async function seConnecter(page: Page, email: string, motDePasse: string): Promi
   return !(await refus.isVisible());
 }
 
-test('E2E-69-r1 utilisateur créé à l’écran avec le mot de passe « a » : il se connecte avec « a »', async ({
+test('E2E-69-r2 utilisateur créé à l’écran avec le mot de passe « mot-de-passe-a » : il se connecte avec lui', async ({
   page,
 }) => {
   await remettreAdminSeul();
   await loginAsAdmin(page);
-  await creerUtilisateur(page, 'Court R2-69', 'court-r2-69@rex2.test', 'a');
+  await creerUtilisateur(page, 'Court R2-69', 'court-r2-69@rex2.test', 'mot-de-passe-a');
   await deconnecter(page);
-  expect(await seConnecter(page, 'court-r2-69@rex2.test', 'a'), 'connexion avec « a »').toBe(true);
+  expect(
+    await seConnecter(page, 'court-r2-69@rex2.test', 'mot-de-passe-a'),
+    'connexion avec « mot-de-passe-a »',
+  ).toBe(true);
 });
 
-test('E2E-70-r1 nouveau mot de passe « b » saisi dans « Modifier <nom> » : il connecte', async ({
+test('E2E-70-r2 nouveau mot de passe « mot-de-passe-b » saisi dans « Modifier <nom> » : il connecte', async ({
   page,
 }) => {
   await remettreAdminSeul();
@@ -89,9 +92,12 @@ test('E2E-70-r1 nouveau mot de passe « b » saisi dans « Modifier <nom> » : i
   await allerAUtilisateurs(page);
   await page.getByRole('button', { name: 'Modifier Court R2-70' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Nouveau mot de passe').fill('b');
+  await dialog.getByLabel('Nouveau mot de passe').fill('mot-de-passe-b');
   await dialog.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(dialog).toBeHidden();
   await deconnecter(page);
-  expect(await seConnecter(page, 'court-r2-70@rex2.test', 'b'), 'connexion avec « b »').toBe(true);
+  expect(
+    await seConnecter(page, 'court-r2-70@rex2.test', 'mot-de-passe-b'),
+    'connexion avec « mot-de-passe-b »',
+  ).toBe(true);
 });

@@ -77,7 +77,7 @@ test('E2E-389 : ouverture directe par l’adresse ; valeur invalide : onglet Uti
   await expect(page.getByRole('button', { name: 'Nouvel utilisateur' })).toBeVisible();
 });
 
-test('E2E-390-r1 : équipe créée dans l’onglet Équipes, choisie dans le dialogue d’un utilisateur sans recharger ; Membres à jour', async ({
+test('E2E-390-r2 : équipe créée dans l’onglet Équipes, choisie dans le dialogue d’un utilisateur sans recharger ; Membres à jour', async ({
   page,
 }) => {
   await loginAsAdmin(page);
@@ -93,7 +93,7 @@ test('E2E-390-r1 : équipe créée dans l’onglet Équipes, choisie dans le dia
   expect(await options(dialog.getByLabel('Équipe'))).toContain('Atelier 5');
   await dialog.getByLabel('Nom').fill('Membre 5');
   await dialog.getByLabel('Email').fill('membre-5@rex5.test');
-  await dialog.getByLabel('Mot de passe', { exact: true }).fill('secret-5');
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill('secret-5-membre-12');
   await dialog.getByLabel('Équipe').selectOption({ label: 'Atelier 5' });
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await expect(page.getByRole('row', { name: /Membre 5/ })).toBeVisible();

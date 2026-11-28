@@ -17,6 +17,7 @@ import { navigate, usePath, useSearch } from '../router';
 import { FormulaireDialogue, messageErreur, ONGLET } from './projet/commun';
 import { OngletCalendriers, type Calendrier } from './Calendriers';
 import { OngletEquipes, type Equipe } from './Equipes';
+import { AIDE_LONGUEUR, MESSAGE_LONGUEUR, validerLongueur } from '../motDePasse';
 import { useTauxDuJour } from '../tauxDuJour';
 import { DialoguesTaux, SectionTaux, useTauxJournaliers } from './TauxJournaliers';
 
@@ -34,6 +35,14 @@ const LOGIN_OU_EMAIL = 'Renseignez un identifiant ou un email.';
 const validerIdentite = (login: string, email: string) => () =>
   login.trim() === '' && email.trim() === '' ? LOGIN_OU_EMAIL : null;
 
+/** Création : identité, puis longueur du mot de passe (D-274). */
+const validerCreation = (login: string, email: string, motDePasse: string) => () =>
+  validerIdentite(login, email)() ?? validerLongueur(motDePasse);
+
+/** Modification : identité, puis longueur du nouveau mot de passe s'il est renseigné (vide = inchangé). */
+const validerModification = (login: string, email: string, motDePasse: string) => () =>
+  validerIdentite(login, email)() ?? (motDePasse === '' ? null : validerLongueur(motDePasse));
+
 /** Texte d'un 409 de l'écran, distingué par le message d'erreur de l'API (D-073). */
 function conflitUtilisateur(err: ApiError): string {
   const m = (err.erreur ?? '').toLowerCase();
@@ -49,6 +58,9 @@ function conflitUtilisateur(err: ApiError): string {
 
 /** Refus 422 « Équipe inconnue » (D-147 (6)) ; les autres refus gardent leurs textes. */
 function texteErreurUtilisateur(err: unknown): string {
+  if (err instanceof ApiError && err.status === 400 && err.erreur === MESSAGE_LONGUEUR) {
+    return MESSAGE_LONGUEUR;
+  }
   return err instanceof ApiError && err.status === 422 && err.erreur === 'Équipe inconnue'
     ? EQUIPE_INCONNUE
     : messageErreur(err, conflitUtilisateur);
@@ -102,7 +114,7 @@ function FormulaireCreation({ calendriers, equipes, onSucces, onAnnuler }: Commu
   return (
     <FormulaireDialogue
       libelle="Créer"
-      valider={validerIdentite(login, email)}
+      valider={validerCreation(login, email, motDePasse)}
       envoyer={() => {
         return api('/api/utilisateurs', {
           method: 'POST',
@@ -147,6 +159,7 @@ function FormulaireCreation({ calendriers, equipes, onSucces, onAnnuler }: Commu
       />
       <Field
         label="Mot de passe"
+        aide={AIDE_LONGUEUR}
         type="password"
         autoComplete="new-password"
         required
@@ -244,7 +257,7 @@ function FormulaireModification({
     <>
       <FormulaireDialogue
         libelle="Enregistrer"
-        valider={validerIdentite(login, email)}
+        valider={validerModification(login, email, motDePasse)}
         envoyer={() => {
           return api(`/api/utilisateurs/${u.id}`, { method: 'PATCH', body: modifies() });
         }}
@@ -307,6 +320,7 @@ function FormulaireModification({
         <Case label="Actif" checked={actif} onChange={(e) => setActif(e.target.checked)} />
         <Field
           label="Nouveau mot de passe"
+          aide={AIDE_LONGUEUR}
           type="password"
           autoComplete="new-password"
           value={motDePasse}

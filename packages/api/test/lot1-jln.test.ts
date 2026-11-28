@@ -79,7 +79,7 @@ describe('Jalons (lot 1, T2)', () => {
     expect(corps(ok)).toMatchObject({ type: 'fixe', date_validee: '2027-01-06' });
   });
 
-  it('JLN-6-r1 : chef de projet et administrateur écrivent ; chef d’un autre projet → 404 ; ressource affectée → 404', async () => {
+  it('JLN-6-r2 : chef de projet et administrateur écrivent ; chef d’un autre projet → 403 ; ressource affectée → 404', async () => {
     const m = await creerMonde(ctx);
     const j = await creerJalon(ctx, m.admin, m.projet.id);
     expect(

@@ -659,7 +659,7 @@ Utilisateur (POST et PATCH /api/utilisateurs) :
 | login | Identifiant (création : vide = repris de l'email ; modification) ; colonne « Identifiant » (D-077) | E2E-71, E2E-72, E2E-73, E2E-74 |
 | initiales | Initiales, facultatives (création, modification) ; colonne « Initiales » (D-077) ; écran consommateur : texte à droite des barres du Gantt du projet et de l'Accueil, case « Initiales » (lot 3d-1, D-088 (2)) | E2E-71, E2E-72, E2E-125, E2E-129, E2E-130, E2E-131 |
 | mot_de_passe | Mot de passe (création) ; Nouveau mot de passe, facultatif (modification) | E2E-46, E2E-53, E2E-69, E2E-70 |
-| role | Rôle (création, modification) | E2E-46, E2E-48 |
+| role | Rôle (création, modification) ; valeur `leader_metier` : « Leader métier » dans les deux listes et dans la colonne Rôle (D-268) | E2E-46, E2E-48, E2E-704, E2E-706 |
 | est_ressource | Ressource planifiable (création, modification) | E2E-47, E2E-48, E2E-51 |
 | capacite | Capacité (j/jour) (création, modification) | E2E-46, E2E-49 |
 | calendrier_id | Calendrier (création, modification) | E2E-46, E2E-49 |
@@ -2943,6 +2943,7 @@ Rouge : ces révisions échouent sans le code (la confirmation est attendue), pa
 | PRT-1 | Chaque dossier de travail (racine, `packages/*`, `e2e`, `scripts`) contient un `.prettierignore` qui ignore `**/*.md` (prettier lancé depuis un dossier de travail ne reformate plus les documents) | D-190 (2), D-189 (5) | Consolidation | scripts/test/prettier-md.test.ts |
 | E2E-113-r1, E2E-115-r1, E2E-124-r1 | Révisions D-031 (D-190 (3)) : clic réel sur la liste avant `selectOption` ; refus, puis « Annuler » et « Abandonner » (confirmation attendue). Même intention, mêmes assertions | D-190 (3), D-188 (3), (4) | Consolidation | e2e/tests/cloture-c2.spec.ts |
 | E2E-446-r2 | Révision D-031 (D-190 (3)) : le geste devant `selectOption` est un clic réel sur la liste, non un focus programmatique | D-190 (3) | Consolidation | e2e/tests/garde-dialogue.spec.ts |
+| E2E-446-r3 | Révision D-031 (D-268, tag `tests-droits-2-r2`) : ArrowUp depuis « Ressource » donne `leader_metier` (ordre DE-9) | DE-9, D-268 | droits-2 | e2e/tests/garde-dialogue.spec.ts |
 | E2E-457 | Confirmation « Abandonner les modifications ? » : le focus initial est sur « Annuler » (rester) ; la touche Entrée y reste sans fermer le dialogue de formulaire ; Échap ferme la confirmation seule | D-190 (4) | Consolidation | e2e/tests/garde-dialogue-focus.spec.ts |
 | E2E-458 | Confirmation de suppression (équipe) : le focus initial est sur « Annuler » ; Entrée ne supprime rien | D-190 (4) | Consolidation | e2e/tests/garde-dialogue-focus.spec.ts |
 | E2E-459 | Boutons « Annuler » propres à leur formulaire (hors `FormulaireDialogue`) : « Nouveau calendrier », « Ajouter un jour férié », « Nouveau projet », « Rejeter » : modifié puis « Annuler » : confirmation (dialogue ouvert, saisie gardée) ; « Abandonner » : fermeture sans envoi ; sans modification : fermeture directe | D-188 (6), D-190 (7) | Consolidation | e2e/tests/garde-dialogue-focus.spec.ts |
@@ -4105,3 +4106,268 @@ Domaines : gantt, feuille-de-temps, dialogues (e2e, STB-3 compris) ; vitest `scr
 - E2E-197-r1 → E2E-197-r2 (`lot3f2.spec.ts`) : attente `toBeFocused()` de la zone après la fermeture par Échap, avant la touche Menu. Aucune assertion métier changée.
 - E2E-403 → E2E-403-r1 (`sortie.spec.ts`) : attente de la confirmation visible avant le second clic « Abandonner ». E2E-401 attend déjà la confirmation avant chaque clic : non révisé.
 - STB-3 → STB-3-r1 (`stabilite-helpers.spec.ts`, tag `tests-robustesse-ci-2-r1`) : l'URL de la base est obtenue par `exigerBaseTest` (scripts/lib/garde-base-test.mjs) au lieu de `process.env.TEST_DATABASE_URL` ; raison : GBT-9, décision du porteur. Scénario, synchronisation et attendus inchangés.
+
+## Droits, tranche 1 (D-265, lot droits, sous-lot droits-1)
+
+Valeurs recopiées de SPEC §2, « Lecture élargie du chef et rôle leader métier (droits, D-265) », point 7 (cas DR-1 à DR-39). Les « cas » DR-n de la SPEC sont des jeux de données, distincts des identifiants LCH-n et LDM-n. Vitest API seulement. Domaines : authentification, utilisateurs-equipes-calendriers, projets, gantt, accueil, validation, plan-de-charge. Chaque refus vérifie la base inchangée (`empreinte`).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| LCH-1 | Chef hors portée : `GET /api/projets` contient P et P1, `peut_ecrire` faux ; `GET /api/projets/:id` 200, `peut_ecrire` faux | DR-1, DR-2 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LCH-2 | Chef hors portée : lectures de P (gantt, planning, activités, jalons, dépendances, affectations, assignations, travail, saisies) 200 ; Gantt `peut_ecrire` faux, `sous_projets` contient P1 | DR-3 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LCH-3 | Chef hors portée : clés financières et de 6c absentes (Gantt, planning, activités, jalons) ; `charge_assignee` absente de la vue d'une activité | DR-4 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LCH-4 | Chef hors portée : écritures sur P (projet, activités, jalons, dépendances, affectations, assignations, déplacement, copie) 403 { erreur: 'Interdit' }, base inchangée | DR-5 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LCH-5 | Chef hors portée : calcul de P 403, historique de P 403, export des coûts de P 403, base inchangée | DR-6, DR-7, DR-8 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LCH-6 | Chef hors portée : planning d'Alice sans ligne masquée ; plan de charge et export sans « Autres projets », ligne de P présente | DR-9, DR-10 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LCH-7 | Chef hors portée, non-régression : validations (`peut_valider` faux pour P, vrai pour Q), valider n'écrit que Q, taux d'Alice 200 et d'une ressource de P seul 403, coûts sans P | DR-11 à DR-14 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LCH-8 | Chef dans sa portée, non-régression : Gantt `peut_ecrire` vrai et `totaux` à huit clés ; PATCH `charge_vendue`, calcul et historique 200 | DR-15, DR-16 | droits-1 | packages/api/test/droits-chef.test.ts |
+| LDM-1 | Administrateur crée (201) et modifie (200) un utilisateur `leader_metier` ; chef 403, rien de créé | DR-17 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-2 | Leader : `GET /api/auth/me` et annuaire, `role` 'leader_metier' | DR-18 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-3 | Leader : tous les projets, `peut_ecrire` vrai ; modèle en lecture seule, PATCH 403 base inchangée | DR-19, DR-20 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-4 | Leader : Gantt, `totaux` = { charge_assignee, charge_reelle } exactement, éléments sans clés de vente, de marge ni de coût, jalon avec ses clés de date client | DR-21 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-5 | Leader : planning sans `charge_vendue` ni `marge`, jalon avec ses clés de date client ; activités et réponses de POST et PATCH : `charge_assignee` présente, `charge_vendue` et `marge` absentes ; jalons avec `date_client` | DR-22 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-6 | Leader : `charge_vendue` (nombre ou null) dans POST ou PATCH d'activité 403 { erreur: 'Interdit' }, base inchangée ; 404 avant ; sans la clé 201 et 200 | DR-23 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-7 | Leader : écritures sur P et Q, calcul de P et Q, historique 200 | DR-24, DR-25 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-8 | Leader : création d'un projet (chef = L ; `chef_id` d'autrui 403) ; copie depuis un modèle et d'un projet 201, `est_modele` vrai 403 ; administrateur désigne L comme chef (201, 200) | DR-26 à DR-28 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-9 | Leader : coûts du pilotage, leur export et export des coûts d'un projet 403, avant 400 et 404, base inchangée | DR-29 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-10 | Leader : toutes les routes de taux 403, avant 400 et 404, base inchangée | DR-30 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-11 | Leader : plan de charge et export 200 sans « Autres projets » ; planning d'une ressource sans ligne masquée ; export des imputations avec P et Q | DR-31, DR-32, DR-38 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-12 | Leader : validations et feuille d'Alice (toutes les lignes) ; valider, dévalider, rejeter 200 | DR-33, DR-34 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-13 | Leader : saisie pour autrui, soumettre et rappeler pour autrui 403, base inchangée ; sa propre feuille et Mes tâches 200 | DR-35, DR-36 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-14 | Leader : utilisateurs, équipes, calendriers, historique transversal en écriture ou liste d'administration 403, base inchangée ; annuaire, équipes, calendriers 200 | DR-37 | droits-1 | packages/api/test/droits-leader.test.ts |
+| LDM-15 | Administrateur, non-régression : Gantt `totaux` à huit clés | DR-39 | droits-1 | packages/api/test/droits-leader.test.ts |
+
+### Révisions D-031 de droits-1 (D-265 (4), tag `tests-droits-1-r1`)
+
+Règle D-265 (4) : attente d'un chef sur un projet hors de sa portée d'écriture, cette attente seulement. 404 en lecture → 200 (`peut_ecrire` faux) ; 404 en écriture, calcul, copie ou historique → 403, base inchangée toujours vérifiée ; projet absent d'une liste, du Gantt global, du planning d'une ressource ou du plan de charge → présent, en lecture seule. Un commit par fichier.
+
+- Vitest : REF-1-r2, REF-2-r2, PRJ-21-r1 (`lot1-complements.test.ts`) ; `verifierRefus` de `lot1-t2-helpers.ts` (chef d'un autre projet 403), d'où ACT-12-r2, ASS-9-r2, JLN-6-r2, LIEN-11-r2 (lecture des dépendances 200), WBS-8-r2 ; AFF-3-r3 ; HIS-12-r2, HIS-13-r2 ; PRJ-17-r1, PRJ-19-r2 (`lot1-prj-t2.test.ts`) ; PRJ-6-r2, PRJ-11-r1, PRJ-12-r1 (`lot1-prj.test.ts`) ; COPIE-8-r2 ; CALC-3-r1 ; SAI-7-r2, SAI-10-r2 (`lot2e-saisies.test.ts`, 403 avant 400) ; GANTT-8-r2, GANTT-9-r2 (`sous_projets` contient P1) ; CALC-51-r1 ; TRAV-6-r1 ; PDC-12-r1 ; RPL-8-r1 ; CSV-9-r2 ; SAI-24-r2 ; CVI-4-r1 ; PCX-2-r1 ; OTP-5-r1 (ancêtre lisible : `otp_source` complet ; choix à ratifier, D-267).
+- E2E : E2E-91-r3 (`accueil-g2.spec.ts`, le parent est la racine affichée), E2E-616-r1 (`couts-1.spec.ts`, aide « Hérité de SECRET-616 : FIN-616 » ; choix à ratifier, D-267), E2E-10-r2 (`lot1.spec.ts`, ligne présente ; lien cliqué avec `exact: true`, rendu nécessaire par la ligne nouvelle), E2E-38-r4 (`lot3b.spec.ts`), E2E-374-r1 (`lot6d.spec.ts`), E2E-379-r1 (`lot6e.spec.ts`, ligne en clair au lieu de la ligne grise), E2E-386-r2 (`lot6f.spec.ts`), E2E-83-r2 (`rex2c.spec.ts`, déplier le parent avant le sous-projet).
+
+## Droits, tranche 2 (D-268, lot droits, sous-lot droits-2)
+
+Fichier : `e2e/tests/droits-2.spec.ts` (E2E-696 à E2E-706). Domaines : projets, accueil, gantt, plan-de-charge, validation, utilisateurs-equipes-calendriers, dialogues. Valeurs de SPEC §2, « Lecture élargie du chef et rôle leader métier (droits, D-265) », point 8 (cas DE-1 à DE-10). Base « administrateur seul » avant et après chaque test. Données préparées par l'API, sauf E2E-706 (parcours complet, tout à l'écran) et l'entité dont l'écran est l'objet du test.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| E2E-696 | Chef hors portée, liste Projets : « Lecture seule » sur la ligne du projet d'un autre chef, rien sur la sienne | DE-1 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-697 | Chef hors portée, projet ouvert : « Lecture seule » en tête ; absente sur son projet | DE-2 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-698 | Chef chef d'aucun projet : message sur l'écran Projets ; absent pour un chef de projet, le leader et l'administrateur | DE-3 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-699 | Leader : menu sans Utilisateurs ; Pilotage sans onglet « Coûts », `/pilotage?onglet=couts` affiche le plan de charge | DE-4, DE-5 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-700 | Leader : onglet « Validation » des Imputations ; il valide la feuille d'Alice pour P4B et Q4B | DE-6 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-700-r1 | Révision D-031 (D-268) : leader non ressource, un seul onglet : pas de liste d'onglets, titre « Validation des feuilles de temps » affiché directement ; il valide la feuille d'Alice pour P4B et Q4B | DE-6 (modifié par D-268), D-247 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-701 | Leader, onglet Affectations : ni « Taux du jour » ni « Modifier les taux de … » ; « Taux (%) » présent | DE-7 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-702 | Leader, Gantt d'un projet : menu « Colonnes » sans Vendu, Marge, Coût planifié, Coût réel ; ni « Totaux du projet » ni « Exporter les coûts » ; dialogues d'activité sans « Charge vendue (j) » ni « Marge » | DE-8 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-703 | Leader, Accueil : menu « Colonnes » sans vente, marge ni coûts ; le chef les a | DE-8 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-704 | Administrateur, Utilisateurs : « Leader métier » dans les listes « Rôle » (création, modification), création à l'écran, colonne Rôle | DE-9 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-705 | Administrateur : le leader dans la liste « Chef de projet » de « Nouveau projet » et de « Modifier le projet », désigné à l'écran | DE-10 | droits-2 | e2e/tests/droits-2.spec.ts |
+| E2E-706 | Parcours complet (administrateur seul) : projet, activité et leader créés à l'écran ; le leader modifie l'activité d'un projet dont il n'est pas chef ; ni Vendu, ni Marge, ni onglet Coûts | DE-4, DE-5, DE-8, DE-9 | droits-2 | e2e/tests/droits-2.spec.ts |
+
+### Révisions D-031 de droits-2 (D-268)
+
+- Tag `tests-droits-2-r1` (653912b) : E2E-700-r1 (`droits-2.spec.ts`), décision du porteur : leader non ressource gardé, Validation affichée directement sans liste d'onglets (D-247).
+- Tag `tests-droits-2-r2` (7340c3f) : E2E-446-r3 (`garde-dialogue.spec.ts`), « Leader métier » inséré avant « Ressource » dans la liste Rôle (DE-9) : ArrowUp depuis « Ressource » donne `leader_metier`, seule l'attente de valeur change. Règle élargie du porteur : test cassé seulement par l'ajout de « Leader métier » dans une liste (ordre ou nombre d'options), révisé de même, commit par fichier, même tag.
+
+## Notes d'activité (D-270, lot notes)
+
+Vitest : `packages/api/test/notes.test.ts` (NOT-1 à NOT-10, cas NO-1 à NO-10 de SPEC §3, « Notes d'activité (notes, D-270) »). E2E : `e2e/tests/notes.spec.ts` (E2E-707 à E2E-711). Domaines : projets, gantt, accueil, dialogues, vue-ressource. Valeurs recopiées de la SPEC. Base « administrateur seul » avant et après chaque test. Données préparées par l'API, sauf E2E-711 (parcours complet, tout à l'écran) et l'entité dont l'écran est l'objet du test.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| NOT-1 | POST avec notes aux espaces de bord retirés, lignes multiples gardées ; sans notes : null | NO-1 | notes | packages/api/test/notes.test.ts |
+| NOT-2 | Notes d'espaces seuls : null, en POST et en PATCH | NO-2 | notes | packages/api/test/notes.test.ts |
+| NOT-3 | 500 points de code acceptés (« é », « 😀 »), 501 refusés en 400, base inchangée | NO-3 | notes | packages/api/test/notes.test.ts |
+| NOT-4 | PATCH modifie, efface (null), absent : inchangé | NO-4 | notes | packages/api/test/notes.test.ts |
+| NOT-5-r1 | Refus (chef hors portée → 403, ressource → 404), base inchangée (révise NOT-5, D-271) | NO-5 | notes | packages/api/test/notes.test.ts |
+| NOT-6 | Lecture : administrateur, chef, leader (écriture, lecture seule) ont `notes` ; la ressource n'a la clé dans aucune route ; jalon sans la clé | NO-6 | notes | packages/api/test/notes.test.ts |
+| NOT-7 | Historique : création, modification, effacement ; valeur inchangée non historisée | NO-7 | notes | packages/api/test/notes.test.ts |
+| NOT-8 | Copie de projet, création depuis un modèle, enregistrement comme modèle : notes copiées | NO-8 | notes | packages/api/test/notes.test.ts |
+| NOT-9 | Migration 019 : colonne nullable, CHECK de longueur sur INSERT direct | NO-9 | notes | packages/api/test/notes.test.ts |
+| NOT-10 | Exports sans colonne de notes | NO-10 | notes | packages/api/test/notes.test.ts |
+| E2E-707 | Chef : dialogue de création d'une activité, champ « Notes », compteur « N / 500 », saisie bloquée à 500 ; colonne « Notes » du Gantt (décochée par défaut) l'affiche | §3 point 7 (a), (b) | notes | e2e/tests/notes.spec.ts |
+| E2E-708 | Chef : dialogue de modification depuis le Planning, le Gantt et l'Accueil ; le texte s'enregistre, s'efface ; colonne « Notes » de l'Accueil | §3 point 7 (a), (b) | notes | e2e/tests/notes.spec.ts |
+| E2E-709 | Leader : modifie la note d'une activité d'un projet dont il n'est pas chef ; lecture seule : colonne « Notes » lisible, pas de dialogue | §3 points 2, 3 | notes | e2e/tests/notes.spec.ts |
+| E2E-710 | Ressource assignée : « Mes tâches » sans note ni colonne de note | §3 point 3 | notes | e2e/tests/notes.spec.ts |
+| E2E-711 | Parcours complet (administrateur seul) : projet, ressource, chef et leader créés à l'écran ; le chef saisit une note, la colonne « Notes » l'affiche ; le leader la modifie ; la ressource ne la voit pas dans Mes tâches | §3 point 7, NO-6 | notes | e2e/tests/notes.spec.ts |
+
+### Couverture des champs, notes
+
+- `notes` (POST `/api/projets/:id/activites`, PATCH `/api/activites/:id`) → champ « Notes » des dialogues de création et de modification d'une activité (E2E-707, E2E-708, E2E-711) ; écran consommateur : colonne « Notes » du Gantt d'un projet et de l'Accueil (E2E-707, E2E-708, E2E-711).
+
+### Révisions D-031 du lot notes (D-270, D-271)
+
+- Tag `tests-notes-r1` (déplacé avant tout push, puis fixé ; D-271) : GANTT-1-r4 → GANTT-1-r5 (clé `notes: null` dans les éléments d'activité) ; GCO-7-r3 → GCO-7-r4 (option « Notes » avant « Drapeaux » dans le menu).
+- Tag `tests-notes-r2` (décision du porteur, validée par claude.ai) : NOT-5 → NOT-5-r1 (ressource : 404 et non 403, règle existante ; NO-5 de la SPEC aligné) ; E2E-709 → E2E-709-r1 (`localStorage` vidé au changement d'utilisateur, D-212).
+- Tag `tests-notes-r3` (menu « Colonnes », option « Notes » avant « Drapeaux ») : E2E-540-r5 → r6, E2E-541-r6 → r7, E2E-555-r4 → r5 (`gantt-colonnes-2.spec.ts`) ; E2E-569-r3 → r4 (`retouches-rex6.spec.ts`) ; E2E-623-r2 → r3 (`retours-deploiement-1.spec.ts`).
+- Cas jalon avec `notes` → 400 (SPEC §3 point 1) : assuré par le corps strict, sans test dédié (complément au backlog).
+
+## Tests du lot securite (D-272)
+
+Fondés sur D-272 (outillage de sécurité, SBOM des paquets internes) ; les tests des corrections de l'audit sont ajoutés à la suite. Fichiers : `scripts/test/sbom.test.ts` (SBOM-11 à SBOM-13), `scripts/test/securite-outillage.test.ts` (SECT-1 à SECT-3). Domaines des passes ciblées : authentification, plus ceux des corrections.
+
+| ID | Test | Décision | Lot | Fichier |
+|---|---|---|---|---|
+| SBOM-11 | Fixture en version racine 3.4.5 : le composant interne `@planersource/a` a `bom-ref` `@planersource/a@3.4.5`, `version` 3.4.5, `purl` `pkg:npm/%40planersource/a@3.4.5` ; `dependencies` et le `dependsOn` de la racine suivent ; plus aucune trace de `@planersource/a@0.0.0` ; `ms@2.1.3` inchangé | D-272 (5) | securite | scripts/test/sbom.test.ts |
+| SBOM-12 | Composants internes : `supplier` = `{ name: "planersource" }`, référence externe `vcs` = `repository.url` de la racine, propriété `planersource:interne` = `true` ; le composant tiers `ms` n'a aucun des trois | D-272 (5) | securite | scripts/test/sbom.test.ts |
+| SBOM-13 | `sbom.cdx.json` du dépôt : `@planersource/api`, `engine` et `web` à la version du package.json racine, fournisseur, `vcs` (`repository.url` du package.json racine, en `git+https://`) et propriété interne ; aucun des trois en 0.0.0 | D-272 (5) | securite | scripts/test/sbom.test.ts |
+| SECT-1 | `eslint-plugin-security` en devDependency ; script `lint:securite` = `eslint -c eslint.securite.config.js .` ; script `lint` inchangé ; `eslint.config.js` sans le plugin | D-272 (4) | securite | scripts/test/securite-outillage.test.ts |
+| SECT-2 | Script `audit-securite` = `node scripts/audit-securite.mjs` ; faux npm : appels `audit --omit=dev --audit-level=high` puis `audit` ; code de sortie celui du premier (0 si premier 0 et second 1 ; 1 si premier 1 et second 0) | D-272 (4) | securite | scripts/test/securite-outillage.test.ts |
+| SECT-3 | ci.yml : étape `npm run audit-securite` avec `continue-on-error: true`, après `npm run licenses` et avant l'installation de Playwright | D-272 (4), (8) | securite | scripts/test/securite-outillage.test.ts |
+
+### Corrections de l'audit (D-272, docs/securite.md)
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| SECT-4 | `creerAdminInitial` hors développement, base vide : `doit_changer_mot_de_passe` vrai ; connexion 200 avec la valeur vraie ; `GET /api/utilisateurs` 403 « Changement de mot de passe requis », base inchangée ; nouveau = actuel → 400, valeur inchangée ; changement → 204, puis 200 et valeur fausse | §8 « Changement de mot de passe » point 7, CPI-1 (SEC-1) | securite | packages/api/test/securite.test.ts |
+| SECT-5 | `creerAdminInitial` en développement, base vide : `doit_changer_mot_de_passe` faux | §8 point 7, CPI-2 (SEC-1) | securite | packages/api/test/securite.test.ts |
+
+Tags : `tests-securite` (SBOM-11 à SBOM-13, SECT-1 à SECT-3, rouges) ; `tests-securite-r1` (révision D-271 : typage du lock dans SBOM-11 et SBOM-12, attentes inchangées) ; `tests-securite-2` (SECT-4 rouge, SECT-5). Aucun test sous tag d'un lot antérieur révisé : les e2e tournent avec `INITIAL_ADMIN=0`, INST-5 à INST-7 et DEV-n restent verts.
+
+## Lot securite-2 (D-274)
+
+Fondés sur SPEC §8 « Corrections de sécurité (securite-2, D-274) » (cas SC2-1 à SC2-17). Domaines des passes ciblées : authentification, utilisateurs-equipes-calendriers, validation, feuille-de-temps, projets. Tag de tests : `tests-securite-2-lot` (`tests-securite-2` est déjà pris par le lot securite, D-274 (4)).
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| SC2T-1 | Leader, historique de P : aucune ligne `champ` = `charge_vendue`, les autres modifications présentes, nombre de lignes = celui de A moins les lignes `charge_vendue` | SC2-1 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-2 | Leader : `nouvelle_valeur` des créations et `ancienne_valeur` des suppressions d'activité sans `charge_vendue`, autres clés présentes | SC2-2 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-3 | Administrateur et chef C : ligne 10 → 12, clé `charge_vendue` dans création et suppression | SC2-3 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-4 | Chef ressource Carl : valider, rejeter, dévalider sa feuille → 403 Interdit, base inchangée | SC2-4 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-5 | Leader ressource : mêmes refus sur sa feuille, base inchangée | SC2-5 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-6 | Administrateur valide la feuille de Carl et la sienne : 200 | SC2-6 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-7 | Chef Carl : POST, PATCH, DELETE de son propre taux → 403, même corps invalide, base inchangée ; GET 200 | SC2-7 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-8 | Chef Carl écrit le taux d'Alice (201, 200, 204) ; l'administrateur écrit son propre taux | SC2-8 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-9 | `POST /api/utilisateurs` : 11 caractères → 400 et message, rien d'écrit ; 12 → 201 | SC2-9 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-10 | Points de code, espaces non retirées (6 et 12 « 😀 », 11 + espace, 12 espaces) | SC2-10 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-11 | `PATCH /api/utilisateurs/:id` : 11 → 400, hash et sessions inchangés ; 12 → 200 ; sans mot de passe → 200 | SC2-11 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-12 | `POST /api/auth/mot-de-passe` : ordre des refus et 204 à 12 | SC2-12 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-13 | `create-admin` : 11 refusé sans ligne, 12 créé | SC2-13 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-14 | Connexion d'un compte à mot de passe de 5 caractères : 200 | SC2-14 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-15 | Compte initial : admin/admin 200, changement imposé à 11 refusé, à 12 accepté | SC2-15 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-16 | Démonstration : connexion de chefa, chefb, alice, bob par `<identifiant>-demonstration`, admin/admin | SC2-16 | securite-2 | packages/api/test/securite-2.test.ts |
+| SC2T-17 | Réservé : aucun test propre (renvoi aux E2E-712 à E2E-716, SC2-17) | SC2-17 | securite-2 | — |
+| E2E-712 | Dialogue « Changer mon mot de passe » : aide « 12 caractères au moins » ; 11 caractères → message, rien d'envoyé ; 12 → « Mot de passe changé. » ; la page « Changez votre mot de passe » porte la même aide | SC2-9, SC2-12, SC2-15 | securite-2 | e2e/tests/securite-2.spec.ts |
+| E2E-713 | Administrateur : aide sous « Mot de passe » de Nouvel utilisateur et « Nouveau mot de passe » de Modifier <nom> ; 11 → message ; 12 → créé, connexion du nouvel utilisateur à l'écran ; champ vide de Modifier : enregistrement sans contrôle | SC2-9, SC2-11 | securite-2 | e2e/tests/securite-2.spec.ts |
+| E2E-714 | Validation : chef ressource sans boutons sur sa propre ligne, phrase « Votre feuille est validée par un autre valideur. », « Voir » présent ; boutons présents sur la feuille d'une autre ressource ; l'administrateur valide la feuille du chef à l'écran | SC2-4, SC2-6 | securite-2 | e2e/tests/securite-2.spec.ts |
+| E2E-715 | Affectations d'un projet : pas de « Modifier les taux de <nom> » sur la ligne du chef (colonne « Taux du jour » présente) ; bouton présent sur la ligne d'une autre ressource et utilisable | SC2-7, SC2-8 | securite-2 | e2e/tests/securite-2.spec.ts |
+| E2E-716 | Leader, onglet Historique d'un projet : lignes d'activité présentes, aucune cellule `charge_vendue` ; administrateur : la ligne est lue | SC2-1 à SC2-3 | securite-2 | e2e/tests/securite-2.spec.ts |
+
+### Couverture des champs, securite-2
+
+- Aucun champ d'API nouveau. `mot_de_passe` (POST et PATCH `/api/utilisateurs`) → champs « Mot de passe » et « Nouveau mot de passe » (E2E-713) ; `nouveau` (POST `/api/auth/mot-de-passe`) → « Nouveau mot de passe » (E2E-712) ; taux propres du chef → bouton « Modifier les taux de <nom> » (E2E-715).
+
+## Absences et charge depuis le taux (D-276, lot absences)
+
+Fondés sur SPEC §4, « Absences et charge depuis le taux (absences, D-276) ». Tests moteur : identifiants de la SPEC (ABM-1 à ABM-12, CT-1 à CT-9), `packages/engine/test/absences.test.ts` et `packages/engine/test/charge-taux.test.ts`. Domaines des passes ciblées : feuille-de-temps, validation, planning-manuel, accueil, vue-ressource, plan-de-charge, gantt, projets, dialogues, utilisateurs-equipes-calendriers. Tags : `tests-absences-1`, `tests-absences-2`, `tests-charge-taux`.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| ABT-1 | POST par la ressource pour elle-même → 201, objet `{ id, ressource_id, debut, fin, portion, motif }` ; une entrée d'historique `creation`, entité `absence`, sans projet | AB-1, points 8 et 9 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-2 | Corps invalides (fin < début, demi-journée sur deux jours, motif et portion inconnus, clé inconnue) → 400, base inchangée | AB-2 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-3 | Chevauchements → 409 `absence_chevauchement`, base inchangée ; matin et après-midi du même jour → 201 | AB-3 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-4 | Jour imputé : journée → 422 `jour_impute`, base inchangée ; demi-journée → 201 ; PATCH vers une période imputée → 422 | AB-4 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-5 | Droits d'écriture POST : chef dans sa portée 201, hors portée 403, leader 201, ressource pour autrui 403, administrateur 201, ressource inconnue 404, non ressource 422 ; base inchangée à chaque refus | AB-5 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-6 | Droits en PATCH et DELETE : mêmes règles ; absence inconnue 404 | AB-5 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-7 | Lecture : ressource (les siennes ; autrui 403), chef, leader, administrateur (toutes) ; filtre `du`/`au` ; 400 paramètres invalides | AB-6 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-8 | Historique : une entrée par champ modifié, une à la suppression ; `GET /api/historique?entite=absence` 200 administrateur, 403 chef | AB-7 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-9 | Calcul : journée d'absence le 05/01, ASAP Alice 2 j → travail les 04 et 06/01 | AB-8 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-10 | Feuille : `capacite` 0 (journée) et 0,5 (demi-journée) ; PUT sur le jour d'absence → 422 `jour_absence`, base inchangée | AB-9 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-11 | Planning manuel : jour d'absence dans `jours-non-ouvres` ; PUT d'une saisie nouvelle → 422 `jour_non_ouvre`, base inchangée | AB-10 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-12 | Migration 020 : table `absence`, CHECK fin ≥ début, portion et motif, demi-journée sur un jour ; entité `absence` acceptée par `historique` | points 1 et 9 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-13 | Rôle ressource : PATCH et DELETE de sa propre absence 200 et 204 | AB-5 | absences-1 | packages/api/test/absences.test.ts |
+| ABT-14 | Jeu de démonstration : deux absences d'alice (formation d'une matinée, congé d'une journée) | point 17 | charge-taux | packages/api/test/demo-absences.test.ts |
+| CTT-1 | `charge_depuis_taux` vrai sur une activité non REGUL (POST, PATCH) → 422 `mode_incompatible`, base inchangée ; REGUL → 201 et 200 ; clé présente, faux par défaut | CT-10 | charge-taux | packages/api/test/charge-taux.test.ts |
+| CTT-2 | PATCH `charge_assignee` sur une assignation au champ vrai (ou le devenant) → 422 `charge_calculee`, base inchangée | CT-11 | charge-taux | packages/api/test/charge-taux.test.ts |
+| CTT-3 | Activité passée de REGUL à ASAP : champ faux, charge inchangée | CT-12 | charge-taux | packages/api/test/charge-taux.test.ts |
+| CTT-4 | Calcul : `charge_assignee` et `reste_a_faire` écrits depuis la sortie (CT-1 et CT-2 par l'API), aucune entrée d'historique du calcul | CT-13 | charge-taux | packages/api/test/charge-taux.test.ts |
+| CTT-5 | Copie de projet : champ copié | CT-14 | charge-taux | packages/api/test/charge-taux.test.ts |
+| CTT-6 | Migration 021 : colonne `charge_depuis_taux` booléenne non nulle, défaut faux | point 11 | charge-taux | packages/api/test/charge-taux.test.ts |
+| CTT-7 | Historique : changement du champ historisé | point 11 | charge-taux | packages/api/test/charge-taux.test.ts |
+| CTT-8 | Jeu de démonstration : une assignation REGUL d'alice au champ vrai (même test qu'ABT-14) | point 17 | charge-taux | packages/api/test/demo-absences.test.ts |
+| E2E-717 | Ressource : onglets « Feuille de temps » et « Absences » ; `?onglet=absences` ; « Nouvelle absence » (congé d'un jour passé), ligne au tableau ; feuille de temps : case du jour désactivée (`aria-disabled`), `title` « Absence (Congé) » (parcours 1) | AB-11, point 10 | absences-2 | e2e/tests/absences.spec.ts |
+| E2E-718 | Modifier une absence, refus de chevauchement affiché dans le dialogue, Supprimer avec confirmation | AB-11, point 10 | absences-2 | e2e/tests/absences.spec.ts |
+| E2E-719 | Chef : liste « Ressource » (lui et les ressources de sa portée) ; formation pour Alice ; calcul ; Accueil, planning d'Alice : jour grisé `title` « Absence (Formation) », barre commençant après le jour (parcours 2) | AB-11, point 10 | absences-2 | e2e/tests/absences.spec.ts |
+| E2E-720 | Administrateur et leader : liste « Ressource » de toutes les ressources ; administrateur non ressource : « Choisissez une ressource. » | point 10 | absences-2 | e2e/tests/absences.spec.ts |
+| E2E-721 | Planning manuel : case d'un jour d'absence désactivée (`aria-disabled`) | point 10 | absences-2 | e2e/tests/absences.spec.ts |
+| E2E-722 | Refus `jour_impute` affiché, dialogue ouvert | point 10 | absences-2 | e2e/tests/absences.spec.ts |
+| E2E-723 | Parcours complet depuis une base où seul l'administrateur existe : utilisateur ressource, projet, affectation, activité, calcul, absence posée par l'onglet Absences, planning d'une ressource grisé | point 10 | absences-2 | e2e/tests/absences.spec.ts |
+| E2E-724 | Dialogue d'assignation : case « Charge depuis le taux » visible en REGUL seulement ; cochée : « Charge assignée » en lecture seule, aide ; enregistrement | CT-15, point 15 | charge-taux | e2e/tests/charge-taux.spec.ts |
+| E2E-725 | Parcours 3 : assignation REGUL en charge depuis le taux ; calcul ; congé posé à l'écran ; nouveau calcul ; charge plus basse dans la colonne Ressources du Gantt et dans Mes tâches | CT-15, point 15 | charge-taux | e2e/tests/charge-taux.spec.ts |
+| E2E-726 | Réservé, non employé | — | — | — |
+
+### Couverture des champs, absences
+
+- Absence : `ressource_id` → liste « Ressource » de l'onglet Absences ; `debut` → « Du » ; `fin` → « Au » ; `portion` → « Portion » ; `motif` → « Motif » (E2E-717, E2E-718, E2E-719).
+- Assignation : `charge_depuis_taux` → case « Charge depuis le taux » du dialogue d'assignation (E2E-724, E2E-725).
+
+### Révisions D-031 du lot absences (D-276 (5), D-277)
+
+- Tag `tests-absences-r1` (règle D-271, test du lot en cours faux au regard d'un mécanisme existant) : E2E-718 → E2E-718-r1 (la garde D-188 propose « Abandonner », pas « Quitter » ; le test sautait le clic et restait bloqué).
+- Tag `tests-absences-r2` (cas (a)) : E2E-700-r1 → E2E-700-r2 (`droits-2.spec.ts`, leader non ressource : onglets « Validation » et « Absences », Validation par défaut, au lieu d'aucune liste d'onglets).
+- Tag `tests-absences-r3` (cas (a)) : E2E-669 → E2E-669-r1, E2E-671 → E2E-671-r1 (`onglets.spec.ts` : onglets « Validation » et « Absences » pour le chef non ressource ; « Feuille de temps » et « Absences » pour le rôle ressource, toujours sans « Validation »).
+- Aucune révision (b), (c) ou (d) : la clé `charge_depuis_taux` n'a cassé aucune réponse comparée à l'identique ; `Ressource.absences` est facultatif dans l'entrée du moteur.
+- Tag `tests-charge-taux-demo` : ABT-14 et CTT-8 rouges (jeu de démonstration), écrits après le vert de charge-taux.
+
+## Absences, suite (D-278, lot absences-suite)
+
+Fondés sur SPEC §4, « Absences et charge depuis le taux », points 21 à 24 (cas AB-12, AB-13, PCA-1 à PCA-8) et CT-16 (moteur, identifiant de la SPEC, `packages/engine/test/charge-taux.test.ts`). Domaines des passes ciblées : plan-de-charge, gantt, accueil, dialogues, feuille-de-temps, vue-ressource. Tag : `tests-absences-suite` ; révisions `tests-absences-suite-r1`, -r2…
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| ASU-1 | SEC-21, calcul : absence insérée du 04/01/2027 au 31/12/2040, calcul de D0 04/01/2027 ; l'entrée du moteur ne porte aucun jour d'absence postérieur à l'horizon (04/01/2030). Preuve a posteriori : rouge sur le parent du commit « fix: … SEC-21 » | AB-13, point 22 | absences-suite | packages/api/test/absences-suite.test.ts |
+| ASU-2 | SEC-21, lecture : absence insérée du 04/01/2027 au 31/12/99999 ; `joursAbsence` du 04/01 au 08/01/2027 rend 5 jours, sous `statement_timeout` de 2 s (le dépliage de toute l'absence le dépasse). Preuve a posteriori comme ASU-1 | AB-13, point 22 | absences-suite | packages/api/test/absences-suite.test.ts |
+| ASU-3 | POST : 366 jours → 201 ; 367 jours → 422 `duree_excessive`, message recopié, base inchangée | AB-12, point 21 | absences-suite | packages/api/test/absences-suite.test.ts |
+| ASU-4 | PATCH vers 367 jours (fin seule, puis début seul) → 422 `duree_excessive`, base inchangée | AB-12, point 21 | absences-suite | packages/api/test/absences-suite.test.ts |
+| ASU-5 | Plan de charge : disponible et écart de PCA-1 à PCA-7 | PCA-1 à PCA-7, point 24 | absences-suite | packages/api/test/absences-suite.test.ts |
+| ASU-6 | Export du plan de charge : lignes « Disponible » et « Écart » de PCA-8 | PCA-8, point 24 | absences-suite | packages/api/test/absences-suite.test.ts |
+| E2E-727 | Onglet Absences : nouvelle absence de 367 jours → « Une absence dure au plus 366 jours. », dialogue ouvert, aucune ligne ajoutée | point 21 | absences-suite | e2e/tests/absences-suite.spec.ts |
+| E2E-728 | Gantt d'un projet, colonne Ressources : « Modifier l'assignation » d'une REGUL : case « Charge depuis le taux » cochée, charge en lecture seule et aide ; décocher, saisir une charge, enregistrer : infobulle de la colonne à jour ; activité non REGUL : pas de case | point 23 | absences-suite | e2e/tests/absences-suite.spec.ts |
+| E2E-729 | Accueil, Gantt global, colonne Ressources : même dialogue, case cochée ; taux modifié et enregistré sans refus, case toujours cochée à la réouverture | point 23 | absences-suite | e2e/tests/absences-suite.spec.ts |
+| E2E-730 | Pilotage, Plan de charge : congé posé à l'écran (onglet Absences) du 04/01 au 08/01/2027 ; infobulle de 01/2027 « Charge 0 j, disponible 16 j, écart 16 j » | PCA-1, point 24 | absences-suite | e2e/tests/absences-suite.spec.ts |
+| E2E-725-r1 | Révision de E2E-725 : cite CT-16 (valeur 4,5 j inchangée) | CT-16 | absences-suite | e2e/tests/charge-taux.spec.ts |
+| E2E-727-r1 | Révision de E2E-727 (D-271, @reviewer) : après le refus, « Annuler », « Abandonner » ; « Aucune absence. » et `GET /api/absences` → `[]` | point 21 | absences-suite | e2e/tests/absences-suite.spec.ts |
+| E2E-41e-r2 | Révision de E2E-41e-r1 : interception limitée au Gantt du projet du test, attente inchangée | 6 (Affichage 15a, 15d), D-069 | absences-suite | e2e/tests/lot3b-largeurs.spec.ts |
+
+### Révisions D-031 du lot absences-suite (D-278 (5), D-279)
+
+- Tag `tests-absences-suite-r1` : E2E-725 → E2E-725-r1 (`charge-taux.spec.ts`, consigne du porteur : cite CT-16, valeur 4,5 j inchangée).
+- Tag `tests-absences-suite-r2` : E2E-41e-r1 → E2E-41e-r2 (`lot3b-largeurs.spec.ts`, consigne du porteur, diagnostic @debugger : l'interception `**/api/projets/*/gantt` attrapait aussi les Gantt des autres projets chargés par l'Accueil, lisibles par le chef depuis D-265, et levait « ligne « Simple » absente de la réponse » ; interception limitée au projet du test, attente inchangée).
+- Tag `tests-absences-suite-r3` (règle D-271, test du lot en cours faux au regard de la règle « tout test de refus vérifie l'état en base », @reviewer) : E2E-727 → E2E-727-r1.
+- Aucune révision des cas (5) de D-278 : aucun test existant cassé par la case, le disponible ou le refus `charge_calculee`.
+
+### Couverture des champs, absences-suite
+
+- Aucun champ d'API nouveau. `charge_depuis_taux` (PATCH `/api/assignations/:id`) → case « Charge depuis le taux » du dialogue « Modifier l'assignation » du Gantt (E2E-728) et de l'Accueil (E2E-729), en plus du Planning (E2E-724).
+
+## Absences, grille mensuelle (D-280, lot absences-grille)
+
+Fondés sur SPEC §4, « Absences et charge depuis le taux », sous-section « Grille mensuelle (absences-grille, D-280) », points 25 à 30 (cas AG-1 à AG-6). Domaines des passes ciblées : feuille-de-temps, validation, vue-ressource, dialogues, utilisateurs-equipes-calendriers. Tag : `tests-absences-grille` ; révisions `tests-absences-grille-r1`, -r2… Valeurs recopiées de la SPEC.
+
+| ID | Test | Spec | Lot | Fichier |
+|---|---|---|---|---|
+| AGT-1 | `GET /api/absences/grille?mois=2027-01` : chef, leader, administrateur → 200, lignes Alice et Bob (ni Claire non ressource, ni Dan inactif), triées par nom, clés exactes | AG-1, point 29 | absences-grille | packages/api/test/absences-grille.test.ts |
+| AGT-2 | `jours_non_ouvres` : Alice 02, 03, 06, 09, 10, 16, 17, 23, 24, 30, 31/01/2027 ; Bob (lundi au samedi) 03, 10, 17, 24, 31/01 | AG-2 | absences-grille | packages/api/test/absences-grille.test.ts |
+| AGT-3 | `peut_ecrire` : administrateur et leader vrai pour toutes ; chef vrai pour Alice seule | AG-3, point 7 | absences-grille | packages/api/test/absences-grille.test.ts |
+| AGT-4 | Refus : 401 sans session, 403 rôle ressource, 400 (`mois` absent, 2027-13, 2027-1, 1999-12) ; absences et historique inchangés (comptes avant et après) | AG-4 | absences-grille | packages/api/test/absences-grille.test.ts |
+| AGT-5 | `GET /api/absences?du=2027-01-01&au=2027-01-31` sans `ressource_id` : chef, toutes les absences du mois (ressource hors portée comprise) ; Alice, les siennes seulement | AG-5, point 29 | absences-grille | packages/api/test/absences-grille.test.ts |
+| AGL-1 | Adresse : `mois` absent ou invalide → mois courant ; `equipe` (`aucune`, id, invalide → Toutes) ; `ressource` absente de l'équipe → Toutes ; adresse canonique reconstruite | point 27 | absences-grille | packages/web/test/absences-grille.test.ts |
+| AGL-2 | Navigation : mois précédent, suivant, ce mois (passage d'année) | point 27 | absences-grille | packages/web/test/absences-grille.test.ts |
+| AGL-3 | Jours du mois : en-têtes (numéro, initiale) de janvier 2027 (31 jours, le 01/01 est un vendredi : « V ») et de février 2028 (29 jours) | point 25 | absences-grille | packages/web/test/absences-grille.test.ts |
+| AGL-4 | État des cases : journée, matin seul, après-midi seul, matin et après-midi (deux demi-cases), jour non ouvré, absence qui commence avant le mois | point 26 | absences-grille | packages/web/test/absences-grille.test.ts |
+| AGL-5 | Libellés : `title` « Alice, 05/01/2027, Congé, matin » ; lettres C, F, A | point 26 | absences-grille | packages/web/test/absences-grille.test.ts |
+| AGL-6 | Filtre : lignes d'une équipe, « Sans équipe », ressource unique ; liste Ressource limitée à l'équipe | point 27 | absences-grille | packages/web/test/absences-grille.test.ts |
+| E2E-731 | Chef (non ressource), base de test : onglet Absences sans sélection : tableau « Absences de janvier 2027 », une ligne par ressource active triée, colonne Ressource, 31 colonnes de jours, légende ; case non travaillée teintée | AG-6, points 25, 26 | absences-grille | e2e/tests/absences-grille.spec.ts |
+| E2E-732 | Parcours IHM : chef de projet, clic sur une case vide d'une ressource de son projet : dialogue « Nouvelle absence » prérempli (ressource, date, journée) ; motif Formation, « Créer » : la case affiche « F » et son nom accessible « <Nom>, JJ/MM/AAAA, Formation, journée » ; `GET /api/absences` confirme ; clic sur la case : « Modifier l'absence », puis suppression : case vide | AG-6, point 28 | absences-grille | e2e/tests/absences-grille.spec.ts |
+| E2E-733 | Filtre « Équipe » réduit les lignes (adresse `&equipe=`) ; filtre « Ressource » : une ligne ; équipe changée : ressource hors équipe corrigée en Toutes | AG-6, point 27 | absences-grille | e2e/tests/absences-grille.spec.ts |
+| E2E-734 | « Mois suivant » change le mois et l'adresse (`mois=2027-02`), « Mois précédent », « Ce mois » ; `mois=2027-13` : mois courant, adresse corrigée sans rechargement | AG-6, point 27 | absences-grille | e2e/tests/absences-grille.spec.ts |
+| E2E-735 | Demi-journées : matin et après-midi d'un même jour = deux demi-cases (gauche, droite) ; ressource hors portée du chef : case d'absence et case vide non activables, hors tabulation ; leader et administrateur : activables | AG-6, points 26, 28 | absences-grille | e2e/tests/absences-grille.spec.ts |
+| E2E-736 | Clavier : tabulation sur les cases activables seulement, Entrée ouvre le dialogue ; bouton « Nouvelle absence » : liste Ressource limitée à la portée d'écriture ; rôle ressource : vue du point 10 inchangée (pas de grille) | AG-6, point 28 | absences-grille | e2e/tests/absences-grille.spec.ts |
+
+### Couverture des champs, absences-grille
+
+- Aucun champ d'API modifiable nouveau (`GET /api/absences/grille` est en lecture). `ressource_id`, `debut`, `fin`, `portion`, `motif` de `POST /api/absences` → champs du dialogue « Nouvelle absence » ouvert depuis une case de la grille (E2E-732).
+
+### Révisions D-031 du lot absences-grille (D-280 (3), D-281)
+
+- Tag `tests-absences-grille-r1` (cas (a), `absences.spec.ts`, un seul fichier) : E2E-719 → E2E-719-r1 (chef : plus de sélection de ressource, « Nouvelle absence » avec la liste du dialogue limitée à Alice), E2E-720 → E2E-720-r1 (administrateur et leader : la grille liste Alice et Bob, plus de message « Choisissez une ressource. »), E2E-723 → E2E-723-r1 (parcours complet : la ressource se choisit dans le dialogue « Nouvelle absence »). Même geste métier, mêmes valeurs ; aucune autre attente changée.
+- AGT-5 est vert dès l'écriture (lecture existante de `GET /api/absences`, caractérisation sans code).

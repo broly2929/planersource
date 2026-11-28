@@ -1,4 +1,5 @@
-import { compilerCalendrier } from './calendrier.js';
+import { compilerCalendrier, estOuvre } from './calendrier.js';
+import type { CalendrierCompile } from './calendrier.js';
 import { agregerDates, avancement, sommerCharges } from './agregation.js';
 import type { Charges } from './agregation.js';
 import { debutPlusTot, dependanceRespectee, finCible, positionBarre } from './dependances.js';
@@ -15,7 +16,7 @@ import { cleStarr } from './modes/starr.js';
 import { drapeauxDuree, fenetreDuree, joursDeFenetre } from './modes/duree.js';
 import type { Fenetre } from './modes/duree.js';
 import { posesMan, resteMan, saisiesParJour } from './modes/man.js';
-import { barreRegul, joursRegul } from './modes/regul.js';
+import { barreRegul, fenetreRegul, joursRegul } from './modes/regul.js';
 import { remplirArriere, remplirAvant, remplirFenetreEtReliquat } from './remplissage.js';
 import type { Pose } from './remplissage.js';
 import type {
@@ -25,6 +26,7 @@ import type {
   Avertissement,
   Entree,
   Mode,
+  Ressource,
   Sortie,
   SortieActivite,
   SortieDependance,
@@ -95,24 +97,84 @@ function idsInvalides(entree: Entree): number[] {
   return [...fautifs].sort((a, b) => a - b);
 }
 
+/**
+ * Contexte d'une ressource (D-276) : sans absence, son calendrier tel quel ; sinon un calendrier propre où
+ * chaque jour d'absence en journée entière (ou matin et après-midi le même jour) est férié, et l'ensemble
+ * des jours en demi-journée.
+ */
+function contexteRessource(r: Ressource, cal: CalendrierCompile): RessourceCtx {
+  if (!r.absences || r.absences.length === 0) return { capacite: r.capacite, cal };
+  const portions = new Map<number, Set<string>>();
+  for (const a of r.absences) {
+    const jour = joursDepuis(a.jour);
+    const p = portions.get(jour) ?? new Set<string>();
+    p.add(a.portion);
+    portions.set(jour, p);
+  }
+  const feries = new Set(cal.feries);
+  const demi = new Set<number>();
+  for (const [jour, p] of portions) {
+    if (p.has('journee') || (p.has('matin') && p.has('apres_midi'))) feries.add(jour);
+    else demi.add(jour);
+  }
+  return { capacite: r.capacite, cal: { jours: cal.jours, feries }, demi };
+}
+
 /** Modes à dates imposées : planifiés en passe A, jamais déplacés par leurs dépendances (SPEC 5.2, 5.3). */
 function aDatesImposees(mode: Mode): boolean {
   return mode === 'REGUL' || mode === 'MAN';
 }
 
-export function calculer(entree: Entree): Sortie {
-  const invalides = idsInvalides(entree);
+/**
+ * Charge depuis le taux (D-276, SPEC §4 point 12) : pour une assignation au champ vrai d'une feuille REGUL
+ * ouverte, charge = réel + taux × capacité × jours ouvrés restants (du maximum de D0 et du début de fenêtre à
+ * la fin validée ; demi-journée d'absence : 0,5), au centième inférieur ; reste = charge − réel, plancher 0.
+ * Renvoie les identifiants des assignations recalculées et la liste d'assignations à planifier.
+ */
+function chargesDepuisTaux(
+  entree: Entree,
+  d0: number,
+  ressources: ReadonlyMap<number, RessourceCtx>,
+): { calculees: Set<number>; assignations: Assignation[] } {
+  const calculees = new Set<number>();
+  if (!entree.assignations.some((a) => a.chargeDepuisTaux)) {
+    return { calculees, assignations: entree.assignations };
+  }
+  const elements = new Map(entree.elements.map((e) => [e.id, e]));
+  const parents = new Set(entree.elements.map((e) => e.parentId));
+  const projets = new Map(entree.projets.map((p) => [p.id, p]));
+  const assignations = entree.assignations.map((a) => {
+    const e = elements.get(a.activiteId);
+    if (!a.chargeDepuisTaux || e?.type !== 'activite' || e.mode !== 'REGUL') return a;
+    if (e.close || parents.has(e.id)) return a;
+    const projet = projets.get(e.projetId);
+    const r = ressources.get(a.ressourceId);
+    if (!projet || !r) return a;
+    const f = fenetreRegul(e, Math.max(d0, joursDepuis(projet.debut)));
+    let demiJours = 0;
+    for (let j = Math.max(d0, f.debut); j <= f.fin; j += 1) {
+      if (estOuvre(r.cal, j)) demiJours += r.demi?.has(j) ? 1 : 2;
+    }
+    calculees.add(a.id);
+    const charge = a.chargeReelle + Math.floor((a.taux * r.capacite * demiJours) / 20000);
+    return { ...a, charge, resteAFaire: Math.max(0, charge - a.chargeReelle) };
+  });
+  return { calculees, assignations };
+}
+
+export function calculer(brute: Entree): Sortie {
+  const invalides = idsInvalides(brute);
   if (invalides.length > 0) throw new ErreurMoteur('entree_invalide', invalides);
-  const d0 = joursDepuis(entree.d0);
-  const horizon = joursDepuis(entree.horizon);
-  const cals = new Map(entree.calendriers.map((c) => [c.id, compilerCalendrier(c)]));
-  const calDefaut = requis(cals, entree.calendrierDefautId);
+  const d0 = joursDepuis(brute.d0);
+  const horizon = joursDepuis(brute.horizon);
+  const cals = new Map(brute.calendriers.map((c) => [c.id, compilerCalendrier(c)]));
+  const calDefaut = requis(cals, brute.calendrierDefautId);
   const ressources = new Map<number, RessourceCtx>(
-    entree.ressources.map((r) => [
-      r.id,
-      { capacite: r.capacite, cal: requis(cals, r.calendrierId) },
-    ]),
+    brute.ressources.map((r) => [r.id, contexteRessource(r, requis(cals, r.calendrierId))]),
   );
+  // charge depuis le taux, calculée en entrée de passe A (D-276)
+  const recalcul = chargesDepuisTaux(brute, d0, ressources);
+  const entree: Entree = { ...brute, assignations: recalcul.assignations };
   const fenetres = new Map<string, FenetreAffectation>();
   for (const p of entree.projets) {
     for (const a of p.affectations) {
@@ -517,7 +579,11 @@ export function calculer(entree: Entree): Sortie {
     avertissements,
     dependances: sortieDependances,
     assignations: entree.assignations
-      .map((a) => ({ id: a.id, reste: resteDe(a) }))
+      .map((a) => ({
+        id: a.id,
+        reste: resteDe(a),
+        ...(recalcul.calculees.has(a.id) ? { charge: a.charge } : {}),
+      }))
       .sort((a, b) => a.id - b.id),
   };
 }

@@ -1,9 +1,10 @@
 import type { Db } from '../db/erreurs.js';
+import { roleVoitFinances, type Role } from '../auth/user.js';
 import { enregistrer, verrouiller } from './historique.js';
 
 export interface Acteur {
   id: number;
-  role: 'administrateur' | 'chef_de_projet' | 'ressource';
+  role: Role;
 }
 
 export interface Projet {
@@ -33,10 +34,10 @@ type Ligne = Projet & {
 
 /**
  * Lit les projets et modèles visibles avec le droit d'écriture (seul endroit où se décident les
- * droits, modèles compris, SPEC §11.1). Administrateur : tout, en écriture. Chef de projet : ses
- * projets et leurs sous-projets, en écriture ; tous les modèles, en lecture seule. Tout rôle : les
- * projets où l'utilisateur est affecté, en lecture seule hors de sa portée de chef. Un modèle est
- * invisible pour une ressource, même affectée.
+ * droits, modèles compris, SPEC §11.1). Administrateur : tout, en écriture. Chef de projet : tous
+ * les projets et modèles (D-265) ; écriture sur ses projets et leurs sous-projets, modèles exclus.
+ * Leader métier : tous les projets et modèles, écriture sur tout projet ordinaire (D-265). Rôle
+ * ressource : rien (D-148).
  */
 async function lireVisibles(db: Db, user: Acteur, id?: number): Promise<Ligne[]> {
   // Rôle ressource : portée de lecture vide (lot 6b, D-148 (2)).
@@ -50,19 +51,26 @@ async function lireVisibles(db: Db, user: Acteur, id?: number): Promise<Ligne[]>
     );
     return rows;
   }
-  const params: unknown[] = [user.id, user.role === 'chef_de_projet'];
+  if (user.role === 'leader_metier') {
+    const params: unknown[] = id === undefined ? [] : [id];
+    const filtre = id === undefined ? '' : ' AND id = $1';
+    const { rows } = await db.query<Ligne>(
+      `SELECT ${COLONNES_LECTURE}, NOT est_modele AS peut_ecrire FROM projet WHERE true${filtre}
+        ORDER BY id`,
+      params,
+    );
+    return rows;
+  }
+  const params: unknown[] = [user.id];
   if (id !== undefined) params.push(id);
-  const filtre = id === undefined ? '' : ' AND id = $3';
+  const filtre = id === undefined ? '' : ' AND id = $2';
   const { rows } = await db.query<Ligne>(
     `WITH RECURSIVE portee (id) AS (
-       SELECT id FROM projet WHERE chef_id = $1 AND $2::boolean AND NOT est_modele
+       SELECT id FROM projet WHERE chef_id = $1 AND NOT est_modele
        UNION
        SELECT p.id FROM projet p JOIN portee ON p.parent_id = portee.id)
      SELECT ${COLONNES_LECTURE}, (id IN (SELECT id FROM portee)) AS peut_ecrire FROM projet
-      WHERE (id IN (SELECT id FROM portee)
-             OR (est_modele AND $2::boolean)
-             OR (NOT est_modele
-                 AND id IN (SELECT projet_id FROM affectation_projet WHERE ressource_id = $1)))${filtre}
+      WHERE true${filtre}
       ORDER BY id`,
     params,
   );
@@ -86,6 +94,19 @@ export async function idsVisibles(db: Db, user: Acteur): Promise<Set<number>> {
 /** Liste des modèles visibles ; vide pour une ressource. */
 export async function modelesVisibles(db: Db, user: Acteur): Promise<Ligne[]> {
   return (await lireVisibles(db, user)).filter((l) => l.est_modele);
+}
+
+/**
+ * `voit_finances` (D-265 (3)) : `peut_ecrire` et rôle autre que leader métier. Jamais renvoyé comme
+ * clé ; condition de visibilité de la charge vendue, de la marge et des coûts.
+ */
+export function voitFinances(user: Acteur, peutEcrire: boolean): boolean {
+  return peutEcrire && roleVoitFinances(user.role);
+}
+
+/** `notes` (D-270) : renvoyées à qui lit le projet, sauf au rôle ressource. */
+export function voitNotes(user: Acteur): boolean {
+  return user.role !== 'ressource';
 }
 
 export interface AccesProjet {
@@ -197,11 +218,11 @@ export async function supprimerProjet(db: Db, par: number, id: number): Promise<
   }
 }
 
-/** Le chef d'un projet est un administrateur ou un chef de projet actif. */
+/** Le chef d'un projet est un administrateur, un chef de projet ou un leader métier actif (D-265). */
 export async function chefValide(db: Db, chefId: number): Promise<boolean> {
   const { rowCount } = await db.query(
     `SELECT 1 FROM utilisateur
-      WHERE id = $1 AND actif AND role IN ('administrateur', 'chef_de_projet')`,
+      WHERE id = $1 AND actif AND role IN ('administrateur', 'chef_de_projet', 'leader_metier')`,
     [chefId],
   );
   return (rowCount ?? 0) > 0;

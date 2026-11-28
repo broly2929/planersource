@@ -77,18 +77,27 @@ export function champsJalon(j: { date_planifiee: string | null; date_client: str
   };
 }
 
-/** Activité telle que renvoyée par l'API : sans les champs de 6c si l'utilisateur n'écrit pas. */
+/**
+ * Activité telle que renvoyée par l'API : sans les champs de 6c si l'utilisateur n'écrit pas ;
+ * sans charge vendue ni marge s'il ne voit pas les finances (D-265 (3)).
+ */
 export function vueActivite(
   a: Activite,
   vendu: Map<number, Vendu>,
   peutEcrire: boolean,
   assignees: Map<number, number> = new Map(),
+  finances: boolean = peutEcrire,
+  notes = true,
 ): Record<string, unknown> {
   const reste: Record<string, unknown> = { ...a };
   delete reste.charge_vendue;
-  return peutEcrire
-    ? { ...reste, ...champsActivite(vendu, a.id), charge_assignee: assignees.get(a.id) ?? 0 }
-    : reste;
+  if (!notes) delete reste.notes;
+  if (!peutEcrire) return reste;
+  return {
+    ...reste,
+    ...(finances ? champsActivite(vendu, a.id) : {}),
+    charge_assignee: assignees.get(a.id) ?? 0,
+  };
 }
 
 /** Jalon tel que renvoyé par l'API : sans les champs de 6c si l'utilisateur n'écrit pas. */

@@ -1,8 +1,12 @@
 {
   "name": "planersource",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/broly2929/planersource.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -13,6 +17,7 @@
   ],
   "scripts": {
     "lint": "eslint . && prettier --check .",
+    "lint:securite": "eslint -c eslint.securite.config.js .",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.json",
     "build": "npm run build -w @planersource/engine && npm run build -w @planersource/api && npm run build -w @planersource/web",
@@ -25,6 +30,7 @@
     "setup-depot": "node scripts/setup-depot.mjs",
     "licenses": "node scripts/check-licenses.mjs",
     "sbom": "node scripts/sbom.mjs",
+    "audit-securite": "node scripts/audit-securite.mjs",
     "create-admin": "npm run create-admin -w @planersource/api --",
     "demo": "npm run demo -w @planersource/api",
     "dev:demo": "concurrently -n api,web \"npm run dev-demo -w @planersource/api\" \"npm run dev -w @planersource/web\"",
@@ -35,6 +41,7 @@
     "@types/node": "^22.20.5",
     "concurrently": "^10.0.7",
     "eslint": "^10.15.0",
+    "eslint-plugin-security": "^4.2.1",
     "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",

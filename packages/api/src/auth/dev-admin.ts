@@ -14,13 +14,13 @@ export interface AdminInitialOptions extends DevAdminOptions {
  * Insère admin / admin si la table utilisateur est vide. Login « admin », email null
  * (D-077) : n'utilise volontairement ni emailSchema ni motDePasseSchema.
  */
-async function insererAdmin(pool: pg.Pool): Promise<boolean> {
+async function insererAdmin(pool: pg.Pool, doitChanger = false): Promise<boolean> {
   const hash = await hashPassword('admin');
   const { rowCount } = await pool.query(
-    `INSERT INTO utilisateur (nom, login, email, mot_de_passe_hash, role, actif)
-     SELECT 'Administrateur', 'admin', NULL, $1, 'administrateur', true
+    `INSERT INTO utilisateur (nom, login, email, mot_de_passe_hash, role, actif, doit_changer_mot_de_passe)
+     SELECT 'Administrateur', 'admin', NULL, $1, 'administrateur', true, $2
      WHERE NOT EXISTS (SELECT 1 FROM utilisateur)`,
-    [hash],
+    [hash, doitChanger],
   );
   return Boolean(rowCount);
 }
@@ -43,7 +43,8 @@ export async function creerAdminDeDeveloppement(
 
 /**
  * Compte initial (D-138 (2)) : admin / admin créé au démarrage si la table utilisateur est
- * vide, quel que soit NODE_ENV, sauf INITIAL_ADMIN=0. En développement, DEV_ADMIN=0 le
+ * vide, quel que soit NODE_ENV, sauf INITIAL_ADMIN=0 ; hors développement, avec
+ * `doit_changer_mot_de_passe` vrai (SEC-1, D-272). En développement, DEV_ADMIN=0 le
  * désactive aussi (D-071 inchangé).
  */
 export async function creerAdminInitial(
@@ -53,7 +54,8 @@ export async function creerAdminInitial(
 ): Promise<{ created: boolean }> {
   if (options.initialAdmin === '0') return { created: false };
   if (options.nodeEnv === 'development') return creerAdminDeDeveloppement(pool, options, log);
-  if (!(await insererAdmin(pool))) return { created: false };
+  // Hors développement, changement imposé à la première connexion (SEC-1, SPEC §8 point 7).
+  if (!(await insererAdmin(pool, true))) return { created: false };
   log.warn('Compte initial créé : admin / admin (base vide). Changez son mot de passe.');
   return { created: true };
 }

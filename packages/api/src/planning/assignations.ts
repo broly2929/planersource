@@ -10,10 +10,12 @@ export interface Assignation {
   charge_assignee: number;
   charge_reelle: number;
   reste_a_faire: number;
+  /** Charge calculée depuis le taux à chaque calcul (D-276, REGUL seulement). */
+  charge_depuis_taux: boolean;
 }
 
 const COLONNES =
-  'id, activite_id, projet_id, ressource_id, taux, charge_assignee, charge_reelle, reste_a_faire';
+  'id, activite_id, projet_id, ressource_id, taux, charge_assignee, charge_reelle, reste_a_faire, charge_depuis_taux';
 
 export async function lireAssignations(db: Db, projetId: number): Promise<Assignation[]> {
   const { rows } = await db.query<Assignation>(
@@ -35,6 +37,7 @@ export interface NouvelleAssignation {
   ressource_id: number;
   taux: number;
   charge_assignee: number;
+  charge_depuis_taux?: boolean;
 }
 
 /** Sans transaction interne (l'appelant l'ouvre) : le reste à faire initial est la charge assignée. */
@@ -46,9 +49,17 @@ export async function creerAssignation(
   d: NouvelleAssignation,
 ): Promise<Assignation> {
   const { rows } = await db.query<Assignation>(
-    `INSERT INTO assignation (activite_id, projet_id, ressource_id, taux, charge_assignee, reste_a_faire)
-     VALUES ($1, $2, $3, $4, $5, $5) RETURNING ${COLONNES}`,
-    [activiteId, projetId, d.ressource_id, d.taux, d.charge_assignee],
+    `INSERT INTO assignation (activite_id, projet_id, ressource_id, taux, charge_assignee, reste_a_faire,
+                              charge_depuis_taux)
+     VALUES ($1, $2, $3, $4, $5, $5, $6) RETURNING ${COLONNES}`,
+    [
+      activiteId,
+      projetId,
+      d.ressource_id,
+      d.taux,
+      d.charge_assignee,
+      d.charge_depuis_taux ?? false,
+    ],
   );
   const assignation = rows[0]!;
   await enregistrer(db, {
@@ -69,16 +80,16 @@ export async function modifierAssignation(
   db: Db,
   par: number,
   id: number,
-  d: Pick<Assignation, 'taux' | 'charge_assignee'>,
+  d: Pick<Assignation, 'taux' | 'charge_assignee' | 'charge_depuis_taux'>,
 ): Promise<Assignation | null> {
   await verrouiller(db, 'assignation', id);
   const avant = await lireAssignation(db, id);
   const { rows } = await db.query<Assignation>(
     `UPDATE assignation
-        SET taux = $2, charge_assignee = $3,
+        SET taux = $2, charge_assignee = $3, charge_depuis_taux = $4,
             reste_a_faire = CASE WHEN charge_reelle = 0 THEN $3 ELSE reste_a_faire END
       WHERE id = $1 RETURNING ${COLONNES}`,
-    [id, d.taux, d.charge_assignee],
+    [id, d.taux, d.charge_assignee, d.charge_depuis_taux],
   );
   const apres = rows[0] ?? null;
   if (avant && apres) {
@@ -91,6 +102,35 @@ export async function modifierAssignation(
     });
   }
   return apres;
+}
+
+/**
+ * Activité sortie du mode REGUL (D-276, point 13) : le champ `charge_depuis_taux` repasse à faux sur ses
+ * assignations, historisé ; la charge garde sa dernière valeur. Dans une transaction.
+ */
+export async function decocherChargeDepuisTaux(
+  db: Db,
+  par: number,
+  activiteId: number,
+): Promise<void> {
+  const { rows } = await db.query<Assignation>(
+    `SELECT ${COLONNES} FROM assignation WHERE activite_id = $1 AND charge_depuis_taux
+      ORDER BY id FOR UPDATE`,
+    [activiteId],
+  );
+  for (const avant of rows) {
+    const { rows: r } = await db.query<Assignation>(
+      `UPDATE assignation SET charge_depuis_taux = false WHERE id = $1 RETURNING ${COLONNES}`,
+      [avant.id],
+    );
+    await enregistrer(db, {
+      utilisateurId: par,
+      entite: 'assignation',
+      avant,
+      apres: r[0]!,
+      projetId: avant.projet_id,
+    });
+  }
 }
 
 /** Dans une transaction : supprimée seulement si la charge réelle vaut 0. */

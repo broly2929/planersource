@@ -11,6 +11,7 @@ import {
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Copy, GripVertical, Pencil, Undo2 } from 'lucide-react';
 import { useAuth } from '../../auth';
+import { useEstLeader } from '../../droits';
 import { api } from '../../api';
 import {
   DialogueCalcul,
@@ -51,6 +52,7 @@ import {
 } from '../../gantt/annulation';
 import { verrou } from '../../gantt/verrou';
 import { useGlisserLigne } from '../../gantt/useGlisserLigne';
+import { CelluleNotes } from '../../gantt/CelluleNotes';
 import { Drapeaux } from '../../gantt/Drapeaux';
 import {
   CLASSE_CELLULE_DRAPEAUX,
@@ -216,8 +218,10 @@ const colonnes = (
   modifierElement: ((element: ElementGantt) => void) | null,
   /** Ouvre « Modifier le projet » d'un sous-projet que l'utilisateur écrit ; null : pas de crayon. */
   modifierSousProjet: (sousProjet: SousProjetGantt) => (() => void) | null,
-  /** Colonnes « Vendu » et « Marge » et badge « Client » : seulement si l'utilisateur écrit (D-149 (8)). */
+  /** Badge « Client » : seulement si l'utilisateur écrit (D-149 (8)). */
   client: boolean,
+  /** Colonnes « Vendu », « Marge » et de coût : `voit_finances` (D-265 (3), D-268). */
+  finances: boolean,
   /** Ouvre « Modifier l'assignation » depuis la colonne Ressources ; null : texte avec infobulle (D-238 (4)). */
   modifierAssignation: ((element: ElementGantt, assignation: AssignationGantt) => void) | null,
 ): ColonneGantt[] => {
@@ -307,7 +311,7 @@ const colonnes = (
           ? formaterNombre(l.element.charge_assignee ?? null)
           : VIDE,
     },
-    ...(client ? colonnesVendu : []),
+    ...(finances ? colonnesVendu : []),
     {
       id: 'avancement',
       titre: 'Avancement',
@@ -324,7 +328,13 @@ const colonnes = (
           ? (l.element.otp_effectif ?? VIDE)
           : VIDE,
     },
-    ...(client ? colonnesCouts : []),
+    ...(finances ? colonnesCouts : []),
+    {
+      id: 'notes',
+      titre: 'Notes',
+      titreCellule: (l) => (l.genre === 'element' ? (l.element.notes ?? undefined) : undefined),
+      cellule: (l) => (l.genre === 'element' ? <CelluleNotes notes={l.element.notes} /> : null),
+    },
     {
       id: 'drapeaux',
       titre: 'Drapeaux',
@@ -348,7 +358,14 @@ type DialogueEdition =
   | { kind: 'jalon'; jalon: JalonDetail }
   | { kind: 'dependance'; dependance: DependanceGantt }
   | { kind: 'projet'; id: number }
-  | { kind: 'assignation'; assignation: AssignationGantt; activite: string };
+  | {
+      kind: 'assignation';
+      assignation: AssignationGantt;
+      activite: string;
+      /** mode REGUL et projet : case « Charge depuis le taux » (D-278) */
+      regul: boolean;
+      projetId: number;
+    };
 
 const TEXTE_ECHEC_ANNULATION =
   'Impossible d’annuler ce geste ; les annulations précédentes ne sont plus possibles.';
@@ -803,8 +820,9 @@ export function GanttProjet({
     return () => document.removeEventListener('keydown', surTouche);
   }, []);
 
+  const leader = useEstLeader();
   const disposition = useDispositionGantt('projet', {
-    vendu: etat.statut === 'ok' && etat.donnees.projet.peut_ecrire,
+    vendu: etat.statut === 'ok' && etat.donnees.projet.peut_ecrire && !leader,
   });
 
   if (etat.statut === 'chargement') return <Chargement libelle="Chargement du Gantt…" />;
@@ -814,7 +832,8 @@ export function GanttProjet({
 
   const { projet, elements, dependances, sous_projets: sousProjets } = etat.donnees;
   const peutCalculer = projet.peut_ecrire && !estModele;
-  const hrefCouts = projet.peut_ecrire ? `/api/projets/${projet.id}/couts/export` : undefined;
+  const hrefCouts =
+    projet.peut_ecrire && !leader ? `/api/projets/${projet.id}/couts/export` : undefined;
   const boutonCalculer = (
     <Button variante="secondaire" disabled={recalcul} onClick={() => setCalcul(true)}>
       Calculer
@@ -876,7 +895,7 @@ export function GanttProjet({
     return (
       <section aria-label="Gantt" className="flex flex-col gap-4">
         {retours}
-        {projet.peut_ecrire && projet.totaux && (
+        {projet.peut_ecrire && !leader && projet.totaux && (
           <TotauxProjetRegion totaux={projet.totaux} hrefCouts={hrefCouts} />
         )}
         <Vide>Ce projet ne contient encore aucun élément.</Vide>
@@ -947,6 +966,7 @@ export function GanttProjet({
   };
   const calcule = lignes.some((l) => datesLigne(l) !== null);
   const client = projet.peut_ecrire;
+  const finances = projet.peut_ecrire && !leader;
   const jours = [...joursConnus(lignes), ...(client ? joursClient(lignes) : [])].sort(
     (a, b) => numeroJour(a) - numeroJour(b),
   );
@@ -997,7 +1017,7 @@ export function GanttProjet({
         </div>
       </div>
       {dialogue}
-      {client && projet.totaux && (
+      {finances && projet.totaux && (
         <TotauxProjetRegion totaux={projet.totaux} hrefCouts={hrefCouts} />
       )}
       <DispositionGantt
@@ -1036,11 +1056,18 @@ export function GanttProjet({
                       }
                     : null,
                 client,
+                finances,
                 projet.peut_ecrire
                   ? (element, assignation) => {
                       if (edition) return;
                       origine.current = 'tableau';
-                      setEdition({ kind: 'assignation', assignation, activite: element.nom });
+                      setEdition({
+                        kind: 'assignation',
+                        assignation,
+                        activite: element.nom,
+                        regul: element.mode === 'REGUL',
+                        projetId: projet.id,
+                      });
                     }
                   : null,
               ),
@@ -1185,6 +1212,8 @@ export function GanttProjet({
           taux={edition.assignation.taux}
           nomRessource={edition.assignation.nom}
           nomActivite={edition.activite}
+          regul={edition.regul}
+          projetId={edition.projetId}
           onSucces={apresEdition}
           onFermer={fermerEdition}
         />

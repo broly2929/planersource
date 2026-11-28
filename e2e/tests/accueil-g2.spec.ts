@@ -220,7 +220,7 @@ test('E2E-90-r1 projets non calculés : bandeau, lignes visibles, aucune barre',
   await expect(zoneCalendrier(page).getByRole('img')).toHaveCount(0);
 });
 
-test('E2E-91-r2 chef affecté à un sous-projet seulement (lecture seule) : il est affiché comme racine, sans bouton', async ({
+test('E2E-91-r3 chef affecté à un sous-projet seulement (lecture seule) : le parent est affiché comme racine (D-265), sans bouton', async ({
   page,
   request,
 }) => {
@@ -234,14 +234,14 @@ test('E2E-91-r2 chef affecté à un sous-projet seulement (lecture seule) : il e
   // Révision 6b (D-031, D-148 (9)) : témoin lecture seule = chef de projet affecté au projet d'un autre chef.
   await connecterAvec(page, await chefLecteur(request, sous.id, 'E91'));
   await replierTout(page); // D-218 (4), (9)
-  expect(await codesAffiches(page)).toEqual(['S91']);
-  await expect(page.getByText('Parent91')).toHaveCount(0);
+  // Révision D-265 (4) : le chef lit tous les projets ; le parent est la racine affichée.
+  expect(await codesAffiches(page)).toEqual(['P91']);
   // Révision G3 (D-031) : « Déplier » arrive en G3 ; « Calculer » reste absent (ressource, et G4).
-  await expect(page.getByRole('button', { name: 'Déplier Sous91', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Déplier Parent91', exact: true })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Calculer' })).toHaveCount(0);
-  await expect(zoneTableau(page).getByRole('link', { name: 'Sous91' })).toHaveAttribute(
+  await expect(zoneTableau(page).getByRole('link', { name: 'Parent91' })).toHaveAttribute(
     'href',
-    `/projets/${sous.id}`,
+    `/projets/${parent.id}`,
   );
 });
 

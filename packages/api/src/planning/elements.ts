@@ -1,4 +1,5 @@
 import type { Db } from '../db/erreurs.js';
+import { decocherChargeDepuisTaux } from './assignations.js';
 import { enregistrer, verrouiller } from './historique.js';
 import { champsActivite, champsJalon, lireVendu } from './vendu.js';
 
@@ -18,6 +19,8 @@ export interface Activite {
   drapeaux: string[];
   close: boolean;
   charge_vendue: number | null;
+  /** Notes libres, 500 caractères au plus (D-270, SPEC §3). */
+  notes: string | null;
   /** OTP propre (D-225, SPEC §12.2). */
   otp: string | null;
   /** Calculé à la lecture : l'activité a des enfants (jamais historisé). */
@@ -53,7 +56,7 @@ export interface LignePlanning {
 
 const ACTIVITE = `e.id, e.projet_id, e.parent_id, e.rang, e.nom, a.mode, a.priorite, a.debut_valide,
   a.fin_valide, a.duree_validee, a.debut_planifie, a.fin_planifiee, a.drapeaux, a.close,
-  a.charge_vendue, a.otp,
+  a.charge_vendue, a.otp, a.notes,
   EXISTS (SELECT 1 FROM element f WHERE f.parent_id = e.id) AS est_parent
   FROM element e JOIN activite a ON a.id = e.id`;
 const JALON = `e.id, e.projet_id, e.parent_id, e.rang, e.nom, j.type, j.date_validee, j.date_planifiee,
@@ -127,6 +130,7 @@ export async function lirePlanning(
   db: Db,
   projetId: number,
   peutEcrire: boolean,
+  finances: boolean = peutEcrire,
 ): Promise<LignePlanning[]> {
   const { rows } = await db.query<LignePlanning>(
     `WITH RECURSIVE ${WBS_CTE}
@@ -134,12 +138,15 @@ export async function lirePlanning(
     [projetId],
   );
   if (!peutEcrire) return rows;
-  // D-149 (4) : charge vendue, marge et champs client, pour qui écrit sur le projet seulement.
-  const vendu = await lireVendu(db, projetId);
+  // D-149 (4) : champs client pour qui écrit sur le projet ; D-265 (3) : charge vendue et marge
+  // pour qui voit les finances.
+  const vendu = finances ? await lireVendu(db, projetId) : null;
   const jalons = new Map((await lireJalons(db, projetId)).map((j) => [j.id, j]));
   return rows.map((l) =>
     l.type === 'activite'
-      ? { ...l, ...champsActivite(vendu, l.id) }
+      ? vendu
+        ? { ...l, ...champsActivite(vendu, l.id) }
+        : l
       : { ...l, ...champsJalon(jalons.get(l.id)!) },
   );
 }
@@ -211,6 +218,7 @@ export interface NouvelleActivite {
   duree_validee: number | null;
   charge_vendue: number | null;
   otp: string | null;
+  notes: string | null;
 }
 
 /** Sans transaction interne : l'appelant ouvre la transaction (plusieurs écritures). */
@@ -223,9 +231,19 @@ export async function creerActivite(
   const id = await insererElement(db, projetId, 'activite', d.parent_id, d.nom, d.rang);
   await db.query(
     `INSERT INTO activite (id, mode, priorite, debut_valide, fin_valide, duree_validee,
-                           charge_vendue, otp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue, d.otp],
+                           charge_vendue, otp, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      id,
+      d.mode,
+      d.priorite,
+      d.debut_valide,
+      d.fin_valide,
+      d.duree_validee,
+      d.charge_vendue,
+      d.otp,
+      d.notes,
+    ],
   );
   const activite = (await lireActivite(db, id))!;
   await enregistrer(db, {
@@ -284,11 +302,24 @@ export async function modifierActivite(
   await db.query('UPDATE element SET nom = $2 WHERE id = $1', [id, d.nom]);
   await db.query(
     `UPDATE activite SET mode = $2, priorite = $3, debut_valide = $4, fin_valide = $5,
-            duree_validee = $6, charge_vendue = $7, otp = $8 WHERE id = $1`,
-    [id, d.mode, d.priorite, d.debut_valide, d.fin_valide, d.duree_validee, d.charge_vendue, d.otp],
+            duree_validee = $6, charge_vendue = $7, otp = $8, notes = $9 WHERE id = $1`,
+    [
+      id,
+      d.mode,
+      d.priorite,
+      d.debut_valide,
+      d.fin_valide,
+      d.duree_validee,
+      d.charge_vendue,
+      d.otp,
+      d.notes,
+    ],
   );
   if (d.close !== undefined) {
     await db.query('UPDATE activite SET close = $2 WHERE id = $1', [id, d.close]);
+  }
+  if (avant.mode === 'REGUL' && d.mode !== 'REGUL') {
+    await decocherChargeDepuisTaux(db, par, id);
   }
   const apres = (await lireActivite(db, id))!;
   await enregistrer(db, {

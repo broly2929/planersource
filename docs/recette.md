@@ -8,15 +8,15 @@ Parcours ordonné pour la recette différée (lots 3, 4b, 4c, 5d, 6, REX-5, D-17
 - Adresse du web : http://localhost:5173 dans la VM.
 - Les lignes qui valident, enregistrent, créent ou modifient changent la base de démonstration. `npm run demo` la remet à zéro.
 
-## Comptes (mot de passe = identifiant, `remplir.ts:31`, `:74`)
+## Comptes (mot de passe : `admin` pour admin, `<identifiant>-demonstration` pour les autres, `remplir.ts`, D-274)
 
 | Identifiant | Mot de passe | Rôle | Particularités |
 |---|---|---|---|
 | admin | admin | administrateur | non ressource ; créé par `demo.ts` |
-| chefa | chefa | chef de projet | non ressource ; chef de DEMO-R, DEMO-Q, DEMO-C ; équipe Pilotage |
-| chefb | chefb | chef de projet et ressource | chef de DEMO-S ; affecté à DEMO-R en lecture seule ; équipe Pilotage ; aucune assignation |
-| alice | alice | ressource | affectée à DEMO-R et DEMO-S ; équipe Développement |
-| bob | bob | ressource | affecté à DEMO-R et DEMO-Q ; équipe Développement |
+| chefa | chefa-demonstration | chef de projet | non ressource ; chef de DEMO-R, DEMO-Q, DEMO-C ; équipe Pilotage |
+| chefb | chefb-demonstration | chef de projet et ressource | chef de DEMO-S ; affecté à DEMO-R en lecture seule ; équipe Pilotage ; aucune assignation |
+| alice | alice-demonstration | ressource | affectée à DEMO-R et DEMO-S ; équipe Développement |
+| bob | bob-demonstration | ressource | affecté à DEMO-R et DEMO-Q ; équipe Développement |
 
 Projets : DEMO-R (fiche `/projets/1`) avec sous-projet DEMO-S (`/projets/2`), DEMO-Q, DEMO-C (clos), DEMO-M (modèle). Les numéros de projet valent pour une base fraîchement recréée.
 
@@ -872,3 +872,90 @@ Non ajoutée au parcours ordonné ci-dessus : le lot est couvert par E2E-678 à 
 ### Recette différée (taux-2, D-260)
 
 Non ajoutée au parcours ordonné ci-dessus : le lot est couvert par E2E-684 à E2E-695. À juger à la prochaine recette : lisibilité de la colonne « Taux du jour » et de la mention « (équipe) » ; la liste Utilisateurs à 1024 px défile horizontalement (la colonne est hors de la zone visible sans défilement) ; la croix « Fermer » des dialogues « Taux de l'équipe <nom> » et « Taux de <nom> » tient lieu de bouton « Fermer » (pas de bouton en pied).
+
+## Recette droits (D-265, D-268)
+
+Base : `npm run demo`, puis `npm run dev:demo` ; 1440 px. Couvert par LCH-1 à LCH-8, LDM-1 à LDM-15 et E2E-696 à E2E-706. Deux comptes sont créés à l'écran par l'administrateur au geste 1 (mot de passe au choix, case « Doit changer son mot de passe » décochée).
+
+| N° | Compte | Geste | Résultat attendu | Verdict | Remarque |
+|---|---|---|---|---|---|
+| D1 | admin | Utilisateurs, « Nouvel utilisateur » : « Chef Z » (identifiant `chefz`, rôle « Chef de projet »), puis « Léa Leader » (identifiant `lea`, rôle « Leader métier », ressource planifiable) | La liste « Rôle » propose Administrateur, Chef de projet, Leader métier, Ressource ; la colonne Rôle affiche « Leader métier » pour Léa | OK | 2026-11-27 |
+| D2 | chefz | Se connecter, ouvrir Projets | Message « Vous n'êtes chef d'aucun projet. L'administrateur désigne le chef dans Modifier le projet. » au-dessus de la liste ; chaque projet porte « Lecture seule » | OK | 2026-11-27 |
+| D3 | chefb | Projets, ouvrir DEMO-Q (projet de chefa) | « Lecture seule » sur la ligne de DEMO-Q et en tête du projet ouvert ; aucun bouton d'écriture ; DEMO-S (son projet) sans mention | OK | 2026-11-27 |
+| D4 | lea | Se connecter ; lire le menu ; ouvrir Pilotage | Menu sans « Utilisateurs » ; Pilotage avec l'onglet « Plan de charge » seul, sans « Coûts » | OK | 2026-11-27 |
+| D5 | lea | Projets, ouvrir DEMO-Q, onglet Planning, « Modifier » une activité, changer le nom, « Enregistrer » ; puis onglet Gantt, menu « Colonnes » | Le nouveau nom s'affiche ; pas de « Lecture seule » ; le dialogue n'a ni « Charge vendue (j) » ni « Marge » ; le menu « Colonnes » n'a ni Vendu, ni Marge, ni Coût planifié, ni Coût réel ; pas de « Totaux du projet » | OK | 2026-11-27 |
+| D6 | lea | Imputations, onglet « Validation », semaine du lundi − 7 (flèche « Semaine précédente » une fois depuis la semaine courante), « Valider la feuille de Bob », puis « Valider » | Message « Feuille validée. » ; Bob « Validée » | OK | 2026-11-27 |
+
+## Recette notes (D-270, D-271)
+
+Base : `npm run demo`, puis `npm run dev:demo` ; 1440 px. Couvert par NOT-1 à NOT-10 et E2E-707 à E2E-711. Les gestes 1 à 4 se jouent sur DEMO-R (chefa) ; la ressource du geste 5 est Alice.
+
+| N° | Compte | Geste | Résultat attendu | Verdict | Remarque |
+|---|---|---|---|---|---|
+| N1 | chefa | Projets, ouvrir DEMO-R, onglet Planning, « Modifier » une activité feuille ; champ « Notes » : saisir deux lignes (Entrée entre elles) ; « Enregistrer » | Le champ « Notes » est sous « Nom » ; le compteur « N / 500 » suit la saisie ; le dialogue se ferme sans erreur | | |
+| N2 | chefa | Même dialogue : coller un texte de plus de 500 caractères | La saisie s'arrête à « 500 / 500 » | | |
+| N3 | chefa | Onglet Gantt, menu « Colonnes » : cocher « Notes » | La colonne « Notes » (avant « Drapeaux ») est décochée tant qu'on ne la coche pas ; ensuite la note de l'activité tient sur une ligne, l'infobulle de la cellule montre le texte complet sur deux lignes ; les autres lignes sont vides | | |
+| N4 | chefa | Accueil, menu « Colonnes » : cocher « Notes » ; cliquer le nom de l'activité, effacer le champ « Notes », « Enregistrer » | La colonne « Notes » de l'Accueil montre la note, puis la cellule devient vide après l'effacement | | |
+| N5 | alice | Se connecter, ouvrir Mes tâches | Aucune note ni colonne « Notes », même pour une tâche dont l'activité en avait une | | |
+| N6 | chefb | Projets, ouvrir DEMO-R (projet de chefa, lecture seule), Gantt, cocher « Notes » | La note est lue dans la colonne ; aucun dialogue de modification n'est proposé | | |
+
+## Recette securite (D-272, D-273)
+
+Couvert par SBOM-11 à SBOM-13, SECT-1 à SECT-5. Pas de jeu de démonstration, sauf S4.
+
+| N° | Compte | Geste | Résultat attendu | Verdict | Remarque |
+|---|---|---|---|---|---|
+| S1 | — | Lire la synthèse et le tableau de docs/securite.md, puis la section « Suites données » | 15 constats SEC-1 à SEC-15, un seul haut (SEC-1, corrigé) ; SEC-2 à SEC-15 en tête de docs/backlog.md ; SEC-2, SEC-3 et SEC-7 attendent une décision du porteur | OK | 2026-11-28 |
+| S2 | — | `npm run sbom`, puis `git status` et chercher `@planersource/api`, `@planersource/engine`, `@planersource/web` dans sbom.cdx.json | Fichier inchangé ; les trois composants en version 1.2.0 (celle de package.json), `supplier` « planersource », référence `vcs` vers le dépôt public, propriété `planersource:interne` = `true` ; aucun `@planersource/…@0.0.0` | OK | 2026-11-28 |
+| S3 | — | `npm run audit-securite`, puis `npm run lint:securite` | Audit : « found 0 vulnerabilities » pour l'exécution, code 0 ; l'audit complet liste seulement les failles modérées d'outillage (SEC-14). Lint : 0 erreur, avertissements seulement | OK | 2026-11-28 |
+| S4 | admin | Installation Docker de test sur un volume de base neuf (docs/installation.md, sections 2 et 3) ; se connecter admin / admin | Page « Changez votre mot de passe », sans menu ; « admin » comme nouveau mot de passe refusé ; un autre de 12 caractères au moins accepté (D-274), puis l'Accueil s'affiche | OK | 2026-11-28 |
+| S5 | admin | `npm run demo` puis `npm run dev:demo` (développement) ; se connecter admin / admin si la base de développement est vide, sinon un compte du jeu | En développement, aucun changement imposé au compte admin / admin (D-071 inchangé) | OK | 2026-11-28 |
+
+## Recette securite-2 (D-274, D-275)
+
+Couvert par SC2T-1 à SC2T-16 et E2E-712 à E2E-716. Base de démonstration (`npm run demo`, mots de passe de la section « Comptes »). À jouer par le porteur ; verdicts vides.
+
+| N° | Compte | Geste | Résultat attendu | Verdict | Remarque |
+|---|---|---|---|---|---|
+| S2-1 | alice | « Changer mon mot de passe » (barre latérale) : actuel `alice-demonstration`, nouveau `abcdefghijk` (11 caractères), confirmation identique ; puis `abcdefghijkl` (12) | Sous « Nouveau mot de passe », l'aide « 12 caractères au moins » ; 11 caractères : « Le mot de passe doit contenir au moins 12 caractères. », rien d'enregistré ; 12 : « Mot de passe changé. » | OK | 2026-11-28 |
+| S2-2 | admin, puis chefb | Admin : projet DEMO-S, onglet Affectations, affecter Chef B, puis onglet Planning, assigner Chef B (2 j) à une activité. Chefb : Imputations, saisir 1 j sur cette activité, enregistrer, soumettre ; onglet Validation | Sur la ligne de Chef B : « Voir la feuille de Chef B » seul et la phrase « Votre feuille est validée par un autre valideur. » ; ni « Valider », ni « Rejeter », ni « Dévalider » ; la feuille d'une autre ressource garde ses boutons | OK | 2026-11-28 |
+| S2-3 | chefb | Projet DEMO-S, onglet Affectations | Ligne de Chef B : colonne « Taux du jour » présente, mais pas de bouton « Modifier les taux de Chef B » ; la ligne d'une autre ressource affectée (par exemple Alice) a son bouton « Modifier les taux de Alice » | OK | 2026-11-28 |
+| S2-4 | admin, puis un leader | Admin : créer un utilisateur « Léa Leader », rôle Leader métier, mot de passe de 12 caractères ; modifier « Charge vendue » d'une activité de DEMO-R ; lire l'onglet Historique de DEMO-R. Se connecter en leader, même onglet | Admin : une ligne `charge_vendue` (ancienne et nouvelle valeur) ; leader : les autres lignes de l'historique, aucune ligne `charge_vendue` | OK | 2026-11-28 |
+| S2-5 | admin | Utilisateurs, « Nouvel utilisateur », mot de passe de 11 caractères, puis de 12 | Aide « 12 caractères au moins » ; 11 caractères : « Le mot de passe doit contenir au moins 12 caractères. », rien de créé ; 12 : l'utilisateur apparaît dans la liste | OK | 2026-11-28 |
+
+## Recette absences (D-276, D-277)
+
+Couvert par ABM-1 à ABM-12, CT-1 à CT-9, ABT-1 à ABT-13, CTT-1 à CTT-7, E2E-717 à E2E-725. Base de démonstration (`npm run demo`, mots de passe de la section « Comptes »). À jouer par le porteur ; verdicts vides.
+
+| N° | Compte | Geste | Résultat attendu | Verdict | Remarque |
+|---|---|---|---|---|---|
+| AB-R1 | alice | Imputations, onglet « Absences » ; « Nouvelle absence » : un mardi passé de la semaine courante ou précédente, Journée, Congé ; puis onglet « Feuille de temps » sur cette semaine | La ligne apparaît (Du, Au, « Journée », « Congé ») ; dans la feuille, la case de ce mardi est grisée et désactivée, infobulle « Absence (Congé) » | OK | 2026-11-28 |
+| AB-R2 | alice | Nouvelle absence chevauchant la précédente (même jour, Matin) ; puis Matin et Après-midi d'un autre jour | Premier envoi : « Cette absence chevauche une autre absence. », dialogue ouvert ; matin puis après-midi du même jour acceptés | OK | 2026-11-28 |
+| AB-R3 | chefa | Imputations, onglet « Absences » : liste « Ressource », choisir Bob, poser une Formation d’une journée sur un jour ouvré à venir où Bob a du travail planifié ; projet DEMO-R, Gantt, « Calculer » ; Accueil, « Planning de » Bob | La liste ne propose que les ressources des projets de chefa ; après le calcul, le jour est grisé sur le planning de Bob (infobulle « Absence (Formation) ») et aucune barre n'y porte de travail nouveau | OK | 2026-11-28 |
+| AB-R4 | chefa | Projet DEMO-R, Planning : « Modifier l'assignation de Alice à Recette » (activité REGUL du jeu, en charge depuis le taux), puis « Assigner une ressource à » une activité non REGUL (ex. « Cadrage ») | Recette : case « Charge depuis le taux » cochée, « Charge assignée (j) » en lecture seule avec l'aide « Recalculée à chaque calcul : taux × capacité × jours ouvrés restants, absences déduites. » ; activité non REGUL : pas de case | OK | 2026-11-28 |
+| AB-R5 | chefa, puis alice | Gantt de DEMO-R, colonne Ressources : infobulle d'Alice sur « Recette » ; alice pose un congé d'une journée sur un jour ouvré à venir de la fenêtre de Recette ; chefa « Calculer » de nouveau ; Mes tâches d'alice | La charge d'Alice sur Recette baisse de 0,4 j (taux 40 %, capacité 1) ; Mes tâches montre la même valeur | OK | 2026-11-28 |
+| AB-R6 | admin | `GET /api/historique?entite=absence` (ou écran d'historique s'il existe), après AB-R1 à AB-R3 | Une entrée de création par absence posée, sans projet | OK | 2026-11-28 |
+
+## Recette absences-suite (D-278, D-279)
+
+Couvert par ASU-1 à ASU-6, CT-16, E2E-727 à E2E-730, E2E-725-r1. Base de démonstration (`npm run demo`, mots de passe de la section « Comptes »). À jouer par le porteur ; verdicts vides.
+
+| N° | Compte | Geste | Résultat attendu | Verdict | Remarque |
+|---|---|---|---|---|---|
+| AS-R1 | alice | Imputations, onglet « Absences » ; « Nouvelle absence » : Du 01/01/2027, Au 02/01/2028, Journée, Congé ; « Créer » | « Une absence dure au plus 366 jours. » dans le dialogue, resté ouvert ; aucune ligne ajoutée. Avec Au 01/01/2028 : absence créée | OK | 2026-11-28 |
+| AS-R2 | chefa | Projet DEMO-R, onglet Gantt, colonne Ressources : clic sur Alice dans la ligne « Recette » (REGUL, charge depuis le taux) | Dialogue « Modifier l'assignation » : case « Charge depuis le taux » cochée, « Charge assignée (j) » en lecture seule avec l'aide ; modifier le taux et enregistrer : accepté, sans message « La charge est calculée depuis le taux. » | OK | 2026-11-28 |
+| AS-R3 | chefa | Accueil, Gantt global, même clic sur « Recette » | Même dialogue, case cochée ; une activité non REGUL n'a pas la case | OK | 2026-11-28 |
+| AS-R4 | alice, puis chefa | alice pose un congé d'une journée sur un jour ouvré du mois prochain ; chefa ouvre Pilotage, onglet « Plan de charge », sur ce mois, infobulle de la cellule d'Alice | Disponible réduit d'un jour (capacité 1) par rapport à avant le congé ; écart réduit d'autant ; même valeur dans la ligne « Disponible » de « Exporter CSV » | OK | 2026-11-28 |
+| AS-R5 | alice, puis chefa | alice pose une demi-journée (Matin) sur un autre jour ouvré du même mois ; chefa relit la cellule | Disponible réduit de 0,5 j de plus | OK | 2026-11-28 |
+
+## Recette absences-grille (D-280, D-281)
+
+Couvert par AGT-1 à AGT-5, AGL-1 à AGL-6, E2E-731 à E2E-736, E2E-719-r1, E2E-720-r1, E2E-723-r1. Base de démonstration (`npm run demo`, mots de passe de la section « Comptes »). À jouer par le porteur ; verdicts vides.
+
+| N° | Compte | Geste | Résultat attendu | Verdict | Remarque |
+|---|---|---|---|---|---|
+| AG-R1 | chefa | Imputations, onglet « Absences » | Grille du mois courant, toutes les ressources actives triées par nom, sans sélection ; week-ends teintés ; légende sous la grille ; les absences d'Alice de la démonstration apparaissent (« F » le matin, « C » en journée) si elles tombent dans le mois | OK | 2026-11-28 |
+| AG-R2 | chefa | Clic sur une case vide d'un jour ouvré d'Alice ; motif « Formation », « Créer » | Dialogue « Nouvelle absence » prérempli (Alice, la date, Journée) ; la case affiche « F », infobulle « Alice…, JJ/MM/AAAA, Formation, journée » | OK | 2026-11-28 |
+| AG-R3 | chefa | Liste « Équipe » : « Développement » ; puis liste « Ressource » : Alice | Lignes réduites à l'équipe, puis à Alice ; l'adresse porte `equipe=` et `ressource=` | OK | 2026-11-28 |
+| AG-R4 | chefa | « Mois suivant », « Mois précédent », « Ce mois » | Le tableau et l'adresse (`mois=`) changent ; 28 à 31 colonnes de jours ; à 1024 px, seule la zone des jours défile, la colonne « Ressource » reste figée | OK | 2026-11-28 |
+| AG-R5 | chefa, puis alice | chefa : clic sur la case d'absence de la ressource d'un autre chef ; alice : onglet « Absences » | chefa : aucun dialogue, infobulle seule ; alice : sa liste d'absences habituelle, sans grille | OK | 2026-11-28 |

@@ -145,7 +145,7 @@ describe('Dépendances (lot 1, T2)', () => {
     expect((await api.delete(url.dependance(d.id))).statusCode).toBe(404);
   });
 
-  it('LIEN-11-r1 : chef d’un autre projet → 404 ; ressource affectée → 404 ; sans session → 401', async () => {
+  it('LIEN-11-r2 : chef d’un autre projet → 403 ; ressource affectée → 404 ; sans session → 401', async () => {
     const { m, a, b } = await deuxActivites();
     const d = await creerDependance(ctx, m.chef, m.projet.id, a.id, b.id);
     await verifierRefus(ctx, m, [
@@ -158,9 +158,10 @@ describe('Dépendances (lot 1, T2)', () => {
       { methode: 'DELETE', adresse: url.dependance(d.id) },
     ]);
     expect(await compter(ctx, 'dependance')).toBe(1);
-    // lecture : ni la ressource affectée (révision 6b, D-148 (2)) ni le chef d'un autre projet ne voient rien
+    // lecture : la ressource affectée ne voit rien (révision 6b, D-148 (2)) ; le chef d'un autre
+    // projet lit (révision D-265 (4))
     expect((await appel(ctx, m.alice).get(url.dependances(m.projet.id))).statusCode).toBe(404);
-    expect((await appel(ctx, m.autreChef).get(url.dependances(m.projet.id))).statusCode).toBe(404);
+    expect((await appel(ctx, m.autreChef).get(url.dependances(m.projet.id))).statusCode).toBe(200);
     expect((await appel(ctx).get(url.dependances(m.projet.id))).statusCode).toBe(401);
   });
 

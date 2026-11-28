@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import type { AppDeps } from '../app.js';
+import type { Role } from '../auth/user.js';
 import { requireUser } from './acces.js';
 
 interface EntreeAnnuaire {
   id: number;
   nom: string;
-  role: 'administrateur' | 'chef_de_projet' | 'ressource';
+  role: Role;
   est_ressource: boolean;
   actif: boolean;
 }

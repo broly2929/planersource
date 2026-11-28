@@ -152,7 +152,7 @@ test('E2E-668 : administrateur, onglets Feuille de temps et Validation, `semaine
   expect(new URL(page.url()).searchParams.get('onglet')).not.toBe('validation');
 });
 
-test('E2E-669 : parcours à l’écran, la ressource soumet, le chef non ressource valide depuis Imputations', async ({
+test('E2E-669-r1 : parcours à l’écran, la ressource soumet, le chef non ressource valide depuis Imputations', async ({
   page,
   browser,
   request,
@@ -174,7 +174,9 @@ test('E2E-669 : parcours à l’écran, la ressource soumet, le chef non ressour
   const chef = await pageDe(browser, EMAIL_CHEF_P);
   await lienMenu(chef, 'Imputations').click();
   await expect(tableauValidation(chef)).toBeVisible();
-  await expect(listeOnglets(chef)).toHaveCount(0);
+  // révision D-276 (5) a) : onglets « Validation » (par défaut) et « Absences »
+  await expect(chef.getByRole('tab')).toHaveText(['Validation', 'Absences']);
+  await expect(onglet(chef, 'Validation')).toHaveAttribute('aria-selected', 'true');
   const ligne = ligneValidation(chef, 'Alice 4B');
   await expect(ligne.getByText('Soumise', { exact: true })).toBeVisible();
   await boutonDe(ligne, 'Valider la feuille de Alice 4B').click();
@@ -205,7 +207,7 @@ test('E2E-670 : chef de projet ressource, les deux onglets', async ({ browser, r
   await chef.context().close();
 });
 
-test('E2E-671 : rôle ressource, pas de liste d’onglets, `?onglet=validation` ignoré', async ({
+test('E2E-671-r1 : rôle ressource, onglets Feuille de temps et Absences (D-276), pas de Validation, `?onglet=validation` ignoré', async ({
   browser,
   request,
 }) => {
@@ -213,10 +215,11 @@ test('E2E-671 : rôle ressource, pas de liste d’onglets, `?onglet=validation` 
   const alice = await pageDe(browser, EMAIL_ALICE);
   await lienMenu(alice, 'Imputations').click();
   await expect(tableauFeuille(alice)).toBeVisible();
-  await expect(listeOnglets(alice)).toHaveCount(0);
+  // révision D-276 (5) a) : onglet « Absences » en plus, jamais « Validation »
+  await expect(alice.getByRole('tab')).toHaveText(['Feuille de temps', 'Absences']);
   await alice.goto(`/imputations?onglet=validation&semaine=${S}`);
   await expect(tableauFeuille(alice)).toBeVisible();
-  await expect(listeOnglets(alice)).toHaveCount(0);
+  await expect(alice.getByRole('tab')).toHaveText(['Feuille de temps', 'Absences']);
   await expect(tableauValidation(alice)).toHaveCount(0);
   await expect(alice.getByText(/Validation|Feuilles de temps à valider/)).toHaveCount(0);
   await alice.context().close();

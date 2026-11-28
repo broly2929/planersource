@@ -8,6 +8,8 @@ export interface Colonne<T> {
   cellule: (ligne: T) => ReactNode;
   /** Classes ajoutées à la cellule d'une ligne (ex. couleur d'une valeur négative) ; en plus de `classeCellule`. */
   classeCelluleLigne?: (ligne: T) => string;
+  /** Attribut `title` de la cellule d'une ligne (texte complet d'un contenu tronqué). */
+  titreCellule?: (ligne: T) => string | undefined;
   /** Classes ajoutées à l'en-tête et aux cellules de la colonne (ex. colonne figée). */
   classeEntete?: string;
   classeCellule?: string;
@@ -110,6 +112,7 @@ export function Table<T>({
               {colonnes.map((c) => (
                 <td
                   key={c.id ?? c.titre}
+                  title={c.titreCellule?.(ligne)}
                   className={`${compact ? 'h-8 px-2 whitespace-nowrap' : 'px-3 py-2'} ${c.serree ? 'px-1!' : ''} ${c.classeCellule ?? ''} ${c.classeCelluleLigne?.(ligne) ?? ''}`}
                 >
                   <Cadre largeur={interieur(c)}>{c.cellule(ligne)}</Cadre>

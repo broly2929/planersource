@@ -303,14 +303,14 @@ describe('Copie de projet (lot 1b-B)', () => {
     });
   });
 
-  it('COPIE-8-r1 : refus de droits, base inchangée (sans session 401, illisible 404, lecture seule 403, ressource 404)', async () => {
+  it('COPIE-8-r2 : refus de droits, base inchangée (sans session 401, chef d’un autre projet 403, lecture seule 403, ressource 404)', async () => {
     const m = await creerMonde(ctx);
     await donneesCopie1(ctx, m);
     const lecteur = await creerActeur(ctx, 'lecteur@example.test', 'chef_de_projet', true);
     await affecter(ctx, m.projet.id, lecteur.id);
     const c = { nom: 'Copie', code: 'CIBLE', date_debut: '2027-02-01' };
     await copieRefusee(ctx, undefined, m.projet.id, c, 401);
-    await copieRefusee(ctx, m.autreChef, m.projet.id, c, 404);
+    await copieRefusee(ctx, m.autreChef, m.projet.id, c, 403); // révision D-265 (4) : lecture seule
     await copieRefusee(ctx, lecteur, m.projet.id, c, 403);
     await copieRefusee(ctx, m.alice, m.projet.id, c, 404); // révision 6b (D-031, D-148 (2))
   });

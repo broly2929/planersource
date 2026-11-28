@@ -384,7 +384,7 @@ const ENTETES_ACCUEIL = [
   'Drapeaux',
 ];
 
-test('E2E-569-r3 : Accueil, toutes les colonnes cochées : en-têtes Code, Nom, Début, Fin, Charge, Avancement, Réel, Vendu, Marge, Drapeaux, dans l’ordre du menu « Colonnes »', async ({
+test('E2E-569-r4 : Accueil, toutes les colonnes cochées : en-têtes Code, Nom, Début, Fin, Charge, Avancement, Réel, Vendu, Marge, Drapeaux, dans l’ordre du menu « Colonnes »', async ({
   page,
   request,
 }) => {
@@ -405,6 +405,7 @@ test('E2E-569-r3 : Accueil, toutes les colonnes cochées : en-têtes Code, Nom, 
     'OTP',
     'Coût planifié',
     'Coût réel',
+    'Notes',
     'Drapeaux',
   ]);
   await page.keyboard.press('Escape');

@@ -314,41 +314,32 @@ describe('Planning d’une ressource : lignes masquées (D-157 (4))', () => {
     return { m, p2, t1, tl, t2 };
   }
 
-  it('RPL-8 : chef de projet : la ligne d’un projet illisible a projet et activité null, drapeaux [], dates et charges gardées ; lignes lisibles en clair', async () => {
-    const { m, t1, tl, t2 } = await monde();
+  it('RPL-8-r1 : chef de projet : aucune ligne masquée (D-265), lignes en clair comme pour l’administrateur ; mêmes dates et charges', async () => {
+    const { m, p2, t1, tl, t2 } = await monde();
     const plan = await lire(ctx, m.chef, m.alice);
-    expect(plan.lignes.map((l) => l.assignation_id)).toEqual([
-      t1.assignation.id,
-      t2.assignation.id,
-      tl.assignation.id,
-    ]);
-    expect(plan.lignes[1]).toEqual({
-      assignation_id: t2.assignation.id,
-      projet: null,
-      activite: null,
+    // Révision D-265 (4) : le chef lit tous les projets ; sa vue est celle de l'administrateur.
+    expect(plan).toEqual(await lire(ctx, m.admin, m.alice));
+    expect(plan.lignes.map((l) => l.assignation_id).sort((a, b) => a - b)).toEqual(
+      [t1.assignation.id, t2.assignation.id, tl.assignation.id].sort((a, b) => a - b),
+    );
+    expect(plan.lignes.find((l) => l.assignation_id === t2.assignation.id)).toMatchObject({
+      projet: { id: p2.id, code: p2.code, nom: p2.nom },
       debut_planifie: '2027-01-05',
       fin_planifiee: '2027-01-05',
       charge_assignee: 4,
       charge_reelle: 1,
       reste_a_faire: 3,
-      drapeaux: [],
     });
-    expect(plan.lignes[0]!.projet).toMatchObject({ code: m.projet.code });
-    expect(plan.lignes[2]!.projet).toMatchObject({ code: 'PL' });
-    // Bob, assigné seulement dans P2 : une ligne masquée.
+    for (const l of plan.lignes) expect(l.projet, 'ligne masquée').not.toBeNull();
+    // Bob, assigné seulement dans P2 : sa ligne est en clair.
     await affecter(ctx, m.autre.id, m.bob.id);
     await tache(ctx, m.admin, m.autre.id, m.bob.id, 2, { nom: 'Bob' });
     const bob = await lire(ctx, m.chef, m.bob);
     expect(bob.lignes).toHaveLength(1);
-    expect(bob.lignes[0]).toMatchObject({ projet: null, activite: null, drapeaux: [] });
-    // Un autre chef ne lit ni P1 : sa vue masque la ligne de P1 et garde celle de P2.
+    expect(bob.lignes[0]!.projet).not.toBeNull();
+    // Un autre chef lit aussi P1 : aucune ligne masquée.
     const autre = await lire(ctx, m.autreChef, m.alice);
-    expect(autre.lignes.find((l) => l.assignation_id === t1.assignation.id)).toMatchObject({
-      projet: null,
-      activite: null,
-      drapeaux: [],
-    });
-    expect(autre.lignes.find((l) => l.assignation_id === t2.assignation.id)!.projet).not.toBeNull();
+    for (const l of autre.lignes) expect(l.projet, 'ligne masquée').not.toBeNull();
   });
 
   it('RPL-9 : administrateur : la même ligne en clair (projet, activité, drapeaux), mêmes dates et charges ; aucune ligne masquée', async () => {

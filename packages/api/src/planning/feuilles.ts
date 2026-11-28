@@ -1,4 +1,5 @@
 import type { Db } from '../db/erreurs.js';
+import { joursAbsence, joursEntiers } from './absences.js';
 import { enregistrer } from './historique.js';
 import type { Acteur } from './projets.js';
 
@@ -54,6 +55,7 @@ const MESSAGES: Record<string, string> = {
   feuille_vide: 'Feuille vide',
   deja_validee: 'Feuille déjà validée en partie',
   statut_invalide: 'Statut invalide',
+  jour_absence: "Jour d'absence",
 };
 const refus = (code: keyof typeof MESSAGES | string): Refus => ({
   code,
@@ -80,9 +82,13 @@ export function lundiValide(s: unknown): s is string {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s && d.getUTCDay() === 1;
 }
 
-/** Projets où l'utilisateur écrit : 'tous' (administrateur), ou ses projets et leurs sous-projets. */
+/**
+ * Projets où l'utilisateur écrit : 'tous' (administrateur ; leader métier, D-265 : tout projet
+ * ordinaire, et les feuilles ne portent que sur des projets ordinaires), ou ses projets et leurs
+ * sous-projets.
+ */
 export async function projetsEcrits(db: Db, user: Acteur): Promise<number[] | 'tous'> {
-  if (user.role === 'administrateur') return 'tous';
+  if (user.role === 'administrateur' || user.role === 'leader_metier') return 'tous';
   if (user.role !== 'chef_de_projet') return [];
   const { rows } = await db.query<{ id: number }>(
     `WITH RECURSIVE portee (id) AS (
@@ -218,11 +224,16 @@ async function vue(
     [ressourceId, lundi],
   );
   const chome = new Set(feries.map((x) => x.jour));
+  // absences (D-276, point 5) : journée entière = capacité 0 ; demi-journée = moitié de la capacité
+  const absences = await joursAbsence(db, [ressourceId], lundi, ajouter(lundi, 6));
+  const entiers = joursEntiers(absences);
+  const demi = new Set(absences.map((a) => a.jour));
   const capacite = cs(us[0]!.capacite);
   const jours = [0, 1, 2, 3, 4, 5, 6].map((k) => {
     const jour = ajouter(lundi, k);
     const iso = k + 1;
-    const cap = us[0]!.jours.includes(iso) && !chome.has(jour) ? capacite : 0;
+    const ouvre = us[0]!.jours.includes(iso) && !chome.has(jour) && !entiers.has(jour);
+    const cap = !ouvre ? 0 : demi.has(jour) ? Math.floor(capacite / 2) : capacite;
     let total = 0;
     for (const l of base) {
       for (const i of imps.get(l.assignation_id) ?? []) if (i.jour === jour) total += cs(i.charge);
@@ -334,6 +345,16 @@ export async function ecrireFeuille(
   if (feuille && (feuille.statut === 'soumise' || feuille.statut === 'validee')) {
     return refus('feuille_verrouillee');
   }
+  // jour d'absence en journée entière (D-276, point 5) : charge > 0 nouvelle ou modifiée refusée
+  const entiers = joursEntiers(await joursAbsence(db, [cible], lundi, ajouter(lundi, 6)));
+  for (const l of lignes) {
+    const avant = new Map(
+      (anciennes.get(l.assignation_id) ?? []).map((i) => [i.jour, cs(i.charge)]),
+    );
+    for (const i of nouvelles.get(l.assignation_id)!) {
+      if (entiers.has(i.jour) && avant.get(i.jour) !== cs(i.charge)) return refus('jour_absence');
+    }
+  }
 
   // Plan d'écriture : rien n'est écrit, ni feuille créée, si rien ne change (D-119 (6)).
   const plan = lignes
@@ -444,6 +465,15 @@ export async function agir(
       ? proprietaire || user.role === 'administrateur'
       : ecrits === 'tous' || concernes.some((p) => ecrit(ecrits, p));
   if (!aLeDroit) return { verdict: 'interdit' };
+  // D-274 (SEC-3a) : nul ne valide, rejette ni dévalide sa propre feuille, sauf l'administrateur.
+  if (
+    proprietaire &&
+    verbe !== 'soumettre' &&
+    verbe !== 'rappeler' &&
+    user.role !== 'administrateur'
+  ) {
+    return { verdict: 'interdit' };
+  }
   if (verbe === 'rejeter' && !corpsValide) return { invalide: true };
 
   const { rows: vs } = await db.query('SELECT 1 FROM validation_feuille WHERE feuille_id = $1', [

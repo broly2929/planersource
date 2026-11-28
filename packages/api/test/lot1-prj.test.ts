@@ -80,7 +80,7 @@ describe('Projets (lot 1, T1)', () => {
     expect(corps(res).chef_id).toBe(chef.id);
   });
 
-  it('PRJ-6-r1 : un chef modifie son projet ; le projet d’un autre chef → 404', async () => {
+  it('PRJ-6-r2 : un chef modifie son projet ; le projet d’un autre chef : lecture 200, peut_ecrire faux ; écriture 403', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
@@ -88,9 +88,12 @@ describe('Projets (lot 1, T1)', () => {
     const b = await creerProjet(ctx, admin, { chef_id: c2.id });
     const api = appel(ctx, c1);
     expect((await api.patch(`/api/projets/${a.id}`, { nom: 'Modifié' })).statusCode).toBe(200);
+    // révision D-265 (4) : le projet d'un autre chef est lisible, en lecture seule
+    const lu = await api.get(`/api/projets/${b.id}`);
+    expect(lu.statusCode).toBe(200);
+    expect(corps(lu).peut_ecrire).toBe(false);
     const refus = (requete: () => Promise<LightMyRequestResponse>) =>
-      refusSansEffet(ctx, TABLES_PRJ, 404, requete);
-    await refus(() => api.get(`/api/projets/${b.id}`));
+      refusSansEffet(ctx, TABLES_PRJ, 403, requete);
     await refus(() => api.patch(`/api/projets/${b.id}`, { nom: 'Pirate' }));
     await refus(() => api.delete(`/api/projets/${b.id}`));
   });
@@ -145,7 +148,7 @@ describe('Projets (lot 1, T1)', () => {
     await refus(() => api.delete(`/api/projets/${projet.id}`));
   });
 
-  it('PRJ-11 : un chef lit et modifie les sous-projets de ses projets (portée par ancêtre)', async () => {
+  it('PRJ-11-r1 : un chef lit et modifie les sous-projets de ses projets (portée par ancêtre)', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
@@ -161,20 +164,31 @@ describe('Projets (lot 1, T1)', () => {
         .map((p) => p.id)
         .sort(),
     ).toEqual([racine.id, sous.id].sort());
-    // le chef du sous-projet seul ne remonte pas vers la racine
+    // le chef du sous-projet seul n'écrit pas sur la racine (révision D-265 (4) : il la lit)
     const api2 = appel(ctx, c2);
     expect((await api2.get(`/api/projets/${sous.id}`)).statusCode).toBe(200);
-    expect((await api2.get(`/api/projets/${racine.id}`)).statusCode).toBe(404);
+    const racineLue = await api2.get(`/api/projets/${racine.id}`);
+    expect(racineLue.statusCode).toBe(200);
+    expect(corps(racineLue).peut_ecrire).toBe(false);
   });
 
-  it('PRJ-12 : un chef ne voit que ses projets dans la liste', async () => {
+  it('PRJ-12-r1 : un chef voit tous les projets dans la liste, en écriture sur les siens seulement', async () => {
     const admin = await creerActeur(ctx, 'admin@example.test', 'administrateur');
     const c1 = await creerActeur(ctx, 'c1@example.test', 'chef_de_projet');
     const c2 = await creerActeur(ctx, 'c2@example.test', 'chef_de_projet');
     const a = await creerProjet(ctx, admin, { chef_id: c1.id });
     const b = await creerProjet(ctx, admin, { chef_id: c2.id });
-    expect(liste(await appel(ctx, c1).get('/api/projets')).map((p) => p.id)).toEqual([a.id]);
-    expect(liste(await appel(ctx, c2).get('/api/projets')).map((p) => p.id)).toEqual([b.id]);
+    // révision D-265 (4) : présents, en lecture seule hors de sa portée
+    const ecrit = async (qui: typeof c1) =>
+      liste(await appel(ctx, qui).get('/api/projets')).map((p) => [p.id, p.peut_ecrire]);
+    expect(await ecrit(c1)).toEqual([
+      [a.id, true],
+      [b.id, false],
+    ]);
+    expect(await ecrit(c2)).toEqual([
+      [a.id, false],
+      [b.id, true],
+    ]);
   });
 
   it('PRJ-13 : cycle dans l’arborescence des projets (dont auto-parent) → 422', async () => {

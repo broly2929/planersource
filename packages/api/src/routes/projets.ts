@@ -26,6 +26,7 @@ import { avecOtp, lireOtpProjets } from '../planning/otp.js';
 import { otpCorps } from './otp.js';
 import type { AppDeps } from '../app.js';
 import { requireUser } from './acces.js';
+import { estChef } from '../auth/user.js';
 
 const champsProjet = {
   code: z.string().trim().min(1),
@@ -182,10 +183,10 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     if (!body.success) return reply.code(400).send({ erreur: 'Données invalides' });
     const d = body.data;
     // Seul l'administrateur désigne le chef (D-028) ; un chef de projet l'est de ses projets.
-    if (user.role === 'chef_de_projet' && d.chef_id !== undefined && d.chef_id !== user.id) {
+    if (estChef(user.role) && d.chef_id !== undefined && d.chef_id !== user.id) {
       return reply.code(403).send({ erreur: 'Seul l’administrateur désigne le chef de projet' });
     }
-    const chefId = user.role === 'chef_de_projet' ? user.id : (d.chef_id ?? user.id);
+    const chefId = estChef(user.role) ? user.id : (d.chef_id ?? user.id);
     if (!(await chefValide(pool, chefId))) {
       return reply.code(422).send({ erreur: 'Chef de projet invalide' });
     }
@@ -225,9 +226,7 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     const d = body.data;
     const autorise =
       user.role === 'administrateur' ||
-      (!d.est_modele &&
-        user.role === 'chef_de_projet' &&
-        (acces.projet.est_modele || acces.peutEcrire));
+      (!d.est_modele && estChef(user.role) && (acces.projet.est_modele || acces.peutEcrire));
     if (!autorise) return reply.code(403).send({ erreur: 'Interdit' });
     try {
       const cree = await transaction(pool, (db) => copierProjet(db, user.id, acces.projet, d));
@@ -255,11 +254,7 @@ export function projetsRoutes(app: FastifyInstance, { pool }: AppDeps): void {
     ) as Parameters<typeof modifierProjet>[3];
     // Un chef ne change pas le chef : seule la valeur déjà en place est acceptée (D-028).
     const actuel = (await accesProjet(pool, user, id))?.projet.chef_id;
-    if (
-      user.role === 'chef_de_projet' &&
-      champs.chef_id !== undefined &&
-      champs.chef_id !== actuel
-    ) {
+    if (estChef(user.role) && champs.chef_id !== undefined && champs.chef_id !== actuel) {
       return reply.code(403).send({ erreur: 'Seul l’administrateur désigne le chef de projet' });
     }
     if (champs.chef_id !== undefined && !(await chefValide(pool, champs.chef_id))) {

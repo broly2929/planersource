@@ -1,4 +1,4 @@
-import { createAdmin } from '../auth/create-admin.js';
+import { creerAdminDeDeveloppement } from '../auth/dev-admin.js';
 import { buildApp } from '../app.js';
 import { loadConfig } from '../config.js';
 import { exigerBaseDemo, NOM_BASE_DEMO, urlBaseDemo } from '../demo/base.js';
@@ -43,7 +43,8 @@ const pool = createPool(urlDemo);
 const lundi = lundiDeLaSemaine(new Date());
 try {
   await migrate(pool);
-  await createAdmin(pool, { login: 'admin', nom: 'Administrateur', motDePasse: 'admin' });
+  // Compte d'amorce de D-071 (admin / admin), exception à la longueur minimale (D-274, SEC-7).
+  await creerAdminDeDeveloppement(pool, { nodeEnv: 'development' }, { warn: () => undefined });
   const app = buildApp({ pool, config: { ...config, databaseUrl: urlDemo } });
   await app.ready();
   await remplirDemo(app, { lundi });
@@ -58,7 +59,7 @@ try {
 if (!process.exitCode) {
   console.log(`Base ${NOM_BASE_DEMO} prête (semaine du ${lundi}).
 
-Comptes (mot de passe = identifiant) :
+Comptes (mot de passe : admin pour admin, sinon <identifiant>-demonstration) :
   admin  administrateur
   chefa  chef de projet (DEMO-R, DEMO-Q, DEMO-C)
   chefb  chef de projet et ressource (DEMO-S ; DEMO-R en lecture seule)

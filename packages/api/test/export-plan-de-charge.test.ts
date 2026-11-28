@@ -179,7 +179,7 @@ describe('Export du plan de charge : nouveau contenu (D-241)', () => {
     );
   });
 
-  it('PCX-2 : chef de projet (« Autres projets »), inactif, sans équipe, valeur nulle « 0 »', async () => {
+  it('PCX-2-r1 : chef de projet (tous les projets nommés, D-265), inactif, sans équipe, valeur nulle « 0 »', async () => {
     const a = await admin(ctx);
     const chef = await utilisateur(ctx, 'Chef', 'chef_de_projet');
     const autreChef = await utilisateur(ctx, 'Autre', 'chef_de_projet');
@@ -202,13 +202,14 @@ describe('Export du plan de charge : nouveau contenu (D-241)', () => {
       ligneDe('Alice', '', 'Disponible', '21;20;23;22;21;22;22;22;22;21;22;23'),
       ligneDe('Alice', '', 'Écart', '14,5;20;23;22;21;22;22;22;22;21;22;23'),
       ligneDe('Alice', '', 'M1 · Mon projet', '2;0;0;0;0;0;0;0;0;0;0;0'),
-      ligneDe('Alice', '', 'Autres projets', '4,5;0;0;0;0;0;0;0;0;0;0;0'),
+      // Révision D-265 (4) : le projet de l'autre chef est nommé, plus de ligne « Autres projets ».
+      ligneDe('Alice', '', 'X-SECRET · Projet caché', '4,5;0;0;0;0;0;0;0;0;0;0;0'),
       ligneDe('Carl (inactif)', 'Dev', 'Charge', '0;0;24;0;0;0;0;0;0;0;0;0'),
       ligneDe('Carl (inactif)', 'Dev', 'Disponible', '21;20;23;22;21;22;22;22;22;21;22;23'),
       ligneDe('Carl (inactif)', 'Dev', 'Écart', '21;20;-1;22;21;22;22;22;22;21;22;23'),
       ligneDe('Carl (inactif)', 'Dev', 'M1 · Mon projet', '0;0;24;0;0;0;0;0;0;0;0;0'),
     ]);
-    expect(lignes.some((l) => l.includes('SECRET') || l.includes('caché'))).toBe(false);
+    expect(lignes.some((l) => l.includes('Autres projets'))).toBe(false);
     expect(lignes.some((l) => l.includes("'-1"))).toBe(false);
   });
 

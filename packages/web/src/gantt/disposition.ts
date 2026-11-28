@@ -61,6 +61,7 @@ export const COLONNES_GANTT: Record<VueGantt, DefinitionColonne[]> = {
     choix('otp', 'OTP', false),
     choix('cout_planifie', 'Coût planifié', false, true),
     choix('cout_reel', 'Coût réel', false, true),
+    choix('notes', 'Notes', false),
     choix('drapeaux', 'Drapeaux', false),
   ],
   accueil: [
@@ -72,11 +73,13 @@ export const COLONNES_GANTT: Record<VueGantt, DefinitionColonne[]> = {
     choix('charge', 'Charge', false),
     choix('avancement', 'Avancement', false),
     choix('reel', 'Réel', false),
-    choix('vendu', 'Vendu', false),
-    choix('marge', 'Marge', false),
+    // D-268 : retirées du menu de l'Accueil quand l'utilisateur ne voit pas les finances (leader métier).
+    choix('vendu', 'Vendu', false, true),
+    choix('marge', 'Marge', false, true),
     choix('otp', 'OTP', false),
-    choix('cout_planifie', 'Coût planifié', false),
-    choix('cout_reel', 'Coût réel', false),
+    choix('cout_planifie', 'Coût planifié', false, true),
+    choix('cout_reel', 'Coût réel', false, true),
+    choix('notes', 'Notes', false),
     choix('drapeaux', 'Drapeaux', false),
   ],
   ressource: [

@@ -63,10 +63,11 @@ describe('Calcul : POST /api/calcul (lot 2a-I, D-044)', () => {
     expect(await travail(ctx, assignation.id)).toHaveLength(2);
   });
 
-  it('CALC-3 : Chef B calcule P de Chef A (illisible pour lui) → 404, base inchangée', async () => {
+  it('CALC-3-r1 : Chef B calcule P de Chef A (lisible, lecture seule) → 403, base inchangée', async () => {
     const m = await creerMonde(ctx);
     await tache(ctx, m.admin, m.projet.id, m.alice.id, 2);
-    await refus(ctx, () => calculer(ctx, m.autreChef, { projets: [m.projet.id], ...calcul }), 404);
+    // révision D-265 (4) : P est lisible pour Chef B, en lecture seule → 403
+    await refus(ctx, () => calculer(ctx, m.autreChef, { projets: [m.projet.id], ...calcul }), 403);
     // témoin : la route existe, le chef de P calcule P
     expect((await calculer(ctx, m.chef, { projets: [m.projet.id], ...calcul })).statusCode).toBe(
       200,

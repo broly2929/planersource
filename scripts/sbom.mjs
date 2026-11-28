@@ -37,6 +37,44 @@ function genere() {
   return JSON.parse(r.stdout);
 }
 
+/** Paquet interne : un workspace, dont le chemin n'est pas sous node_modules (D-272 (5)). */
+const cheminDe = (c) => (c.properties ?? []).find((p) => p.name === 'cdx:npm:package:path')?.value;
+const estInterne = (c) => {
+  const chemin = cheminDe(c);
+  return typeof chemin === 'string' && chemin !== '' && !chemin.split('/').includes('node_modules');
+};
+
+/**
+ * Paquets internes à la version de la racine, avec fournisseur, dépôt (vcs) et propriété
+ * `planersource:interne` (D-272 (5)). Les package.json des workspaces restent en 0.0.0.
+ */
+function marqueInternes(sbom, { version, depot }) {
+  const renommes = new Map();
+  for (const c of sbom.components.filter(estInterne)) {
+    const ancien = c['bom-ref'];
+    const nouveau = `${ancien.slice(0, ancien.lastIndexOf('@'))}@${version}`;
+    renommes.set(ancien, nouveau);
+    c['bom-ref'] = nouveau;
+    c.version = version;
+    if (typeof c.purl === 'string')
+      c.purl = `${c.purl.slice(0, c.purl.lastIndexOf('@'))}@${version}`;
+    c.supplier = { name: 'planersource' };
+    if (depot) {
+      c.externalReferences = [
+        ...(c.externalReferences ?? []).filter((r) => r.type !== 'vcs'),
+        { type: 'vcs', url: depot },
+      ];
+    }
+    c.properties = [...(c.properties ?? []), { name: 'planersource:interne', value: 'true' }];
+  }
+  const ref = (r) => renommes.get(r) ?? r;
+  sbom.dependencies = sbom.dependencies.map((d) =>
+    d.dependsOn
+      ? { ...d, ref: ref(d.ref), dependsOn: d.dependsOn.map(ref) }
+      : { ...d, ref: ref(d.ref) },
+  );
+}
+
 /** Retire l'outillage et les champs variables, trie (D-169 (2), (3)). */
 function normalise(sbom) {
   const retires = new Set(
@@ -45,14 +83,20 @@ function normalise(sbom) {
       .map((c) => c['bom-ref']),
   );
   // npm sbom tire ce nom du dossier de la racine : on le remplace par celui de package.json (D-170 (1)).
-  const { name } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const { name, version, repository } = JSON.parse(
+    readFileSync(join(root, 'package.json'), 'utf8'),
+  );
   sbom.metadata.component.name = name;
+  const depot = typeof repository === 'string' ? repository : repository?.url;
   delete sbom.serialNumber;
   delete sbom.metadata.timestamp;
   delete sbom.metadata.tools;
-  sbom.components = sbom.components
-    .filter((c) => !retires.has(c['bom-ref']))
-    .sort((a, b) => (a['bom-ref'] < b['bom-ref'] ? -1 : a['bom-ref'] > b['bom-ref'] ? 1 : 0));
+  sbom.components = sbom.components.filter((c) => !retires.has(c['bom-ref']));
+  sbom.dependencies = sbom.dependencies.filter((d) => !retires.has(d.ref));
+  marqueInternes(sbom, { version, depot });
+  sbom.components = sbom.components.sort((a, b) =>
+    a['bom-ref'] < b['bom-ref'] ? -1 : a['bom-ref'] > b['bom-ref'] ? 1 : 0,
+  );
   sbom.dependencies = sbom.dependencies
     .filter((d) => !retires.has(d.ref))
     .map((d) =>

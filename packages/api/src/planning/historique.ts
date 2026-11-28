@@ -9,7 +9,8 @@ export type Entite =
   | 'assignation'
   | 'calendrier'
   | 'taux'
-  | 'taux_equipe';
+  | 'taux_equipe'
+  | 'absence';
 
 export const ENTITES: readonly Entite[] = [
   'projet',
@@ -21,6 +22,7 @@ export const ENTITES: readonly Entite[] = [
   'calendrier',
   'taux',
   'taux_equipe',
+  'absence',
 ];
 
 export type Objet = object;
@@ -106,13 +108,42 @@ export async function verrouiller(
 const COLONNES = `quand, utilisateur_id, entite, entite_id, operation, champ,
   ancienne_valeur, nouvelle_valeur`;
 
-/** Du plus récent au plus ancien. */
-export async function lireHistoriqueProjet(db: Db, projetId: number): Promise<Entree[]> {
+/** Champs financiers historisés d'un projet (D-274, SEC-2) : cachés à qui ne voit pas les finances. */
+const CHAMPS_FINANCIERS: readonly string[] = ['charge_vendue'];
+
+function sansFinances(valeur: unknown): unknown {
+  if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) return valeur;
+  return Object.fromEntries(
+    Object.entries(valeur).filter(([cle]) => !CHAMPS_FINANCIERS.includes(cle)),
+  );
+}
+
+/** Retire les lignes de modification d'un champ financier et la clé financière des créations et suppressions. */
+export function masquerFinances(entrees: Entree[]): Entree[] {
+  return entrees
+    .filter((e) => !(e.operation === 'modification' && CHAMPS_FINANCIERS.includes(e.champ ?? '')))
+    .map((e) =>
+      e.operation === 'modification'
+        ? e
+        : {
+            ...e,
+            ancienne_valeur: sansFinances(e.ancienne_valeur),
+            nouvelle_valeur: sansFinances(e.nouvelle_valeur),
+          },
+    );
+}
+
+/** Du plus récent au plus ancien ; `finances` faux : sans les champs financiers (D-274). */
+export async function lireHistoriqueProjet(
+  db: Db,
+  projetId: number,
+  finances = true,
+): Promise<Entree[]> {
   const { rows } = await db.query<Entree>(
     `SELECT ${COLONNES} FROM historique WHERE projet_id = $1 ORDER BY quand DESC, id DESC`,
     [projetId],
   );
-  return rows;
+  return finances ? rows : masquerFinances(rows);
 }
 
 /** Historique transversal, filtré par entité si demandé. Du plus récent au plus ancien. */

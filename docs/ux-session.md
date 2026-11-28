@@ -150,7 +150,7 @@ Arbitrage : D-132 ((a) ombre portée à gauche de la colonne Drapeaux, (b) pas u
 - `npm run dev:demo`, semaine `lundi − 7` (adresse `/validation?semaine=…`) : chefa voit Alice « Soumise » (DEMO-R · Validé, DEMO-S · Non autorisé) et Bob « Soumise » ; chefb voit Alice avec « DEMO-S · À valider » ; admin voit tout.
 - Semaine `lundi − 14` : Bob « Validée » ; Alice « Rejetée », commentaire « Imputations du jeudi à revoir » (bouton Voir, ou Feuille de temps d'Alice).
 - Semaine `lundi` : Alice brouillon (lundi seulement).
-- Comptes : chefa, chefb, admin (mot de passe = identifiant).
+- Comptes : chefa, chefb, admin (mot de passe = identifiant à l'époque ; depuis D-274 : `<identifiant>-demonstration`, sauf admin).
 - Badges de lundi − 7 inversés par la précision de D-136 (S validé par chefb, R à valider pour chefa) : docs/recette.md fait foi.
 
 ## Captures de 5d

@@ -1,6 +1,7 @@
 // Lot 5i, bandeau du mot de passe d'origine (D-138 (2)) : E2E-321.
 // Base « administrateur seul », tout à l'écran (règle « Parcours IHM »).
 import { expect, test, type Page } from '@playwright/test';
+import argon2 from 'argon2';
 import pg from 'pg';
 import { E2E_ADMIN } from './credentials.js';
 import { loginAsAdmin } from './helpers.js';
@@ -32,6 +33,29 @@ async function remettreAdminSeul(): Promise<void> {
   }
 }
 
+/**
+ * Révision D-274 (SEC-7, règle (a)) : le mot de passe d'origine « admin » n'est plus acceptable par
+ * l'écran « Nouvel utilisateur » (12 caractères au moins) ; le compte « admin » de l'amorce (D-071,
+ * D-138 (2)) est donc posé en base, comme le fait le démarrage, au lieu d'être créé à l'écran.
+ */
+async function poserAdminDOrigine(): Promise<void> {
+  const url = process.env.TEST_DATABASE_URL ?? '';
+  if (!url || !new URL(url).pathname.slice(1).endsWith('_test')) {
+    throw new Error('TEST_DATABASE_URL doit désigner une base dont le nom finit par _test');
+  }
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  try {
+    await client.query(
+      `INSERT INTO utilisateur (nom, login, email, mot_de_passe_hash, role, actif)
+       VALUES ('Administrateur initial', 'admin', NULL, $1, 'administrateur', true)`,
+      [await argon2.hash('admin')],
+    );
+  } finally {
+    await client.end();
+  }
+}
+
 async function allerAUtilisateurs(page: Page): Promise<void> {
   await page.getByRole('link', { name: 'Utilisateurs', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Utilisateurs', level: 1 })).toBeVisible();
@@ -52,7 +76,7 @@ async function seConnecter(page: Page, identifiant: string, motDePasse: string):
 
 test.afterAll(remettreAdminSeul);
 
-test('E2E-321-r1 bandeau du mot de passe d’origine : affiché pour admin / admin, absent après changement à l’écran', async ({
+test('E2E-321-r2 bandeau du mot de passe d’origine : affiché pour admin / admin, absent après changement à l’écran', async ({
   page,
 }) => {
   await remettreAdminSeul();
@@ -60,15 +84,7 @@ test('E2E-321-r1 bandeau du mot de passe d’origine : affiché pour admin / adm
   // L'administrateur e2e n'a pas le mot de passe d'origine : pas de bandeau.
   await expect(page.getByText(BANDEAU_RE)).toHaveCount(0);
 
-  await allerAUtilisateurs(page);
-  await page.getByRole('button', { name: 'Nouvel utilisateur' }).click();
-  const creation = page.getByRole('dialog');
-  await creation.getByLabel('Nom').fill('Administrateur initial');
-  await creation.getByLabel('Identifiant').fill('admin');
-  await creation.getByLabel('Mot de passe', { exact: true }).fill('admin');
-  await creation.getByLabel('Rôle').selectOption({ label: 'Administrateur' });
-  await creation.getByRole('button', { name: 'Créer' }).click();
-  await expect(page.getByRole('row', { name: /Administrateur initial/ })).toBeVisible();
+  await poserAdminDOrigine();
   await deconnecter(page);
 
   await seConnecter(page, 'admin', 'admin');

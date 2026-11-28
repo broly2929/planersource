@@ -1,6 +1,7 @@
 import type { Db } from '../db/erreurs.js';
 import { comparerDates, comparerProjetWbs, lireLignesRetenues, type Ligne } from './mes-taches.js';
 import { projetsVisibles, type Acteur } from './projets.js';
+import { estChef } from '../auth/user.js';
 
 /** Planning d'une ressource (lot 6e, D-157) : lecture seule, jamais de charge vendue. */
 export interface LignePlanning {
@@ -33,7 +34,7 @@ export async function lirePlanningRessource(
   if (u.length === 0) return null;
   const { rows, info } = await lireLignesRetenues(db, ressourceId);
   const lisibles =
-    acteur.role === 'administrateur'
+    acteur.role === 'administrateur' || estChef(acteur.role)
       ? null
       : new Set((await projetsVisibles(db, acteur)).map((p) => p.id));
   const masquee = (r: Ligne) => lisibles !== null && !lisibles.has(r.projet_id);

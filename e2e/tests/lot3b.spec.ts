@@ -205,7 +205,7 @@ test('E2E-37 : avant tout calcul, bandeau et tableau sans barre ; projet sans é
   await expect(page.locator('svg [data-element-id]')).toHaveCount(0);
 });
 
-test('E2E-38-r3 : parent, sous-projet en synthèse avec lien ; un chef affecté à P seul voit P sans P1 et sans bouton d’écriture', async ({
+test('E2E-38-r4 : parent, sous-projet en synthèse avec lien ; un chef affecté à P seul voit P et P1 (D-265), sans bouton d’écriture', async ({
   page,
   request,
 }) => {
@@ -239,8 +239,9 @@ test('E2E-38-r3 : parent, sous-projet en synthèse avec lien ; un chef affecté 
   await connecterAvec(page, await chefLecteur(request, p, 'E2E38'));
   await page.goto(gantt(p));
   await expect(barre(page, g.id)).toHaveAttribute('data-type', 'parent');
-  await expect(page.getByRole('link', { name: 'Sous-projet E2E38' })).toHaveCount(0);
-  await expect(page.locator(`svg [data-projet-id="${p1.id}"]`)).toHaveCount(0);
+  // Révision D-265 (4) : P1 est lisible par tout chef ; il est présent, en lecture seule.
+  await expect(page.getByRole('link', { name: 'Sous-projet E2E38' })).toHaveCount(1);
+  await expect(page.locator(`svg [data-projet-id="${p1.id}"]`)).toHaveCount(1);
   // Révision -r1 (D-031, D-127 (4)) : le bouton « Annuler », désactivé, s'ajoute aux trois boutons de zoom.
   // Révision -r3 (D-031, décision du porteur, D-212 (4)) : le bouton « Colonnes », sans écriture, s'y ajoute.
   await expect(page.getByRole('tabpanel').getByRole('button')).toHaveCount(5);

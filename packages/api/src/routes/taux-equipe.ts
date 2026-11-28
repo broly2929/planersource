@@ -12,7 +12,7 @@ import {
   supprimerTauxEquipe,
 } from '../planning/taux-equipe.js';
 import type { AppDeps } from '../app.js';
-import { requireAdmin, requireNonRessource } from './acces.js';
+import { requireAdmin, requireFinances } from './acces.js';
 import { creation, definis, invalide, modification, REFUS } from './taux.js';
 
 const interdit = { erreur: 'Interdit' };
@@ -24,7 +24,7 @@ export function tauxEquipeRoutes(app: FastifyInstance, { pool }: AppDeps): void 
   // Lecture : 401, 403 (rôle ressource), 404, 403 (chef sans membre dans sa portée).
   app.get<{ Params: { id: string } }>(
     '/api/equipes/:id/taux',
-    { preHandler: requireNonRessource },
+    { preHandler: requireFinances },
     async (request, reply) => {
       const user = request.user!;
       const id = identifiant(request.params.id);
